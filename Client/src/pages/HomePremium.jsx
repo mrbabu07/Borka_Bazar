@@ -180,7 +180,8 @@ export default function HomePremium() {
               View All Products
             </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
       {/* New Arrivals */}
       {newArrivals.length > 0 && (
