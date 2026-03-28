@@ -2,8 +2,6 @@ import { Outlet } from "react-router-dom";
 import NavbarPremium from "../components/NavbarPremium";
 import FooterPremium from "../components/FooterPremium";
 import ScrollToTop from "../components/ScrollToTop";
-import RecentlyViewedIndicator from "../components/RecentlyViewedIndicator";
-import ComparisonFloatingButton from "../components/ComparisonFloatingButton";
 
 export default function PremiumLayout() {
   return (
@@ -14,8 +12,6 @@ export default function PremiumLayout() {
       </main>
       <FooterPremium />
       <ScrollToTop />
-      <RecentlyViewedIndicator />
-      <ComparisonFloatingButton />
     </div>
   );
 }

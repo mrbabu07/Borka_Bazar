@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getProductById } from "../services/api";
 import useCart from "../hooks/useCart";
-import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import { useCurrency } from "../hooks/useCurrency";
 import { ProductDetailSkeleton } from "../components/Skeleton";
 import StockIndicator from "../components/StockIndicator";
@@ -18,7 +17,6 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { addToRecentlyViewed } = useRecentlyViewed();
   const { formatPrice } = useCurrency();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,9 +48,6 @@ export default function ProductDetail() {
       const response = await getProductById(id);
       const data = response.data.data;
       setProduct(data);
-
-      // Add to recently viewed
-      addToRecentlyViewed(data);
 
       // Set initial selected image
       const initialImage = data.image || (data.images && data.images[0]) || "";

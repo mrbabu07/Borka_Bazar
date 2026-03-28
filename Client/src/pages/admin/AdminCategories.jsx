@@ -11,7 +11,13 @@ export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: "", slug: "" });
+  const [formData, setFormData] = useState({ 
+    name: "", 
+    slug: "",
+    description: "",
+    image: "",
+    isActive: true
+  });
   const [deleteId, setDeleteId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,15 +38,33 @@ export default function AdminCategories() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert("Category name is required");
+      return;
+    }
+    if (!formData.slug.trim()) {
+      alert("Slug is required");
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await createCategory(formData);
-      setFormData({ name: "", slug: "" });
+      setFormData({ 
+        name: "", 
+        slug: "",
+        description: "",
+        image: "",
+        isActive: true
+      });
       setShowForm(false);
       fetchCategories();
+      alert("Category created successfully!");
     } catch (error) {
       console.error("Failed to create category:", error);
-      alert("Failed to create category");
+      alert(error.response?.data?.error || "Failed to create category");
     } finally {
       setSubmitting(false);
     }
@@ -150,48 +174,114 @@ export default function AdminCategories() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               New Category
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-4">
+              {/* Name and Slug */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                      setFormData({ ...formData, name, slug });
+                    }}
+                    required
+                    placeholder="e.g., Women's Burka"
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Slug <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })
+                    }
+                    required
+                    placeholder="e.g., womens-burka"
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL-friendly identifier (auto-generated from name)
+                  </p>
+                </div>
+              </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category Name
+                  Description
                 </label>
-                <input
-                  type="text"
-                  value={formData.name}
+                <textarea
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
-                  required
-                  placeholder="e.g., Men's Fashion"
-                  className="input-field"
+                  rows="3"
+                  placeholder="Brief description of this category..."
+                  className="input-field resize-none"
                 />
               </div>
+
+              {/* Image URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Slug
+                  Category Image URL
                 </label>
                 <input
-                  type="text"
-                  value={formData.slug}
+                  type="url"
+                  value={formData.image}
                   onChange={(e) =>
-                    setFormData({ ...formData, slug: e.target.value })
+                    setFormData({ ...formData, image: e.target.value })
                   }
-                  required
-                  placeholder="e.g., mens"
+                  placeholder="https://example.com/image.jpg"
                   className="input-field"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  URL-friendly identifier (lowercase, no spaces)
+                  Optional: Image URL for category banner
                 </p>
               </div>
+
+              {/* Active Status */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) =>
+                    setFormData({ ...formData, isActive: e.target.checked })
+                  }
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                  Active (visible to customers)
+                </label>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary disabled:opacity-50"
-            >
-              {submitting ? "Creating..." : "Create Category"}
-            </button>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 btn-primary disabled:opacity-50"
+              >
+                {submitting ? "Creating..." : "Create Category"}
+              </button>
+            </div>
           </form>
         )}
 

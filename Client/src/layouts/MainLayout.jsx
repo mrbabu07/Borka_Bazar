@@ -2,8 +2,6 @@ import { Outlet } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import ScrollToTop from "../components/ScrollToTop";
-import RecentlyViewedIndicator from "../components/RecentlyViewedIndicator";
-import ComparisonFloatingButton from "../components/ComparisonFloatingButton";
 import SpinWheelFAB from "../components/SpinWheelFAB";
 
 export default function MainLayout() {
@@ -15,8 +13,6 @@ export default function MainLayout() {
       </main>
       <Footer />
       <ScrollToTop />
-      <RecentlyViewedIndicator />
-      <ComparisonFloatingButton />
       <SpinWheelFAB />
     </div>
   );

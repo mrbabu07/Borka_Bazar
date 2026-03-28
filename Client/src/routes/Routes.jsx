@@ -16,7 +16,6 @@ import Cart from "../pages/Cart";
 import CartPremium from "../pages/CartPremium";
 import Wishlist from "../pages/Wishlist";
 import SharedWishlist from "../pages/SharedWishlist";
-import Compare from "../pages/Compare";
 import Checkout from "../pages/Checkout";
 import CheckoutPremium from "../pages/CheckoutPremium";
 import Orders from "../pages/Orders";
@@ -71,7 +70,6 @@ const router = createBrowserRouter([
       { path: "/baby", element: <CategoryPage /> },
       { path: "/product/:id", element: <ProductDetailPremium /> },
       { path: "/cart", element: <CartPremium /> },
-      { path: "/compare", element: <Compare /> },
       {
         path: "/wishlist",
         element: (

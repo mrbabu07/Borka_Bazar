@@ -5,7 +5,6 @@ import useProductView from "../hooks/useProductView";
 import WishlistButton from "./WishlistButton";
 import ProductBadge from "./ProductBadge";
 import QuickViewModal from "./QuickViewModal";
-import CompareButton from "./CompareButton";
 import ProductRatingDisplay from "./ProductRatingDisplay";
 import { formatViewCount } from "../utils/formatters";
 import { useCurrency } from "../hooks/useCurrency";
@@ -134,12 +133,9 @@ export default function ProductCard({ product }) {
             </div>
 
             {/* Action Buttons - Only show on hover */}
-            <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
               <div onClick={(e) => e.preventDefault()}>
                 <WishlistButton product={product} size="sm" />
-              </div>
-              <div onClick={(e) => e.preventDefault()}>
-                <CompareButton product={product} size="sm" />
               </div>
             </div>
 

@@ -5,7 +5,6 @@ import { getActiveCoupons } from "../services/api";
 import ProductCard from "../components/ProductCard";
 import CategoryCarousel from "../components/CategoryCarousel";
 import ProductsByCategory from "../components/ProductsByCategory";
-import RecentlyViewed from "../components/RecentlyViewed";
 import FlashSaleFinal from "../components/FlashSaleFinal";
 import { ProductCardSkeleton } from "../components/Skeleton";
 
@@ -454,9 +453,6 @@ export default function Home() {
 
         {/* Products by Category */}
         <ProductsByCategory />
-
-        {/* Recently Viewed Products */}
-        <RecentlyViewed />
 
         {/* Reviews / Trust Section */}
         <section className="py-16 bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-800 dark:to-gray-900">
