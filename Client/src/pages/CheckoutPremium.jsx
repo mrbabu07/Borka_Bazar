@@ -42,23 +42,34 @@ export default function CheckoutPremium() {
       setLoading(true);
 
       const orderData = {
-        items: cart.map((item) => ({
-          product: item._id,
-          quantity: item.quantity,
-          size: item.selectedSize,
-          color: item.selectedColor,
+        products: cart.map((item) => ({
+          productId: item._id,
+          title: item.title,
           price: item.price,
+          quantity: item.quantity,
+          selectedSize: item.selectedSize || null,
+          selectedColor: item.selectedColor || null,
+          image: item.selectedImage || item.image,
         })),
-        shippingAddress: {
-          fullName: formData.fullName,
+        total: cartTotal,
+        subtotal: cartTotal,
+        shippingInfo: {
+          name: formData.fullName,
+          email: formData.email || user?.email || "",
           phone: formData.phone,
           address: formData.address,
           city: formData.city,
-          postalCode: formData.postalCode,
+          area: "",
+          zipCode: formData.postalCode || "",
         },
-        totalAmount: cartTotal,
-        paymentMethod: "Cash on Delivery",
-        notes: formData.notes,
+        paymentMethod: "cod",
+        transactionId: null,
+        specialInstructions: formData.notes || "",
+        couponCode: null,
+        redeemedPoints: null,
+        pointsDiscount: 0,
+        couponDiscount: 0,
+        totalDiscount: 0,
       };
 
       const response = await createOrder(orderData);
@@ -66,7 +77,8 @@ export default function CheckoutPremium() {
       if (response.data.success) {
         clearCart();
         toast.success("Order placed successfully!");
-        navigate(`/orders/${response.data.data._id}`);
+        const orderId = response.data?.data?._id || response.data?._id || "NEW";
+        navigate(`/orders`);
       }
     } catch (error) {
       console.error("Order creation failed:", error);
