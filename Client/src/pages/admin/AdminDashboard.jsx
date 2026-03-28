@@ -158,31 +158,27 @@ export default function AdminDashboard() {
   ];
 
   const statusColors = {
-    pending:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
-    processing:
-      "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
-    shipped:
-      "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400",
-    delivered:
-      "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
-    cancelled: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
+    pending: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+    processing: "bg-blue-50 text-blue-700 border border-blue-200",
+    shipped: "bg-purple-50 text-purple-700 border border-purple-200",
+    delivered: "bg-green-50 text-green-700 border border-green-200",
+    cancelled: "bg-red-50 text-red-700 border border-red-200",
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Premium Header with Gradient */}
+      <div className="bg-gradient-to-br from-black via-gray-900 to-black border-b border-gold-500/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
               <Link
                 to="/"
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-3 bg-white/10 hover:bg-white/20 transition-all rounded-lg backdrop-blur-sm"
                 title="Back to Home"
               >
                 <svg
-                  className="w-6 h-6 text-gray-600 dark:text-gray-400"
+                  className="w-5 h-5 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -196,29 +192,29 @@ export default function AdminDashboard() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                  Analytics Dashboard
+                <h1 className="font-display text-4xl text-white mb-2">
+                  Dashboard
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Real-time insights and business metrics
+                <p className="text-gold-500 text-sm tracking-wider uppercase">
+                  Welcome back, Admin
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <select
                 value={timeframe}
                 onChange={(e) => setTimeframe(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="border border-white/20 px-4 py-3 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:border-gold-500 transition-all rounded-lg"
               >
                 {timeframeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value} value={option.value} className="bg-gray-900 text-white">
                     {option.label}
                   </option>
                 ))}
               </select>
               <Link
                 to="/admin/products/add"
-                className="btn-primary flex items-center gap-2"
+                className="px-6 py-3 bg-gold-500 text-black text-sm tracking-wider uppercase font-semibold hover:bg-gold-400 transition-all flex items-center gap-2 rounded-lg shadow-lg shadow-gold-500/20"
               >
                 <svg
                   className="w-5 h-5"
@@ -242,14 +238,11 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Low Stock Alert */}
-        <LowStockAlert threshold={5} />
-
-        {/* Basic Analytics Dashboard */}
-        <div className="mb-8">
-          <BasicAnalytics />
+        <div className="mb-6">
+          <LowStockAlert threshold={5} />
         </div>
 
-        {/* Key Metrics */}
+        {/* Key Metrics - Premium Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
             title="Revenue"
@@ -340,53 +333,97 @@ export default function AdminDashboard() {
           />
         </div>
 
+        {/* Analytics Section */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+              <h2 className="font-display text-xl text-black">Analytics Overview</h2>
+              <p className="text-sm text-gray-500 mt-1">Real-time business insights</p>
+            </div>
+            <div className="p-6">
+              <BasicAnalytics />
+            </div>
+          </div>
+        </div>
+
         {/* Real-time Stats */}
         <div className="mb-8">
-          <RealtimeStats />
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <AnalyticsChart
-              data={chartData.revenue}
-              type="area"
-              title="Revenue Trend"
-              color="#10B981"
-              height={300}
-            />
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <AnalyticsChart
-              data={chartData.orders}
-              type="bar"
-              title="Orders Trend"
-              color="#3B82F6"
-              height={300}
-            />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+              <h2 className="font-display text-xl text-black">Live Statistics</h2>
+              <p className="text-sm text-gray-500 mt-1">Monitor your store in real-time</p>
+            </div>
+            <div className="p-6">
+              <RealtimeStats />
+            </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Top Products */}
+        {/* Charts Section - Premium Design */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-50 to-white px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-black">Revenue Trend</h3>
+              <p className="text-xs text-gray-500 mt-1">Track your earnings over time</p>
+            </div>
+            <div className="p-6">
+              <AnalyticsChart
+                data={chartData.revenue}
+                type="area"
+                title=""
+                color="#C9A961"
+                height={300}
+              />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-white px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-black">Orders Trend</h3>
+              <p className="text-xs text-gray-500 mt-1">Monitor order volume patterns</p>
+            </div>
+            <div className="p-6">
+              <AnalyticsChart
+                data={chartData.orders}
+                type="bar"
+                title=""
+                color="#000000"
+                height={300}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section - Improved Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Top Products - Premium Card */}
           <div className="lg:col-span-2">
-            <TopProducts />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-50 to-white px-6 py-4 border-b border-gray-100">
+                <h2 className="font-display text-xl text-black">Top Performing Products</h2>
+                <p className="text-sm text-gray-500 mt-1">Best sellers this period</p>
+              </div>
+              <div className="p-6">
+                <TopProducts />
+              </div>
+            </div>
           </div>
 
-          {/* Quick Actions & Recent Orders */}
-          <div className="space-y-8">
-            {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Quick Actions
-              </h2>
-              <div className="space-y-3">
+          {/* Sidebar - Quick Actions & Recent Orders */}
+          <div className="space-y-6">
+            {/* Quick Actions - Premium Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-gold-50 to-white px-6 py-4 border-b border-gray-100">
+                <h2 className="font-semibold text-black uppercase tracking-wider text-sm">
+                  Quick Actions
+                </h2>
+              </div>
+              <div className="p-4">
+                <div className="space-y-1">
                 <Link
                   to="/admin/products"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -401,20 +438,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Manage Products
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Products
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Add, edit, or remove products
+                    <p className="text-xs text-gray-500">
+                      Manage inventory
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/inventory"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center text-orange-600 dark:text-orange-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -429,20 +469,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Inventory Management
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Inventory
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Monitor stock levels and alerts
+                    <p className="text-xs text-gray-500">
+                      Stock levels
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/orders"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-600 dark:text-green-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -457,48 +500,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      View Orders
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Orders
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Track and update orders
-                    </p>
-                  </div>
-                </Link>
-                <Link
-                  to="/admin/returns"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                >
-                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Manage Returns
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Handle return requests and refunds
+                    <p className="text-xs text-gray-500">
+                      Track orders
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/coupons"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -513,104 +531,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Manage Coupons
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Coupons
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Create discount codes
-                    </p>
-                  </div>
-                </Link>
-                <Link
-                  to="/admin/flash-sales"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                >
-                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Flash Sales
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Limited time deals
+                    <p className="text-xs text-gray-500">
+                      Discount codes
                     </p>
                   </div>
-                </Link>
-                <Link
-                  to="/admin/delivery-settings"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                >
-                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Delivery Settings
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Configure delivery charges
-                    </p>
-                  </div>
-                </Link>
-                <Link
-                  to="/admin/offers"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                >
-                  <div className="w-10 h-10 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Promotional Offers
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Manage promotional banners
-                    </p>
-                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/reviews"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -625,48 +562,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Manage Reviews
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Reviews
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Reply to customer feedback
-                    </p>
-                  </div>
-                </Link>
-                <Link
-                  to="/admin/qa"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                >
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Q&A Management
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Answer customer questions
+                    <p className="text-xs text-gray-500">
+                      Customer feedback
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/users"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -681,20 +593,178 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      User Management
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Users
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Manage users and permissions
+                    <p className="text-xs text-gray-500">
+                      Manage users
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  to="/admin/returns"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Returns
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Handle refunds
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  to="/admin/flash-sales"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Flash Sales
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Limited deals
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  to="/admin/delivery-settings"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Delivery
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Shipping settings
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  to="/admin/offers"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Offers
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Promo banners
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  to="/admin/qa"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Q&A
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Customer questions
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/insights"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center text-pink-600 dark:text-pink-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -709,20 +779,23 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Customer Insights
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Insights
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Analyze customer behavior
+                    <p className="text-xs text-gray-500">
+                      Customer analytics
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
                 <Link
                   to="/admin/support"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center text-teal-600 dark:text-teal-400">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-black rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -737,82 +810,105 @@ export default function AdminDashboard() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      Support Management
+                  <div className="flex-1">
+                    <p className="font-medium text-black text-sm">
+                      Support
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Handle customer support
+                    <p className="text-xs text-gray-500">
+                      Help tickets
                     </p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               </div>
             </div>
+          </div>
 
-            {/* Recent Orders */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Recent Orders
-                </h2>
-                <Link
-                  to="/admin/orders"
-                  className="text-primary-500 hover:text-primary-600 text-sm font-medium"
-                >
-                  View All →
-                </Link>
+            {/* Recent Orders - Premium Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-black uppercase tracking-wider text-sm">
+                      Recent Orders
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-1">Latest transactions</p>
+                  </div>
+                  <Link
+                    to="/admin/orders"
+                    className="text-black hover:text-gold-500 text-xs font-medium transition-colors flex items-center gap-1"
+                  >
+                    View All
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
               </div>
 
-              {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="animate-pulse flex items-center gap-3 p-3"
-                    >
-                      <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : recentOrders.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No orders yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentOrders.map((order) => (
-                    <div
-                      key={order._id}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary-600 dark:text-primary-400">
-                            #{order._id.slice(-4).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {formatPrice(order.total)}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}
+              <div className="p-4">
+                {loading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="animate-pulse flex items-center gap-3 p-3"
                       >
-                        {order.status}
-                      </span>
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : recentOrders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <p className="text-gray-500 text-sm">No orders yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {recentOrders.map((order) => (
+                      <div
+                        key={order._id}
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                            <span className="text-xs font-bold text-black">
+                              #{order._id.slice(-4).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-black">
+                              {formatPrice(order.total)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(order.createdAt).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-3 py-1 text-xs font-medium uppercase tracking-wider rounded-full ${statusColors[order.status]}`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

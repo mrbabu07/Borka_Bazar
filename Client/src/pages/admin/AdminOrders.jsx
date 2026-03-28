@@ -29,6 +29,13 @@ export default function AdminOrders() {
     try {
       const response = await getAllOrders();
       console.log("📋 Fetched orders:", response.data.data);
+      
+      // Debug: Log first order's products to see structure
+      if (response.data.data && response.data.data.length > 0) {
+        console.log("🔍 First order products:", response.data.data[0].products);
+        console.log("🔍 First product details:", response.data.data[0].products[0]);
+      }
+      
       setOrders(response.data.data);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -541,9 +548,12 @@ export default function AdminOrders() {
                   <td>
                     <div style="font-weight: bold; margin-bottom: 4px;">${item.title}</div>
                     <div class="product-details">
-                      ${item.selectedSize ? `Size: <strong>${item.selectedSize}</strong>` : ""}
-                      ${item.selectedSize && item.selectedColor ? " • " : ""}
-                      ${item.selectedColor ? `Color: <strong>${renderColor(item.selectedColor)}</strong>` : ""}
+                      ${(item.selectedSize || item.size || item.variant?.size) ? `Size: <strong>${item.selectedSize || item.size || item.variant?.size}</strong>` : ""}
+                      ${(item.selectedSize || item.size || item.variant?.size) && (item.selectedColor || item.color || item.variant?.color) ? " • " : ""}
+                      ${(item.selectedColor || item.color || item.variant?.color) ? `Color: <strong>${renderColor(item.selectedColor || item.color || item.variant?.color)}</strong>` : ""}
+                      ${(item.productId || item._id) ? ` • ID: <strong>${(item.productId || item._id).slice(-6)}</strong>` : ""}
+                    </div>
+                    </div>
                     </div>
                   </td>
                   <td style="text-align: center; font-weight: bold;">${item.quantity}</td>
@@ -994,38 +1004,53 @@ export default function AdminOrders() {
                                         {formatPrice(item.price)}
                                       </span>
                                     </div>
-                                    {item.selectedSize && (
+                                    
+                                    {/* Size - check multiple possible fields */}
+                                    {(item.selectedSize || item.size || item.variant?.size) && (
                                       <div>
                                         <span className="text-gray-500">
                                           Size:
                                         </span>
                                         <span className="ml-2 font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-md text-xs">
-                                          {item.selectedSize}
+                                          {item.selectedSize || item.size || item.variant?.size}
                                         </span>
                                       </div>
                                     )}
-                                    {item.selectedColor && (
+                                    
+                                    {/* Color - check multiple possible fields */}
+                                    {(item.selectedColor || item.color || item.variant?.color) && (
                                       <div>
                                         <span className="text-gray-500">
                                           Color:
                                         </span>
                                         <div className="ml-2 inline-flex items-center gap-2 font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded-md text-xs">
-                                          {typeof item.selectedColor ===
+                                          {typeof (item.selectedColor || item.color || item.variant?.color) ===
                                             "object" &&
-                                            item.selectedColor.value && (
+                                            (item.selectedColor || item.color || item.variant?.color).value && (
                                               <div
                                                 className="w-3 h-3 rounded-full border border-gray-300"
                                                 style={{
                                                   backgroundColor:
-                                                    item.selectedColor.value,
+                                                    (item.selectedColor || item.color || item.variant?.color).value,
                                                 }}
                                               />
                                             )}
-                                          {renderColor(item.selectedColor)}
+                                          {renderColor(item.selectedColor || item.color || item.variant?.color)}
                                         </div>
                                       </div>
                                     )}
-                                    <div>
+                                    
+                                    {/* Product ID for debugging */}
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500 text-xs">
+                                        Product ID:
+                                      </span>
+                                      <span className="ml-2 font-mono text-xs text-gray-600">
+                                        {item.productId || item._id}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="col-span-2">
                                       <span className="text-gray-500">
                                         Subtotal:
                                       </span>

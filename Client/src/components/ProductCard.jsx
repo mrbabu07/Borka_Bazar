@@ -23,10 +23,18 @@ export default function ProductCard({ product }) {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if product has sizes - if so, open quick view instead
+    const hasSizes = product.sizes?.length > 0 || product.availableSizes?.length > 0;
+    if (hasSizes) {
+      setShowQuickView(true);
+      return;
+    }
+    
     setIsAdding(true);
     const imageToUse =
       product.image || (product.images && product.images[0]) || fallbackImage;
-    addToCart(product, 1, imageToUse);
+    addToCart(product, 1, imageToUse, null, null);
     setTimeout(() => setIsAdding(false), 1200);
   };
 

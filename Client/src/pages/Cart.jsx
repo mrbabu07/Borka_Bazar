@@ -21,12 +21,22 @@ export default function Cart() {
   useEffect(() => {
     const fetchDeliverySettings = async () => {
       try {
+        // Add cache-busting parameter to ensure fresh data
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings`,
+          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
         );
         const data = await response.json();
+        console.log('🚚 Cart - Fetched delivery settings:', data);
         if (data.success) {
           setDeliverySettings(data.data);
+          console.log('✅ Cart - Delivery settings applied:', data.data);
         }
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
@@ -46,11 +56,37 @@ export default function Cart() {
   const deliveryCharge = deliverySettings?.standardDeliveryCharge || 100 / 110;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
 
+  // Debug logging for delivery charge calculation
+  console.log('🛒 Cart - Delivery Charge Info:', {
+    cartTotal,
+    freeDeliveryThreshold,
+    deliveryCharge,
+    deliveryChargeInBDT: Math.round(deliveryCharge * 110),
+    freeDeliveryEnabled,
+    willBeFree: freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold,
+    finalTotal: cartTotal + (freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold ? 0 : deliveryCharge)
+  });
+
   const handleCheckout = () => {
     if (!user) {
       navigate("/login", { state: { from: { pathname: "/checkout" } } });
       return;
     }
+    
+    // Check if any items with sizes don't have a size selected
+    const itemsWithoutSize = cart.filter(item => {
+      const hasSizes = item.sizes?.length > 0 || item.availableSizes?.length > 0;
+      return hasSizes && !item.selectedSize;
+    });
+    
+    if (itemsWithoutSize.length > 0) {
+      error(
+        `Please select size for: ${itemsWithoutSize.map(item => item.title).join(', ')}`,
+        { title: 'Size Required' }
+      );
+      return;
+    }
+    
     navigate("/checkout");
   };
 
@@ -229,15 +265,44 @@ export default function Cart() {
                           {item.title}
                         </Link>
 
-                        {/* Selected Size */}
-                        {item.selectedSize && (
+                        {/* Size Display and Selection */}
+                        {(item.sizes?.length > 0 || item.availableSizes?.length > 0) ? (
+                          <div className="mb-2">
+                            {item.selectedSize ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">Size:</span>
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-md font-medium">
+                                  {item.selectedSize}
+                                </span>
+                                <Link
+                                  to={`/product/${item._id}`}
+                                  className="text-xs text-primary-600 hover:text-primary-700 underline"
+                                >
+                                  Change
+                                </Link>
+                              </div>
+                            ) : (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                                <p className="text-xs text-amber-800 font-medium mb-1">
+                                  ⚠️ Size not selected
+                                </p>
+                                <Link
+                                  to={`/product/${item._id}`}
+                                  className="text-xs text-primary-600 hover:text-primary-700 font-semibold underline"
+                                >
+                                  Select size on product page →
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        ) : item.selectedSize ? (
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-sm text-gray-500">Size:</span>
                             <span className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-md font-medium">
                               {item.selectedSize}
                             </span>
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Selected Color */}
                         {item.selectedColor && (

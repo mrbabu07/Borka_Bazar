@@ -90,7 +90,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
           {product.sizes && product.sizes.length > 0 && (
             <div className="mb-4">
               <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                Size
+                Size <span className="text-red-500">*</span>
               </h4>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => (
@@ -107,6 +107,42 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
                   </button>
                 ))}
               </div>
+              {!selectedSize && (
+                <p className="text-xs text-red-500 mt-1">Please select a size</p>
+              )}
+            </div>
+          )}
+
+          {/* Available Sizes (with stock info) */}
+          {product.availableSizes && product.availableSizes.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                Size <span className="text-red-500">*</span>
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {product.availableSizes.map((sizeItem) => (
+                  <button
+                    key={sizeItem.size}
+                    onClick={() => setSelectedSize(sizeItem.size)}
+                    disabled={sizeItem.stock === 0}
+                    className={`px-3 py-1 rounded-lg border font-medium transition relative ${
+                      selectedSize === sizeItem.size
+                        ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400"
+                        : sizeItem.stock === 0
+                        ? "border-gray-200 text-gray-400 cursor-not-allowed line-through"
+                        : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400"
+                    }`}
+                  >
+                    {sizeItem.size}
+                    {sizeItem.stock > 0 && sizeItem.stock <= 3 && (
+                      <span className="ml-1 text-xs text-orange-500">({sizeItem.stock})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {!selectedSize && (
+                <p className="text-xs text-red-500 mt-1">Please select a size</p>
+              )}
             </div>
           )}
 

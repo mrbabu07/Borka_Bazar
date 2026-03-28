@@ -4,6 +4,8 @@ import { getProductById, getProducts } from "../services/api";
 import useCart from "../hooks/useCart";
 import useWishlist from "../hooks/useWishlist";
 import ProductCardPremium from "../components/ProductCardPremium";
+import ReviewsSection from "../components/reviews/ReviewsSection";
+import ProductQA from "../components/ProductQA";
 import { toast } from "react-hot-toast";
 
 export default function ProductDetailPremium() {
@@ -18,6 +20,7 @@ export default function ProductDetailPremium() {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -32,7 +35,9 @@ export default function ProductDetailPremium() {
       setProduct(productData);
 
       // Set default selections
-      if (productData.sizes?.length > 0) {
+      if (productData.availableSizes?.length > 0) {
+        setSelectedSize(productData.availableSizes[0].size);
+      } else if (productData.sizes?.length > 0) {
         setSelectedSize(productData.sizes[0]);
       }
       if (productData.colors?.length > 0) {
@@ -54,20 +59,32 @@ export default function ProductDetailPremium() {
   };
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
+    // Check if product has sizes and if one is selected
+    const hasSizes = product.sizes?.length > 0 || product.availableSizes?.length > 0;
+    if (hasSizes && !selectedSize) {
       toast.error("Please select a size");
       return;
     }
-    addToCart(product, quantity, selectedSize, selectedColor);
+    
+    // Get the current selected image URL
+    const currentImage = product.images?.[selectedImage] || product.image;
+    
+    addToCart(product, quantity, currentImage, selectedSize, selectedColor);
     toast.success("Added to cart");
   };
 
   const handleBuyNow = () => {
-    if (!selectedSize) {
+    // Check if product has sizes and if one is selected
+    const hasSizes = product.sizes?.length > 0 || product.availableSizes?.length > 0;
+    if (hasSizes && !selectedSize) {
       toast.error("Please select a size");
       return;
     }
-    addToCart(product, quantity, selectedSize, selectedColor);
+    
+    // Get the current selected image URL
+    const currentImage = product.images?.[selectedImage] || product.image;
+    
+    addToCart(product, quantity, currentImage, selectedSize, selectedColor);
     navigate("/cart");
   };
 
@@ -199,26 +216,69 @@ export default function ProductDetailPremium() {
               )}
             </div>
 
-            {/* Size Selector */}
-            {product.sizes?.length > 0 && (
+            {/* Size Selector with Size Guide */}
+            {(product.sizes?.length > 0 || product.availableSizes?.length > 0) && (
               <div>
-                <p className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
-                  Select Size
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-medium text-black uppercase tracking-wide">
+                    Select Size
+                  </p>
+                  <button
+                    onClick={() => setShowSizeGuide(true)}
+                    className="flex items-center gap-1 text-sm text-gold-600 hover:text-gold-700 transition-colors font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Size Guide
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-3">
-                  {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-6 py-3 border text-sm font-medium transition-all ${
-                        selectedSize === size
-                          ? "border-black bg-black text-white"
-                          : "border-gray-300 text-gray-700 hover:border-black"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {/* Handle both sizes array and availableSizes array */}
+                  {product.availableSizes?.length > 0 ? (
+                    product.availableSizes.map((sizeItem) => (
+                      <button
+                        key={sizeItem.size}
+                        onClick={() => setSelectedSize(sizeItem.size)}
+                        disabled={sizeItem.stock === 0}
+                        className={`px-6 py-3 border text-sm font-medium transition-all relative ${
+                          selectedSize === sizeItem.size
+                            ? "border-black bg-black text-white"
+                            : sizeItem.stock === 0
+                            ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                            : "border-gray-300 text-gray-700 hover:border-black"
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="font-semibold">{sizeItem.size}</div>
+                          {sizeItem.stock <= 3 && sizeItem.stock > 0 && (
+                            <div className="text-xs text-orange-500 mt-1">
+                              Only {sizeItem.stock} left
+                            </div>
+                          )}
+                          {sizeItem.stock === 0 && (
+                            <div className="text-xs text-red-500 mt-1">
+                              Out of Stock
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    product.sizes?.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-6 py-3 border text-sm font-medium transition-all ${
+                          selectedSize === size
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 text-gray-700 hover:border-black"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -314,6 +374,55 @@ export default function ProductDetailPremium() {
                 <p className="text-gray-700 leading-relaxed">{product.description}</p>
               </div>
             )}
+
+            {/* Product Rating Summary */}
+            {product.rating && (
+              <div className="border-t border-gray-100 pt-8">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <svg
+                        key={i}
+                        className={`w-5 h-5 ${
+                          i < Math.floor(product.rating)
+                            ? "text-gold-500"
+                            : "text-gray-300"
+                        }`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    {product.rating.toFixed(1)} ({product.reviewCount || 0} reviews)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reviews & Q&A Section */}
+        <div className="mt-20 border-t border-gray-100 pt-16">
+          <div className="mb-12">
+            <h2 className="font-display text-2xl md:text-3xl text-black text-center mb-3">
+              Customer Reviews & Questions
+            </h2>
+            <p className="text-center text-gray-500">
+              See what our customers are saying
+            </p>
+          </div>
+          
+          {/* Reviews Section */}
+          <div className="mb-16">
+            <ReviewsSection productId={id} />
+          </div>
+
+          {/* Q&A Section */}
+          <div className="border-t border-gray-100 pt-16">
+            <ProductQA productId={id} />
           </div>
         </div>
 
@@ -331,6 +440,193 @@ export default function ProductDetailPremium() {
           </div>
         )}
       </div>
+
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowSizeGuide(false)}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="font-display text-2xl text-black">Burka Size Guide</h2>
+              <button
+                onClick={() => setShowSizeGuide(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-8">
+              {/* Introduction */}
+              <div className="text-center">
+                <p className="text-gray-600 leading-relaxed">
+                  Find your perfect fit with our comprehensive size guide. All measurements are in inches.
+                </p>
+              </div>
+
+              {/* Women's Burka Size Chart */}
+              <div>
+                <h3 className="font-semibold text-lg text-black mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gold-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Women's Burka Sizes
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Size</th>
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Bust (inches)</th>
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Waist (inches)</th>
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Hip (inches)</th>
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Length (inches)</th>
+                        <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-black">Height Range</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">XS</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">32-34</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">24-26</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">34-36</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">54-56</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">5'0" - 5'3"</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">S</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">34-36</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">26-28</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">36-38</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">56-58</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">5'3" - 5'5"</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">M</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">36-38</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">28-30</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">38-40</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">58-60</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">5'5" - 5'7"</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">L</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">38-40</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">30-32</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">40-42</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">60-62</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">5'7" - 5'9"</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">XL</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">40-42</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">32-34</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">42-44</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">62-64</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">5'9" - 6'0"</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-gray-200 px-4 py-3 font-medium">XXL</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">42-44</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">34-36</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">44-46</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">64-66</td>
+                        <td className="border border-gray-200 px-4 py-3 text-gray-700">6'0" - 6'2"</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* How to Measure */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="font-semibold text-lg text-black mb-4">How to Measure</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-black mb-2 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-gold-500 text-white rounded-full flex items-center justify-center text-xs">1</span>
+                      Bust
+                    </h4>
+                    <p className="text-sm text-gray-600">Measure around the fullest part of your bust, keeping the tape parallel to the floor.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-black mb-2 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-gold-500 text-white rounded-full flex items-center justify-center text-xs">2</span>
+                      Waist
+                    </h4>
+                    <p className="text-sm text-gray-600">Measure around your natural waistline, keeping the tape comfortably loose.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-black mb-2 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-gold-500 text-white rounded-full flex items-center justify-center text-xs">3</span>
+                      Hip
+                    </h4>
+                    <p className="text-sm text-gray-600">Measure around the fullest part of your hips, approximately 8 inches below your waist.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-black mb-2 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-gold-500 text-white rounded-full flex items-center justify-center text-xs">4</span>
+                      Length
+                    </h4>
+                    <p className="text-sm text-gray-600">Measure from the shoulder seam down to your desired length (typically ankle or floor length).</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tips */}
+              <div className="border-l-4 border-gold-500 bg-gold-50 p-4 rounded">
+                <h4 className="font-semibold text-black mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sizing Tips
+                </h4>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-gold-600 mt-1">•</span>
+                    <span>If you're between sizes, we recommend sizing up for a more comfortable fit.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gold-600 mt-1">•</span>
+                    <span>All measurements are approximate and may vary slightly by style.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gold-600 mt-1">•</span>
+                    <span>For custom sizing or specific questions, please contact our customer service.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gold-600 mt-1">•</span>
+                    <span>Consider the fabric type - some materials have more stretch than others.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Contact Support */}
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">Still not sure about your size?</p>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-medium hover:bg-gold-500 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Contact Us for Help
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

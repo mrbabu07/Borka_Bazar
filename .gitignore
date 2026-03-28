@@ -88,3 +88,8 @@ Server/invoices/*.pdf
 *.swp
 *.swo
 *~
+
+# Documentation files (development notes)
+BURKA_STORE_REDESIGN_GUIDE.md
+PREMIUM_REDESIGN_COMPLETE.md
+PROFESSIONAL_ECOMMERCE_FEATURES.md

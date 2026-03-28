@@ -52,16 +52,16 @@ export const generateProfessionalInvoice = (order) => {
       <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
         
         <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6">
+        <div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-6">
           <div class="flex justify-between items-start">
             <div>
-              <h1 class="text-3xl font-bold mb-1">HnilaBazar</h1>
-              <p class="text-blue-100 text-sm">Your Trusted E-commerce Partner</p>
+              <h1 class="text-3xl font-bold mb-1" style="font-family: 'Playfair Display', serif;">Borka Bazar</h1>
+              <p class="text-gray-300 text-sm">Premium Modest Fashion</p>
             </div>
             <div class="text-right">
-              <div class="text-xs text-blue-200 mb-1">INVOICE</div>
+              <div class="text-xs text-gray-400 mb-1">INVOICE</div>
               <div class="text-2xl font-bold">#${order._id.slice(-8).toUpperCase()}</div>
-              <div class="text-xs text-blue-100 mt-2">${orderDate}</div>
+              <div class="text-xs text-gray-300 mt-2">${orderDate}</div>
             </div>
           </div>
         </div>
@@ -155,7 +155,20 @@ export const generateProfessionalInvoice = (order) => {
                     order.products && order.products.length > 0
                       ? order.products
                           .map(
-                            (item) => `
+                            (item) => {
+                              // Debug logging
+                              console.log('Invoice Item:', {
+                                title: item.title,
+                                selectedSize: item.selectedSize,
+                                size: item.size,
+                                variantSize: item.variant?.size,
+                                selectedColor: item.selectedColor,
+                                color: item.color,
+                                variantColor: item.variant?.color,
+                                fullItem: item
+                              });
+                              
+                              return `
                     <tr class="hover:bg-gray-50">
                       <td class="py-3 px-3">
                         <div class="flex items-center gap-3">
@@ -166,9 +179,10 @@ export const generateProfessionalInvoice = (order) => {
                           }
                           <div class="flex-1">
                             <div class="font-medium text-gray-900 text-sm">${item.title || "Product"}</div>
-                            <div class="flex gap-1 mt-1">
-                              ${item.selectedSize ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Size: ${item.selectedSize}</span>` : ""}
-                              ${item.selectedColor ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Color: ${renderColor(item.selectedColor)}</span>` : ""}
+                            <div class="flex gap-1 mt-1 flex-wrap">
+                              ${(item.selectedSize || item.size || item.variant?.size) ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">Size: ${item.selectedSize || item.size || item.variant?.size}</span>` : ""}
+                              ${(item.selectedColor || item.color || item.variant?.color) ? `<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">Color: ${renderColor(item.selectedColor || item.color || item.variant?.color)}</span>` : ""}
+                              ${(item.productId || item._id) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">ID: ${(item.productId || item._id).slice(-6)}</span>` : ""}
                             </div>
                           </div>
                         </div>
@@ -177,7 +191,8 @@ export const generateProfessionalInvoice = (order) => {
                       <td class="py-3 px-3 text-right text-gray-900">${formatPrice(item.price || 0)}</td>
                       <td class="py-3 px-3 text-right font-semibold text-gray-900">${formatPrice((item.price || 0) * (item.quantity || 1))}</td>
                     </tr>
-                  `,
+                  `;
+                            }
                           )
                           .join("")
                       : `
@@ -218,7 +233,7 @@ export const generateProfessionalInvoice = (order) => {
               <div class="text-xs text-gray-600 space-y-1">
                 <div>📞 +880 1521-721946</div>
                 <div>📧 mdjahedulislamjaved@gmail.com</div>
-                <div>🌐 www.hnilabazar.com</div>
+                <div>🌐 www.borkabazar.com</div>
                 <div class="text-gray-500">Dhaka, Bangladesh</div>
               </div>
             </div>
@@ -264,7 +279,7 @@ export const generateProfessionalInvoice = (order) => {
         <div class="bg-gray-50 px-8 py-4 border-t border-gray-200">
           <div class="text-center text-xs text-gray-500">
             <div class="mb-1">This is a computer-generated invoice. No signature required.</div>
-            <div>Thank you for shopping with HnilaBazar!</div>
+            <div>Thank you for shopping with Borka Bazar!</div>
             <div class="mt-2 text-gray-400">Generated: ${new Date().toLocaleString()} | Invoice #${order._id.slice(-8).toUpperCase()}</div>
           </div>
         </div>
@@ -273,7 +288,7 @@ export const generateProfessionalInvoice = (order) => {
 
       <!-- Print Button (No Print) -->
       <div class="max-w-4xl mx-auto mt-4 text-center no-print">
-        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
+        <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
           Print Invoice
         </button>
       </div>

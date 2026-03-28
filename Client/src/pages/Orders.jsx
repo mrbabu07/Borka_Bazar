@@ -666,17 +666,32 @@ export default function Orders() {
                           <h4 className="font-semibold text-gray-900 truncate">
                             {item.title}
                           </h4>
-                          <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                            <span>Qty: {item.quantity}</span>
-                            {item.selectedSize && (
-                              <span>Size: {item.selectedSize}</span>
-                            )}
-                            {item.selectedColor && (
-                              <span>
-                                Color: {renderColor(item.selectedColor)}
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                              </svg>
+                              Qty: {item.quantity}
+                            </span>
+                            {(item.selectedSize || item.size) && (
+                              <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                Size: {item.selectedSize || item.size}
                               </span>
                             )}
-                            <span>{formatPrice(item.price)} each</span>
+                            {(item.selectedColor || item.color) && (
+                              <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                </svg>
+                                Color: {renderColor(item.selectedColor || item.color)}
+                              </span>
+                            )}
+                            <span className="text-primary-600 font-medium">
+                              {formatPrice(item.price)} each
+                            </span>
                           </div>
                         </div>
                         <div className="text-right flex flex-col items-end gap-2">
@@ -815,17 +830,17 @@ export default function Orders() {
                         </svg>
                         Payment Method
                       </h4>
-                      <p className="text-sm text-green-700 capitalize">
+                      <p className="text-sm text-green-700 capitalize font-medium">
                         {order.paymentMethod === "cod"
-                          ? "Cash on Delivery"
+                          ? "💵 Cash on Delivery"
                           : order.paymentMethod}
                       </p>
                     </div>
 
                     {/* Delivery Address */}
                     {order.shippingInfo && (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                        <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
                           <svg
                             className="w-5 h-5"
                             fill="none"
@@ -841,13 +856,29 @@ export default function Orders() {
                           </svg>
                           Delivery Address
                         </h4>
-                        <div className="text-sm text-blue-700 space-y-1">
-                          <p className="font-medium">
+                        <div className="text-sm text-blue-800 space-y-1.5">
+                          <p className="font-semibold flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
                             {order.shippingInfo.name}
                           </p>
-                          <p>{order.shippingInfo.phone}</p>
-                          <p>{order.shippingInfo.address}</p>
-                          <p>
+                          <p className="flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            {order.shippingInfo.phone}
+                          </p>
+                          <p className="flex items-start gap-2">
+                            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <span>{order.shippingInfo.address}</span>
+                          </p>
+                          <p className="flex items-center gap-2 text-blue-700">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
                             {order.shippingInfo.area}, {order.shippingInfo.city}
                           </p>
                         </div>

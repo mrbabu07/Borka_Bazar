@@ -21,6 +21,53 @@ export default function CheckoutPremium() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [deliverySettings, setDeliverySettings] = useState(null);
+
+  // Fetch delivery settings
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        // Add cache-busting parameter to ensure fresh data
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
+        );
+        const data = await response.json();
+        console.log('🚚 Fetched delivery settings (Premium):', data);
+        if (data.success) {
+          setDeliverySettings(data.data);
+          console.log('✅ Delivery settings applied (Premium):', data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching delivery settings:", err);
+        // Use defaults if fetch fails
+        setDeliverySettings({
+          freeDeliveryThreshold: 50,
+          standardDeliveryCharge: 100 / 110,
+          freeDeliveryEnabled: true,
+        });
+      }
+    };
+    fetchDeliverySettings();
+  }, []);
+
+  // Calculate delivery charge
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
+  const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge || 100 / 110;
+  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
+  
+  const deliveryCharge =
+    freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold
+      ? 0
+      : deliveryChargeAmount;
+  
+  const finalTotal = cartTotal + deliveryCharge;
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -58,8 +105,9 @@ export default function CheckoutPremium() {
           selectedColor: item.selectedColor || null,
           image: item.selectedImage || item.image,
         })),
-        total: cartTotal,
+        total: finalTotal,
         subtotal: cartTotal,
+        deliveryCharge: deliveryCharge,
         shippingInfo: {
           name: formData.fullName,
           email: formData.email || user?.email || "",
@@ -289,7 +337,7 @@ export default function CheckoutPremium() {
               <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
                 {cart.map((item) => (
                   <div key={`${item._id}_${item.selectedSize || 'no-size'}_${item.selectedColor?.name || 'no-color'}`} className="flex gap-4">
-                    <div className="w-16 h-20 flex-shrink-0 bg-white overflow-hidden">
+                    <div className="w-16 h-20 flex-shrink-0 bg-white border border-gray-200 overflow-hidden">
                       <img
                         src={item.selectedImage || item.image}
                         alt={item.title}
@@ -297,17 +345,40 @@ export default function CheckoutPremium() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-black font-medium truncate">
+                      <p className="text-sm text-black font-medium truncate mb-2">
                         {item.title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {item.selectedSize && `Size: ${item.selectedSize}`}
-                        {item.selectedSize && item.selectedColor && " • "}
-                        {item.selectedColor && `${typeof item.selectedColor === 'string' ? item.selectedColor : item.selectedColor?.name}`}
-                      </p>
-                      <p className="text-sm text-black mt-1">
-                        ৳{item.price.toLocaleString()} × {item.quantity}
-                      </p>
+                      
+                      {/* Size and Color Display */}
+                      {(item.selectedSize || item.selectedColor) && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {item.selectedSize && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
+                              {item.selectedSize}
+                            </span>
+                          )}
+                          {item.selectedColor && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                              </svg>
+                              {typeof item.selectedColor === 'string' ? item.selectedColor : item.selectedColor?.name || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600">
+                          ৳{item.price.toLocaleString()} × {item.quantity}
+                        </p>
+                        <p className="text-sm font-semibold text-black">
+                          ৳{(item.price * item.quantity).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -323,14 +394,21 @@ export default function CheckoutPremium() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium text-black">Free</span>
+                  <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-black'}`}>
+                    {deliveryCharge === 0 ? 'Free' : `৳${deliveryCharge.toLocaleString()}`}
+                  </span>
                 </div>
+                {freeDeliveryEnabled && cartTotal < freeDeliveryThreshold && (
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    Add ৳{(freeDeliveryThreshold - cartTotal).toLocaleString()} more for free delivery
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between text-lg mb-8">
                 <span className="font-medium text-black">Total</span>
                 <span className="font-display text-2xl font-semibold text-black">
-                  ৳{cartTotal.toLocaleString()}
+                  ৳{finalTotal.toLocaleString()}
                 </span>
               </div>
 

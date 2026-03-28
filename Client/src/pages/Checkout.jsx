@@ -46,12 +46,22 @@ export default function Checkout() {
   useEffect(() => {
     const fetchDeliverySettings = async () => {
       try {
+        // Add cache-busting parameter to ensure fresh data
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings`,
+          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
         );
         const data = await response.json();
+        console.log('🚚 Fetched delivery settings:', data);
         if (data.success) {
           setDeliverySettings(data.data);
+          console.log('✅ Delivery settings applied:', data.data);
         }
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
@@ -95,6 +105,19 @@ export default function Checkout() {
       ? 0
       : deliveryChargeAmount;
   const finalTotal = subtotal - totalDiscount + deliveryCharge;
+
+  // Debug logging
+  console.log('💰 Delivery Charge Calculation:', {
+    deliverySettings,
+    freeDeliveryThreshold,
+    deliveryChargeAmount,
+    freeDeliveryEnabled,
+    subtotal,
+    totalDiscount,
+    calculatedDeliveryCharge: deliveryCharge,
+    finalTotal,
+    deliveryChargeInBDT: Math.round(deliveryCharge * 110)
+  });
 
   // Fetch default address and set user email on mount
   useEffect(() => {
@@ -244,6 +267,15 @@ export default function Checkout() {
               `Cart item "${item.title || "Unknown"}" is missing product ID`,
             );
           }
+          
+          // Debug: Log cart item to see what data we have
+          console.log('Cart item before order creation:', {
+            title: item.title,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+            fullItem: item
+          });
+          
           return {
             productId: item._id,
             title: item.title,
@@ -256,6 +288,7 @@ export default function Checkout() {
         }),
         total: finalTotal,
         subtotal: subtotal,
+        deliveryCharge: deliveryCharge,
         shippingInfo: {
           name: formData.name,
           email: user.email || formData.email,
@@ -275,6 +308,14 @@ export default function Checkout() {
         couponDiscount: couponDiscount,
         totalDiscount: totalDiscount,
       };
+
+      console.log('📦 Order Data being sent:', {
+        total: finalTotal,
+        subtotal: subtotal,
+        deliveryCharge: deliveryCharge,
+        deliveryChargeInBDT: Math.round(deliveryCharge * 110),
+        totalInBDT: Math.round(finalTotal * 110)
+      });
 
       const response = await createOrder(orderData);
 
@@ -1510,11 +1551,11 @@ export default function Checkout() {
               <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
                 {cart.map((item) => (
                   <div
-                    key={`${item._id}-${item.selectedSize || "no-size"}`}
+                    key={`${item._id}_${item.selectedSize || 'no-size'}_${item.selectedColor?.name || 'no-color'}`}
                     className="flex gap-4 p-3 bg-gray-50 rounded-xl"
                   >
                     <img
-                      src={item.image}
+                      src={item.selectedImage || item.image}
                       alt={item.title}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
@@ -1522,11 +1563,29 @@ export default function Checkout() {
                       <h4 className="font-semibold text-gray-900 text-sm truncate">
                         {item.title}
                       </h4>
-                      {item.selectedSize && (
-                        <p className="text-xs text-gray-500">
-                          Size: {item.selectedSize}
-                        </p>
+                      
+                      {/* Size and Color Display */}
+                      {(item.selectedSize || item.selectedColor) && (
+                        <div className="flex flex-wrap gap-2 mt-1 mb-2">
+                          {item.selectedSize && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-white text-gray-700 px-2 py-1 rounded border border-gray-200">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
+                              {item.selectedSize}
+                            </span>
+                          )}
+                          {item.selectedColor && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-white text-gray-700 px-2 py-1 rounded border border-gray-200">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                              </svg>
+                              {typeof item.selectedColor === 'string' ? item.selectedColor : item.selectedColor?.name || 'N/A'}
+                            </span>
+                          )}
+                        </div>
                       )}
+                      
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-500">
                           Qty: {item.quantity}

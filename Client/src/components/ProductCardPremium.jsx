@@ -21,10 +21,23 @@ export default function ProductCardPremium({ product }) {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if product has sizes and if size is required
+    const hasSizes = product.sizes?.length > 0 || product.availableSizes?.length > 0;
+    
+    // If product has sizes but none selected, open quick view instead
+    if (hasSizes && !selectedSize) {
+      setQuickViewOpen(true);
+      return;
+    }
+    
     setIsAdding(true);
     const imageToUse =
       product.image || (product.images && product.images[0]) || fallbackImage;
-    addToCart(product, 1, imageToUse);
+    
+    // Pass size and color to cart
+    addToCart(product, 1, imageToUse, selectedSize || null, selectedColor || null);
+    
     setTimeout(() => setIsAdding(false), 1500);
   };
 
@@ -215,7 +228,7 @@ export default function ProductCardPremium({ product }) {
               {product.sizes && product.sizes.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
-                    Select Size
+                    Select Size <span className="text-red-500">*</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {product.sizes.map((size) => (
@@ -232,6 +245,48 @@ export default function ProductCardPremium({ product }) {
                       </button>
                     ))}
                   </div>
+                  {!selectedSize && (
+                    <p className="text-xs text-red-500 mt-2">
+                      Please select a size
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Available Sizes (with stock info) */}
+              {product.availableSizes && product.availableSizes.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                    Select Size <span className="text-red-500">*</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.availableSizes.map((sizeItem) => (
+                      <button
+                        key={sizeItem.size}
+                        onClick={() => setSelectedSize(sizeItem.size)}
+                        disabled={sizeItem.stock === 0}
+                        className={`px-4 py-2 border text-sm transition-all relative ${
+                          selectedSize === sizeItem.size
+                            ? "border-black bg-black text-white"
+                            : sizeItem.stock === 0
+                            ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                            : "border-gray-300 hover:border-black"
+                        }`}
+                      >
+                        {sizeItem.size}
+                        {sizeItem.stock === 0 && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="w-full h-px bg-gray-400 rotate-45" />
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {!selectedSize && (
+                    <p className="text-xs text-red-500 mt-2">
+                      Please select a size
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -264,6 +319,14 @@ export default function ProductCardPremium({ product }) {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
+                    
+                    // Validate size selection
+                    const hasSizes = product.sizes?.length > 0 || product.availableSizes?.length > 0;
+                    if (hasSizes && !selectedSize) {
+                      // Don't close modal, just show error
+                      return;
+                    }
+                    
                     handleAddToCart(e);
                     setQuickViewOpen(false);
                   }}

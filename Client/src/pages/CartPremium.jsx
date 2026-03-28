@@ -1,10 +1,57 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import useCart from "../hooks/useCart";
 import { toast } from "react-hot-toast";
 
 export default function CartPremium() {
   const navigate = useNavigate();
   const { cart, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
+  const [deliverySettings, setDeliverySettings] = useState(null);
+
+  // Fetch delivery settings
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
+        );
+        const data = await response.json();
+        console.log('🚚 CartPremium - Fetched delivery settings:', data);
+        if (data.success) {
+          setDeliverySettings(data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching delivery settings:", err);
+        setDeliverySettings({
+          freeDeliveryThreshold: 50,
+          standardDeliveryCharge: 100 / 110,
+          freeDeliveryEnabled: true,
+        });
+      }
+    };
+    fetchDeliverySettings();
+  }, []);
+
+  // Calculate delivery charge
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
+  const deliveryCharge = deliverySettings?.standardDeliveryCharge || 100 / 110;
+  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
+  
+  // Convert USD values to BDT for display
+  const freeDeliveryThresholdBDT = Math.round(freeDeliveryThreshold * 110);
+  const deliveryChargeBDT = Math.round(deliveryCharge * 110);
+  
+  const calculatedDeliveryCharge =
+    freeDeliveryEnabled && cartTotal >= freeDeliveryThresholdBDT ? 0 : deliveryChargeBDT;
+  
+  const finalTotal = cartTotal + calculatedDeliveryCharge;
 
   const handleQuantityChange = (item, newQuantity) => {
     if (newQuantity < 1) return;
@@ -186,14 +233,21 @@ export default function CartPremium() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium text-black">Calculated at checkout</span>
+                  <span className={`font-medium ${calculatedDeliveryCharge === 0 ? 'text-green-600' : 'text-black'}`}>
+                    {calculatedDeliveryCharge === 0 ? 'Free' : `৳${calculatedDeliveryCharge.toLocaleString()}`}
+                  </span>
                 </div>
+                {freeDeliveryEnabled && cartTotal < freeDeliveryThresholdBDT && (
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    Add ৳{(freeDeliveryThresholdBDT - cartTotal).toLocaleString()} more for free shipping
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between text-lg mb-8">
                 <span className="font-medium text-black">Total</span>
                 <span className="font-display text-2xl font-semibold text-black">
-                  ৳{cartTotal.toLocaleString()}
+                  ৳{finalTotal.toLocaleString()}
                 </span>
               </div>
 
@@ -223,7 +277,12 @@ export default function CartPremium() {
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
-                  <span>Free Shipping Over ৳2000</span>
+                  <span>
+                    {freeDeliveryEnabled 
+                      ? `Free Shipping Over ৳${freeDeliveryThresholdBDT.toLocaleString()}`
+                      : 'Standard Shipping Available'
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
