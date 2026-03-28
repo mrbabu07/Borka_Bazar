@@ -1,18 +1,16 @@
 import { Link } from "react-router-dom";
 import useWishlist from "../hooks/useWishlist";
 import useCart from "../hooks/useCart";
-import Loading from "../components/Loading";
 import WishlistButton from "../components/WishlistButton";
 import WishlistShare from "../components/WishlistShare";
-import { useCurrency } from "../hooks/useCurrency";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { auth } from "../firebase/firebase.config";
+import { toast } from "react-hot-toast";
 
 export default function Wishlist() {
   const { wishlist, loading } = useWishlist();
   const { addToCart } = useCart();
-  const { formatPrice } = useCurrency();
   const [isPublic, setIsPublic] = useState(false);
   const [shareId, setShareId] = useState("");
 
@@ -20,7 +18,7 @@ export default function Wishlist() {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        alert("Please login");
+        toast.error("Please login");
         return;
       }
 
@@ -76,62 +74,61 @@ export default function Wishlist() {
   const handleAddToCart = (product) => {
     const imageToUse = product.image || (product.images && product.images[0]);
     addToCart(product, 1, imageToUse);
+    toast.success("Added to cart");
   };
 
   if (loading) {
-    return <Loading text="Loading your wishlist..." />;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Back to Home"
-          >
-            <svg
-              className="w-6 h-6 text-gray-600 dark:text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
+    <div className="min-h-screen bg-white">
+      {/* Page Header - Premium Style */}
+      <div className="bg-gray-50 border-b border-gray-100 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Breadcrumb */}
+          <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
+            <Link to="/" className="hover:text-black transition">
+              Home
+            </Link>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              My Wishlist
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {wishlist.length} {wishlist.length === 1 ? "item" : "items"} saved
-              for later
-            </p>
+            <span className="text-black">Wishlist</span>
+          </nav>
+
+          {/* Title & Share */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display text-3xl md:text-4xl text-black mb-2">
+                My Wishlist
+              </h1>
+              <p className="text-gray-500">
+                {wishlist.length} {wishlist.length === 1 ? "item" : "items"} saved for later
+              </p>
+            </div>
+
+            {/* Share Button */}
+            {wishlist.length > 0 && (
+              <WishlistShare
+                wishlistId={shareId}
+                isPublic={isPublic}
+                onTogglePublic={handleTogglePublic}
+              />
+            )}
           </div>
         </div>
-
-        {/* Share Button */}
-        {wishlist.length > 0 && (
-          <WishlistShare
-            wishlistId={shareId}
-            isPublic={isPublic}
-            onTogglePublic={handleTogglePublic}
-          />
-        )}
       </div>
 
-      {wishlist.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {wishlist.length === 0 ? (
+          <div className="text-center py-20">
             <svg
-              className="w-12 h-12 text-gray-400"
+              className="w-24 h-24 mx-auto mb-6 text-gray-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -139,118 +136,112 @@ export default function Wishlist() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={1}
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Your wishlist is empty
-          </h2>
-          <p className="text-gray-600 mb-8">
-            Save items you love to your wishlist and shop them later
-          </p>
-          <Link to="/" className="btn-primary">
-            Start Shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wishlist.map((product) => (
-            <div key={product._id} className="card overflow-hidden group">
-              {/* Product Image */}
-              <div className="relative aspect-square bg-gray-100">
-                <Link to={`/product/${product._id}`}>
-                  <img
-                    src={product.image || (product.images && product.images[0])}
-                    alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </Link>
-
-                {/* Wishlist Button */}
-                <div className="absolute top-3 right-3">
-                  <WishlistButton product={product} size="md" />
-                </div>
-
-                {/* Stock Badge */}
-                {product.stock <= 5 && product.stock > 0 && (
-                  <span className="absolute top-3 left-3 bg-amber-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                    Only {product.stock} left
-                  </span>
-                )}
-                {product.stock === 0 && (
-                  <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                    Out of Stock
-                  </span>
-                )}
-              </div>
-
-              {/* Product Info */}
-              <div className="p-4">
-                <Link to={`/product/${product._id}`}>
-                  <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 hover:text-primary-500 transition-colors">
-                    {product.title}
-                  </h3>
-                </Link>
-
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xl font-bold text-primary-500">
-                    {formatPrice(product.price)}
-                  </span>
-                  {product.stock > 0 && (
-                    <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">
-                      In Stock
-                    </span>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAddToCart(product)}
-                    disabled={product.stock === 0}
-                    className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                  </button>
-                  <Link
-                    to={`/product/${product._id}`}
-                    className="px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
-                  >
-                    View
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Continue Shopping */}
-      {wishlist.length > 0 && (
-        <div className="mt-12 text-center">
-          <Link
-            to="/"
-            className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <h2 className="font-display text-2xl text-black mb-4">
+              Your wishlist is empty
+            </h2>
+            <p className="text-gray-500 mb-8">
+              Save items you love to your wishlist and shop them later
+            </p>
+            <Link
+              to="/products"
+              className="inline-block px-12 py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Continue Shopping
-          </Link>
-        </div>
-      )}
+              Start Shopping
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+              {wishlist.map((product) => (
+                <div key={product._id} className="group relative bg-white">
+                  {/* Product Image */}
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
+                    <Link to={`/product/${product._id}`}>
+                      <img
+                        src={product.image || (product.images && product.images[0])}
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    </Link>
+
+                    {/* Wishlist Button */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <WishlistButton product={product} size="md" />
+                    </div>
+
+                    {/* Stock Badge */}
+                    {product.stock <= 5 && product.stock > 0 && (
+                      <span className="absolute top-4 left-4 bg-gold-500 text-white text-xs font-medium px-3 py-1 tracking-wide">
+                        Only {product.stock} left
+                      </span>
+                    )}
+                    {product.stock === 0 && (
+                      <span className="absolute top-4 left-4 bg-black text-white text-xs font-medium px-3 py-1 tracking-wide">
+                        Out of Stock
+                      </span>
+                    )}
+
+                    {/* Hover Overlay with Actions */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors">
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          disabled={product.stock === 0}
+                          className="px-8 py-3 bg-white text-black text-sm tracking-widest uppercase font-medium hover:bg-gold-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="p-6 text-center">
+                    <Link to={`/product/${product._id}`}>
+                      <h3 className="font-display text-base md:text-lg text-black group-hover:text-gold-600 transition-colors leading-tight min-h-[3rem] line-clamp-2 mb-2">
+                        {product.title}
+                      </h3>
+                    </Link>
+
+                    {/* Fabric/Style Info */}
+                    {(product.fabric || product.style) && (
+                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
+                        {product.fabric || product.style}
+                      </p>
+                    )}
+
+                    {/* Price */}
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-lg md:text-xl font-semibold text-black">
+                        ৳{product.price?.toLocaleString()}
+                      </span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="text-sm text-gray-400 line-through">
+                          ৳{product.originalPrice?.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Continue Shopping */}
+            <div className="mt-12 text-center">
+              <Link
+                to="/products"
+                className="inline-block px-12 py-4 border-2 border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors"
+              >
+                Continue Shopping
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
