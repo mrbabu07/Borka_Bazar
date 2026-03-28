@@ -91,6 +91,11 @@ const FlashSales = () => {
   };
 
   const FlashSaleCard = ({ sale, isUpcoming = false }) => {
+    // Check if product exists
+    if (!sale.product) {
+      return null;
+    }
+
     const timer = timers[sale._id] || {
       days: 0,
       hours: 0,
@@ -296,9 +301,11 @@ const FlashSales = () => {
               <div className="flex-1 h-px bg-gradient-to-r from-error-500/50 to-transparent"></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeFlashSales.map((sale) => (
-                <FlashSaleCard key={sale._id} sale={sale} />
-              ))}
+              {activeFlashSales
+                .filter((sale) => sale.product)
+                .map((sale) => (
+                  <FlashSaleCard key={sale._id} sale={sale} />
+                ))}
             </div>
           </div>
         )}

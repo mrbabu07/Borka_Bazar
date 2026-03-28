@@ -1,18 +1,24 @@
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
+import PremiumLayout from "../layouts/PremiumLayout";
 import Home from "../pages/Home";
+import HomePremium from "../pages/HomePremium";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import CategoryPage from "../pages/CategoryPage";
 import Products from "../pages/Products";
+import ProductsPremium from "../pages/ProductsPremium";
 import ProductDetail from "../pages/ProductDetail";
+import ProductDetailPremium from "../pages/ProductDetailPremium";
 import Cart from "../pages/Cart";
+import CartPremium from "../pages/CartPremium";
 import Wishlist from "../pages/Wishlist";
 import SharedWishlist from "../pages/SharedWishlist";
 import Compare from "../pages/Compare";
 import Checkout from "../pages/Checkout";
+import CheckoutPremium from "../pages/CheckoutPremium";
 import Orders from "../pages/Orders";
 import Profile from "../pages/Profile";
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -45,16 +51,16 @@ import SearchResults from "../pages/SearchResults";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout />,
+    element: <PremiumLayout />,
     children: [
-      { path: "/", element: <Home /> },
+      { path: "/", element: <HomePremium /> },
       { path: "/about", element: <About /> },
       { path: "/contact", element: <Contact /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
       { path: "/category/:category", element: <CategoryPage /> },
       { path: "/categories", element: <CategoryPage /> },
-      { path: "/products", element: <Products /> },
+      { path: "/products", element: <ProductsPremium /> },
       { path: "/search", element: <SearchResults /> },
       { path: "/flash-sales", element: <FlashSales /> },
 
@@ -63,8 +69,8 @@ const router = createBrowserRouter([
       { path: "/womens", element: <CategoryPage /> },
       { path: "/electronics", element: <CategoryPage /> },
       { path: "/baby", element: <CategoryPage /> },
-      { path: "/product/:id", element: <ProductDetail /> },
-      { path: "/cart", element: <Cart /> },
+      { path: "/product/:id", element: <ProductDetailPremium /> },
+      { path: "/cart", element: <CartPremium /> },
       { path: "/compare", element: <Compare /> },
       {
         path: "/wishlist",
@@ -79,7 +85,7 @@ const router = createBrowserRouter([
         path: "/checkout",
         element: (
           <PrivateRoute>
-            <Checkout />
+            <CheckoutPremium />
           </PrivateRoute>
         ),
       },

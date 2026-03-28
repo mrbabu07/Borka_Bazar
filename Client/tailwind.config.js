@@ -5,41 +5,54 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Premium Burka Store Color Palette
         primary: {
-          50: "#f0fdf4",
-          100: "#dcfce7",
-          200: "#bbf7d0",
-          300: "#86efac",
-          400: "#4ade80",
-          500: "#10B981", // Main primary color
-          600: "#059669",
-          700: "#047857",
-          800: "#065f46",
-          900: "#064e3b",
+          50: "#fafafa",
+          100: "#f5f5f5",
+          200: "#e5e5e5",
+          300: "#d4d4d4",
+          400: "#a3a3a3",
+          500: "#000000", // Black - Main primary
+          600: "#171717",
+          700: "#262626",
+          800: "#404040",
+          900: "#525252",
+        },
+        gold: {
+          50: "#fdfbf7",
+          100: "#f9f5eb",
+          200: "#f3ebd7",
+          300: "#ead9b8",
+          400: "#dfc490",
+          500: "#C9A961", // Soft Gold - Main accent
+          600: "#b8954a",
+          700: "#9a7a3a",
+          800: "#7d6230",
+          900: "#665128",
         },
         secondary: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3B82F6", // Main secondary color
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+          50: "#fafafa",
+          100: "#f5f5f5",
+          200: "#e5e5e5",
+          300: "#d4d4d4",
+          400: "#a3a3a3",
+          500: "#737373", // Gray
+          600: "#525252",
+          700: "#404040",
+          800: "#262626",
+          900: "#171717",
         },
         accent: {
-          50: "#fffbeb",
-          100: "#fef3c7",
-          200: "#fde68a",
-          300: "#fcd34d",
-          400: "#fbbf24",
-          500: "#F59E0B", // Main accent color
-          600: "#d97706",
-          700: "#b45309",
-          800: "#92400e",
-          900: "#78350f",
+          50: "#fdfbf7",
+          100: "#f9f5eb",
+          200: "#f3ebd7",
+          300: "#ead9b8",
+          400: "#dfc490",
+          500: "#C9A961", // Soft Gold
+          600: "#b8954a",
+          700: "#9a7a3a",
+          800: "#7d6230",
+          900: "#665128",
         },
         success: {
           50: "#f0fdf4",
@@ -67,8 +80,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Poppins", "system-ui", "sans-serif"],
+        sans: ['"Playfair Display"', '"Cormorant Garamond"', 'Georgia', 'serif'], // Elegant serif for headings
+        body: ['"Inter"', '"Lato"', 'system-ui', 'sans-serif'], // Clean sans-serif for body
+        display: ['"Playfair Display"', 'Georgia', 'serif'], // Display font
         bengali: ["Noto Sans Bengali", "system-ui", "sans-serif"],
       },
       spacing: {
