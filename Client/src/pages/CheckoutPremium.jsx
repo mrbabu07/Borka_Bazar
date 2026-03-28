@@ -43,11 +43,11 @@ export default function CheckoutPremium() {
 
       const orderData = {
         items: cart.map((item) => ({
-          product: item.product._id,
+          product: item._id,
           quantity: item.quantity,
-          size: item.size,
-          color: item.color,
-          price: item.product.price,
+          size: item.selectedSize,
+          color: item.selectedColor,
+          price: item.price,
         })),
         shippingAddress: {
           fullName: formData.fullName,
@@ -263,25 +263,25 @@ export default function CheckoutPremium() {
               {/* Cart Items */}
               <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex gap-4">
+                  <div key={`${item._id}_${item.selectedSize || 'no-size'}_${item.selectedColor?.name || 'no-color'}`} className="flex gap-4">
                     <div className="w-16 h-20 flex-shrink-0 bg-white overflow-hidden">
                       <img
-                        src={item.product.image}
-                        alt={item.product.title}
+                        src={item.selectedImage || item.image}
+                        alt={item.title}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-black font-medium truncate">
-                        {item.product.title}
+                        {item.title}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {item.size && `Size: ${item.size}`}
-                        {item.size && item.color && " • "}
-                        {item.color && `${item.color}`}
+                        {item.selectedSize && `Size: ${item.selectedSize}`}
+                        {item.selectedSize && item.selectedColor && " • "}
+                        {item.selectedColor && `${typeof item.selectedColor === 'string' ? item.selectedColor : item.selectedColor?.name}`}
                       </p>
                       <p className="text-sm text-black mt-1">
-                        ৳{item.product.price.toLocaleString()} × {item.quantity}
+                        ৳{item.price.toLocaleString()} × {item.quantity}
                       </p>
                     </div>
                   </div>
