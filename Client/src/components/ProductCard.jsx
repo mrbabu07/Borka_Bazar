@@ -204,140 +204,57 @@ export default function ProductCard({ product }) {
           </div>
 
           {/* Product Info */}
-          <div className="p-5">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-tight">
+          <div className="p-4">
+            {/* Title */}
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-tight min-h-[2.5rem]">
               {product.title}
             </h3>
 
-            {/* Brand */}
-            {product.brand && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                {product.brand}
-              </p>
+            {/* Burka Quick Info - Simplified */}
+            {(product.fabric || product.style) && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                {product.fabric && (
+                  <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {product.fabric}
+                  </span>
+                )}
+                {product.style && (
+                  <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {product.style}
+                  </span>
+                )}
+              </div>
             )}
 
-            {/* Rating with colored stars */}
+            {/* Rating */}
             <div className="mb-3">
               <ProductRatingDisplay
                 productId={product._id}
                 size="sm"
                 showCount={true}
-                className="mb-1"
               />
-
-              {/* View Count */}
-              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-                <span>{formatViewCount(product.views)}</span>
-              </div>
             </div>
 
-            {/* Price and Stock Status */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Price */}
+            <div className="mb-3">
               <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  {formatPrice(product.price)}
+                <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                  ৳{product.price.toLocaleString()}
                 </span>
-                {product.originalPrice &&
-                  product.originalPrice > product.price && (
-                    <span className="text-sm text-gray-500 line-through">
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                  )}
-              </div>
-              <div
-                className={`px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.color}`}
-              >
-                {stockStatus.text}
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="text-sm text-gray-500 line-through">
+                    ৳{product.originalPrice.toLocaleString()}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Size and Color Indicators */}
-            {(product.sizes?.length > 0 || product.colors?.length > 0) && (
-              <div className="flex items-center gap-4 mb-3 text-xs">
-                {product.sizes?.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Sizes:
-                    </span>
-                    <span className="text-gray-700 dark:text-gray-300 font-medium">
-                      {product.sizes.length} options
-                    </span>
-                  </div>
-                )}
-                {product.colors?.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Colors:
-                    </span>
-                    <div className="flex gap-1">
-                      {product.colors.slice(0, 4).map((color, index) => (
-                        <div
-                          key={index}
-                          className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600"
-                          style={{ backgroundColor: color.value }}
-                          title={color.name}
-                        />
-                      ))}
-                      {product.colors.length > 4 && (
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">
-                          +{product.colors.length - 4}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Category */}
-            {product.category && (
-              <div className="mb-3">
-                <span className="inline-block bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded-full">
-                  {product.category}
-                </span>
-              </div>
-            )}
-
-            {/* Free Shipping Badge */}
-            {product.freeShipping !== false && (
-              <div className="mb-3">
-                <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Free Shipping
-                </span>
-              </div>
-            )}
+            {/* Stock Status */}
+            <div className="mb-3">
+              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${stockStatus.bgColor} ${stockStatus.color}`}>
+                {stockStatus.text}
+              </span>
+            </div>
 
             {/* Action Buttons - Always visible on mobile */}
             <div className="flex gap-2 md:hidden">

@@ -19,6 +19,10 @@ class Product {
       colors,
       inStock,
       search,
+      fabric,
+      style,
+      occasion,
+      sleeveType,
       sortBy = "createdAt",
       sortOrder = -1,
       limit = 20,
@@ -27,6 +31,9 @@ class Product {
 
     // Build MongoDB query
     const query = {};
+
+    // Only show active products by default
+    query.isActive = { $ne: false };
 
     // Category filter
     if (category) {
@@ -40,26 +47,48 @@ class Product {
       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
     }
 
-    // Stock filter
+    // Stock filter - check availableSizes array
     if (inStock) {
-      query.stock = { $gt: 0 };
+      query["availableSizes.stock"] = { $gt: 0 };
     }
 
-    // Size filter
+    // Size filter - check availableSizes array
     if (sizes && sizes.length > 0) {
-      query.sizes = { $in: sizes };
+      query["availableSizes.size"] = { $in: sizes };
     }
 
-    // Color filter
+    // Color filter (Burka-specific)
     if (colors && colors.length > 0) {
-      query["colors.name"] = { $in: colors };
+      query.color = { $in: colors };
+    }
+
+    // Fabric filter (Burka-specific)
+    if (fabric) {
+      query.fabric = { $regex: fabric, $options: "i" };
+    }
+
+    // Style filter (Burka-specific)
+    if (style) {
+      query.style = style;
+    }
+
+    // Occasion filter (Burka-specific)
+    if (occasion) {
+      query.occasion = occasion;
+    }
+
+    // Sleeve Type filter (Burka-specific)
+    if (sleeveType) {
+      query.sleeveType = { $regex: sleeveType, $options: "i" };
     }
 
     // Search filter
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { fabric: { $regex: search, $options: "i" } },
+        { style: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -120,12 +149,19 @@ class Product {
   async getFilterOptions() {
     const pipeline = [
       {
+        $match: { isActive: { $ne: false } },
+      },
+      {
         $group: {
           _id: null,
           minPrice: { $min: "$price" },
           maxPrice: { $max: "$price" },
-          allSizes: { $addToSet: "$sizes" },
-          allColors: { $addToSet: "$colors" },
+          allSizes: { $addToSet: "$availableSizes" },
+          allColors: { $addToSet: "$color" },
+          allFabrics: { $addToSet: "$fabric" },
+          allStyles: { $addToSet: "$style" },
+          allOccasions: { $addToSet: "$occasion" },
+          allSleeveTypes: { $addToSet: "$sleeveType" },
           categories: { $addToSet: "$categoryId" },
         },
       },
@@ -138,17 +174,32 @@ class Product {
         priceRange: { min: 0, max: 0 },
         sizes: [],
         colors: [],
+        fabrics: [],
+        styles: [],
+        occasions: [],
+        sleeveTypes: [],
         categories: [],
       };
     }
 
     const data = result[0];
 
-    // Flatten and deduplicate sizes and colors
-    const sizes = [...new Set(data.allSizes.flat())].filter(Boolean);
-    const colors = [
-      ...new Set(data.allColors.flat().map((c) => c?.name)),
+    // Extract unique sizes from availableSizes array
+    const sizes = [
+      ...new Set(
+        data.allSizes
+          .flat()
+          .filter(Boolean)
+          .map((s) => s.size)
+      ),
     ].filter(Boolean);
+
+    // Deduplicate colors, fabrics, styles, occasions, sleeveTypes
+    const colors = [...new Set(data.allColors)].filter(Boolean);
+    const fabrics = [...new Set(data.allFabrics)].filter(Boolean);
+    const styles = [...new Set(data.allStyles)].filter(Boolean);
+    const occasions = [...new Set(data.allOccasions)].filter(Boolean);
+    const sleeveTypes = [...new Set(data.allSleeveTypes)].filter(Boolean);
 
     return {
       priceRange: {
@@ -157,22 +208,43 @@ class Product {
       },
       sizes,
       colors,
+      fabrics,
+      styles,
+      occasions,
+      sleeveTypes,
       categories: data.categories.filter(Boolean),
     };
   }
 
   async getLowStockProducts(threshold = 10) {
+    // Find products where any size has low stock
     return await this.collection
       .find({
-        stock: { $lte: threshold, $gt: 0 },
+        isActive: { $ne: false },
+        availableSizes: {
+          $elemMatch: {
+            stock: { $lte: threshold, $gt: 0 },
+          },
+        },
       })
       .toArray();
   }
 
   async getOutOfStockProducts() {
+    // Find products where all sizes are out of stock
     return await this.collection
       .find({
-        stock: { $lte: 0 },
+        isActive: { $ne: false },
+        $or: [
+          { availableSizes: { $size: 0 } },
+          {
+            availableSizes: {
+              $not: {
+                $elemMatch: { stock: { $gt: 0 } },
+              },
+            },
+          },
+        ],
       })
       .toArray();
   }

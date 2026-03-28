@@ -25,6 +25,7 @@ export default function ProductForm() {
   const [formData, setFormData] = useState({
     title: "",
     price: "",
+    originalPrice: "",
     image: "",
     images: [],
     categoryId: "",
@@ -34,9 +35,16 @@ export default function ProductForm() {
     colors: [],
     sizeChart: "",
     variants: [],
+    // Burka-specific fields
+    fabric: "",
+    style: "",
+    occasion: "",
+    sleeveType: "",
+    color: "",
+    availableSizes: [], // [{size: "M", stock: 20}]
   });
 
-  const availableSizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+  const availableSizes = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
 
   const availableColors = [
     { name: "Black", value: "#000000" },
@@ -78,6 +86,13 @@ export default function ProductForm() {
         colors: product.colors || [],
         sizeChart: product.sizeChart || "",
         variants: product.variants || [],
+        // Burka fields
+        fabric: product.fabric || "",
+        style: product.style || "",
+        occasion: product.occasion || "",
+        sleeveType: product.sleeveType || "",
+        color: product.color || "",
+        availableSizes: product.availableSizes || [],
       });
     } catch (error) {
       console.error("Failed to fetch product:", error);
@@ -436,7 +451,7 @@ export default function ProductForm() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price ($) *
+                  Price (৳) *
                 </label>
                 <input
                   type="number"
@@ -444,11 +459,28 @@ export default function ProductForm() {
                   value={formData.price}
                   onChange={handleChange}
                   required
-                  step="0.01"
+                  step="1"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="2500"
                   className="input-field"
                 />
+                <p className="text-xs text-gray-500 mt-1">Enter price in BDT (৳)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Original Price (৳)
+                </label>
+                <input
+                  type="number"
+                  name="originalPrice"
+                  value={formData.originalPrice}
+                  onChange={handleChange}
+                  step="1"
+                  min="0"
+                  placeholder="3500"
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional - for showing discount</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -464,6 +496,7 @@ export default function ProductForm() {
                   placeholder="0"
                   className="input-field"
                 />
+                <p className="text-xs text-gray-500 mt-1">Total stock (or use size-based stock below)</p>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -588,6 +621,156 @@ export default function ProductForm() {
               variants={formData.variants}
               onChange={handleVariantsChange}
             />
+          </div>
+
+          {/* Burka-Specific Fields (Optional) */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-2">Burka Details (Optional)</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Fill these fields if this is a Burka product
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fabric
+                </label>
+                <input
+                  type="text"
+                  name="fabric"
+                  value={formData.fabric}
+                  onChange={handleChange}
+                  placeholder="e.g., Nida, Georgette, Crepe"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Style
+                </label>
+                <select
+                  name="style"
+                  value={formData.style}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="">Select style</option>
+                  <option value="Overhead">Overhead</option>
+                  <option value="Front Open">Front Open</option>
+                  <option value="Pullover">Pullover</option>
+                  <option value="Two Piece">Two Piece</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Occasion
+                </label>
+                <select
+                  name="occasion"
+                  value={formData.occasion}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="">Select occasion</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Formal">Formal</option>
+                  <option value="Party">Party</option>
+                  <option value="Daily Wear">Daily Wear</option>
+                  <option value="Prayer">Prayer</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sleeve Type
+                </label>
+                <input
+                  type="text"
+                  name="sleeveType"
+                  value={formData.sleeveType}
+                  onChange={handleChange}
+                  placeholder="e.g., Full Sleeve, Half Sleeve"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Color
+                </label>
+                <input
+                  type="text"
+                  name="color"
+                  value={formData.color}
+                  onChange={handleChange}
+                  placeholder="e.g., Black, Navy Blue"
+                  className="input-field"
+                />
+              </div>
+            </div>
+
+            {/* Available Sizes with Stock */}
+            <div className="mt-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                Size-Based Stock (For Burka Products)
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Add sizes with individual stock quantities. Leave empty to use general stock field above.
+              </p>
+              <div className="space-y-3">
+                {formData.availableSizes.map((sizeItem, index) => (
+                  <div key={index} className="flex gap-3 items-center">
+                    <input
+                      type="text"
+                      value={sizeItem.size}
+                      onChange={(e) => {
+                        const newSizes = [...formData.availableSizes];
+                        newSizes[index].size = e.target.value;
+                        setFormData({ ...formData, availableSizes: newSizes });
+                      }}
+                      placeholder="Size (e.g., M, L, XL)"
+                      className="input-field flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={sizeItem.stock}
+                      onChange={(e) => {
+                        const newSizes = [...formData.availableSizes];
+                        newSizes[index].stock = parseInt(e.target.value) || 0;
+                        setFormData({ ...formData, availableSizes: newSizes });
+                      }}
+                      placeholder="Stock"
+                      min="0"
+                      className="input-field w-32"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSizes = formData.availableSizes.filter((_, i) => i !== index);
+                        setFormData({ ...formData, availableSizes: newSizes });
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      availableSizes: [...formData.availableSizes, { size: "", stock: 0 }],
+                    });
+                  }}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Size
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Size Chart (Optional) */}

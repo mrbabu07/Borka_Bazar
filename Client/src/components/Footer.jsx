@@ -1,16 +1,10 @@
 import { Link } from "react-router-dom";
-import NewsletterSignup from "./NewsletterSignup";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-gray-900 dark:bg-black text-white border-t border-gray-800 dark:border-gray-900">
-      {/* Newsletter Signup */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-b border-gray-800">
-        <NewsletterSignup />
-      </div>
-
       {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -20,7 +14,7 @@ export default function Footer() {
               <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">H</span>
               </div>
-              <span className="text-2xl font-bold text-white">HnilaBazar</span>
+              <span className="text-2xl font-bold text-white">Borka Bazar</span>
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
               Your trusted online shopping destination. Quality products, great
@@ -188,7 +182,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 gap-6">
             <p className="text-gray-400 text-sm">
-              © {currentYear} HnilaBazar. All rights reserved.
+              © {currentYear} Borka Bazar. All rights reserved.
             </p>
 
             {/* Payment Methods */}

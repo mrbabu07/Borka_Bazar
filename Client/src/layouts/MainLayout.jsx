@@ -5,7 +5,6 @@ import ScrollToTop from "../components/ScrollToTop";
 import RecentlyViewedIndicator from "../components/RecentlyViewedIndicator";
 import ComparisonFloatingButton from "../components/ComparisonFloatingButton";
 import SpinWheelFAB from "../components/SpinWheelFAB";
-import ServiceWorkerManager from "../components/ServiceWorkerManager";
 
 export default function MainLayout() {
   return (
@@ -19,7 +18,6 @@ export default function MainLayout() {
       <RecentlyViewedIndicator />
       <ComparisonFloatingButton />
       <SpinWheelFAB />
-      <ServiceWorkerManager />
     </div>
   );
 }

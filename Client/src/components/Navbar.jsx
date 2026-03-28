@@ -124,7 +124,7 @@ export default function Navbar() {
                 <span className="text-white font-bold text-xl">H</span>
               </div>
               <span className="text-2xl font-bold text-gray-900 dark:text-white hidden sm:block">
-                HnilaBazar
+                Borka Bazar
               </span>
             </Link>
 
@@ -575,7 +575,7 @@ export default function Navbar() {
                   />
                 </svg>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  +880 1XXX-XXXXXX
+                  +880 1521-721946
                 </span>
               </div>
             </div>

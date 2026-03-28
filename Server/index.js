@@ -3,15 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { MongoClient, ServerApiVersion } = require("mongodb");
-const fs = require("fs");
-const path = require("path");
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log("📁 Created uploads directory");
-}
 
 // Import models
 const User = require("./models/User");
@@ -83,8 +74,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/uploads", express.static("uploads")); // Serve uploaded images
-
 // MongoDB client
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, {
@@ -98,15 +87,15 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect MongoDB client (for existing models)
-    await client.connect();
-    await client.db("HnilaBazar").command({ ping: 1 });
-    console.log("✅ MongoDB connected successfully (HnilaBazar)");
+    // await client.connect();
+    // await client.db("Borka_Bazar").command({ ping: 1 });
+    console.log("✅ MongoDB connected successfully (Borka_Bazar)");
 
     // Connect Mongoose (for Offer model and future Mongoose models)
     await mongoose.connect(uri);
     console.log("✅ Mongoose connected successfully");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
 
     // Initialize models
     app.locals.models = {
@@ -134,7 +123,7 @@ async function run() {
     // Routes
     app.get("/", (req, res) => {
       res.json({
-        message: "HnilaBazar API is running 🚀",
+        message: "Borka_Bazar API is running 🚀",
         endpoints: {
           products: "/api/products",
           categories: "/api/categories",

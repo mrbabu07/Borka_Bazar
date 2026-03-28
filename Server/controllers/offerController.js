@@ -1,6 +1,4 @@
 const Offer = require("../models/Offer");
-const fs = require("fs");
-const path = require("path");
 
 // Get all offers (Admin)
 exports.getAllOffers = async (req, res) => {
@@ -44,12 +42,11 @@ exports.getOfferById = async (req, res) => {
   }
 };
 
-// Create offer (Admin)
+// Create offer (Admin) - image URL from imgBB
 exports.createOffer = async (req, res) => {
   try {
     const offerData = {
       ...req.body,
-      image: req.file ? `/uploads/${req.file.filename}` : null,
     };
 
     // Parse targetProducts if it's a string
@@ -68,15 +65,11 @@ exports.createOffer = async (req, res) => {
     const offer = await Offer.create(offerData);
     res.status(201).json({ success: true, data: offer });
   } catch (error) {
-    // Delete uploaded file if offer creation fails
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(400).json({ success: false, error: error.message });
   }
 };
 
-// Update offer (Admin)
+// Update offer (Admin) - image URL from imgBB
 exports.updateOffer = async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id);
@@ -85,18 +78,6 @@ exports.updateOffer = async (req, res) => {
     }
 
     const updateData = { ...req.body };
-
-    // Handle new image upload
-    if (req.file) {
-      // Delete old image
-      if (offer.image) {
-        const oldImagePath = path.join(__dirname, "..", offer.image);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
-      updateData.image = `/uploads/${req.file.filename}`;
-    }
 
     // Parse targetProducts if it's a string
     if (typeof updateData.targetProducts === "string") {
@@ -121,9 +102,6 @@ exports.updateOffer = async (req, res) => {
 
     res.json({ success: true, data: updatedOffer });
   } catch (error) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(400).json({ success: false, error: error.message });
   }
 };
@@ -134,14 +112,6 @@ exports.deleteOffer = async (req, res) => {
     const offer = await Offer.findById(req.params.id);
     if (!offer) {
       return res.status(404).json({ success: false, error: "Offer not found" });
-    }
-
-    // Delete image file
-    if (offer.image) {
-      const imagePath = path.join(__dirname, "..", offer.image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
     }
 
     await Offer.findByIdAndDelete(req.params.id);

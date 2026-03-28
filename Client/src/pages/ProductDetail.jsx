@@ -328,12 +328,12 @@ export default function ProductDetail() {
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-bold text-primary-600 dark:text-primary-400">
-                  {formatPrice(selectedVariant?.price || product.price)}
+                  ৳{(selectedVariant?.price || product.price).toLocaleString()}
                 </span>
                 {product.originalPrice &&
                   product.originalPrice > product.price && (
                     <span className="text-xl text-gray-500 line-through">
-                      {formatPrice(product.originalPrice)}
+                      ৳{product.originalPrice.toLocaleString()}
                     </span>
                   )}
               </div>
@@ -382,6 +382,85 @@ export default function ProductDetail() {
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 {product.description}
               </p>
+            </div>
+          )}
+
+          {/* Burka Details */}
+          {(product.fabric || product.style || product.occasion || product.sleeveType || product.color) && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Product Details
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {product.fabric && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Fabric</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white">{product.fabric}</p>
+                  </div>
+                )}
+                {product.style && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Style</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white">{product.style}</p>
+                  </div>
+                )}
+                {product.occasion && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Occasion</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white">{product.occasion}</p>
+                  </div>
+                )}
+                {product.sleeveType && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Sleeve Type</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white">{product.sleeveType}</p>
+                  </div>
+                )}
+                {product.color && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Color</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white">{product.color}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Available Sizes with Stock (Burka) */}
+          {product.availableSizes && product.availableSizes.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                Select Size
+              </h3>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {product.availableSizes.map((sizeItem) => (
+                  <button
+                    key={sizeItem.size}
+                    onClick={() => setSelectedSize(sizeItem.size)}
+                    disabled={sizeItem.stock === 0}
+                    className={`px-4 py-3 rounded-xl border-2 font-medium transition-all hover:shadow-sm relative ${
+                      selectedSize === sizeItem.size
+                        ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
+                        : sizeItem.stock === 0
+                          ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                          : "border-gray-300 text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="font-semibold">{sizeItem.size}</div>
+                      <div className="text-xs mt-1">
+                        {sizeItem.stock === 0 ? (
+                          <span className="text-red-500">Out of Stock</span>
+                        ) : sizeItem.stock <= 3 ? (
+                          <span className="text-orange-500">Only {sizeItem.stock} left</span>
+                        ) : (
+                          <span className="text-green-600">{sizeItem.stock} available</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

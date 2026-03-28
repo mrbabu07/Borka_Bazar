@@ -28,7 +28,7 @@ export default function About() {
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                About HnilaBazar
+                About Borka Bazar
               </h1>
               <p className="text-gray-600">
                 Learn more about our story and mission
@@ -60,8 +60,8 @@ export default function About() {
             Your Trusted E-commerce Partner
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            HnilaBazar is Bangladesh's premier online marketplace, connecting
-            customers with quality products and exceptional service.
+            Borka Bazar is Bangladesh's premier online marketplace for authentic Burkas,
+            connecting customers with quality products and exceptional service.
           </p>
         </div>
 
@@ -70,9 +70,9 @@ export default function About() {
           <div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Our Story</h3>
             <p className="text-gray-600 mb-4">
-              Founded with a vision to revolutionize online shopping in
-              Bangladesh, HnilaBazar started as a small initiative to bridge the
-              gap between quality products and customers across the country.
+              Founded with a vision to revolutionize online Burka shopping in
+              Bangladesh, Borka Bazar started as a specialized initiative to provide
+              authentic, high-quality Burkas to customers across the country.
             </p>
             <p className="text-gray-600 mb-4">
               Today, we've grown into a comprehensive e-commerce platform
@@ -81,14 +81,14 @@ export default function About() {
               quality and customer satisfaction.
             </p>
             <p className="text-gray-600">
-              Our name "HnilaBazar" reflects our deep connection to Bangladeshi
-              culture and our mission to create a marketplace that truly serves
-              our community.
+              Our name "Borka Bazar" reflects our specialization in providing
+              the finest collection of Burkas and our mission to serve the modest fashion
+              needs of our community.
             </p>
           </div>
           <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-2xl p-8">
             <h4 className="text-xl font-semibold text-gray-900 mb-6">
-              Why Choose HnilaBazar?
+              Why Choose Borka Bazar?
             </h4>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
@@ -253,7 +253,7 @@ export default function About() {
         {/* Stats */}
         <div className="bg-gradient-to-r from-primary-500 to-secondary-500 rounded-2xl p-8 text-white mb-16">
           <h3 className="text-2xl font-bold text-center mb-8">
-            HnilaBazar by Numbers
+            Borka Bazar by Numbers
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>

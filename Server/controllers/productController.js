@@ -8,6 +8,10 @@ const getAllProducts = async (req, res) => {
       minRating,
       sizes,
       colors,
+      fabric,
+      style,
+      occasion,
+      sleeveType,
       inStock,
       search,
       sortBy,
@@ -27,6 +31,10 @@ const getAllProducts = async (req, res) => {
       minRating,
       sizes: sizes ? sizes.split(",") : undefined,
       colors: colors ? colors.split(",") : undefined,
+      fabric,
+      style,
+      occasion,
+      sleeveType,
       inStock: inStock === "true",
       search,
       sortBy,
@@ -44,9 +52,9 @@ const getAllProducts = async (req, res) => {
 
     const products = await Product.findWithFilters(filters);
 
-    // Get total count for pagination (simplified - in production, use separate count query)
+    // Get total count for pagination
     const totalProducts = await Product.findAll(
-      category ? { categoryId: category } : {},
+      category ? { categoryId: category, isActive: { $ne: false } } : { isActive: { $ne: false } },
     );
     const totalCount = totalProducts.length;
     const totalPages = Math.ceil(totalCount / parseInt(limit));
@@ -171,25 +179,74 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const Product = req.app.locals.models.Product;
-    const { title, price, image, categoryId, stock, description } = req.body;
+    const {
+      name,
+      price,
+      description,
+      images,
+      categoryId,
+      fabric,
+      color,
+      style,
+      sleeveType,
+      occasion,
+      availableSizes,
+      attributes,
+      isFeatured,
+      isActive,
+    } = req.body;
 
-    if (!title || !price || !categoryId) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Missing required fields" });
+    // Validate required fields
+    if (!name || !price || !categoryId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: name, price, categoryId",
+      });
+    }
+
+    // Validate images array (imgBB URLs)
+    if (images && !Array.isArray(images)) {
+      return res.status(400).json({
+        success: false,
+        error: "Images must be an array of URLs",
+      });
+    }
+
+    // Validate availableSizes array
+    if (availableSizes && !Array.isArray(availableSizes)) {
+      return res.status(400).json({
+        success: false,
+        error: "availableSizes must be an array",
+      });
     }
 
     const productId = await Product.create({
-      title,
+      name,
       price: parseFloat(price),
-      image,
+      description: description || "",
+      images: images || [],
       categoryId,
-      stock: parseInt(stock) || 0,
-      description,
+      fabric: fabric || "",
+      color: color || "",
+      style: style || "",
+      sleeveType: sleeveType || "",
+      occasion: occasion || "",
+      availableSizes: availableSizes || [],
+      attributes: attributes || {},
+      isFeatured: isFeatured === true,
+      isActive: isActive !== false,
+      views: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    res.status(201).json({ success: true, data: { id: productId } });
+    res.status(201).json({
+      success: true,
+      data: { id: productId },
+      message: "Product created successfully",
+    });
   } catch (error) {
+    console.error("Error creating product:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -199,14 +256,11 @@ const updateProduct = async (req, res) => {
     const Product = req.app.locals.models.Product;
     const { id } = req.params;
 
-    // Enhanced logging for debugging
     console.log("🔄 Product Update Request:");
     console.log("- Product ID:", id);
-    console.log("- Request Body:", JSON.stringify(req.body, null, 2));
 
     // Validate ObjectId format
     if (!id || typeof id !== "string" || id.length !== 24) {
-      console.log("❌ Invalid ID format:", id);
       return res.status(400).json({
         success: false,
         error: "Invalid product ID format",
@@ -214,25 +268,19 @@ const updateProduct = async (req, res) => {
     }
 
     // Validate required fields
-    const { title, price, categoryId } = req.body;
-    if (!title || !price || !categoryId) {
-      console.log("❌ Missing required fields:", {
-        title: !!title,
-        price: !!price,
-        categoryId: !!categoryId,
-      });
+    const { name, price, categoryId } = req.body;
+    if (!name || !price || !categoryId) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: title, price, categoryId",
+        error: "Missing required fields: name, price, categoryId",
       });
     }
 
-    // Sanitize and validate data - exclude _id and other immutable fields
-    const { _id, __v, createdAt, ...bodyData } = req.body;
+    // Sanitize data - exclude immutable fields
+    const { _id, __v, createdAt, views, ...bodyData } = req.body;
     const updateData = {
       ...bodyData,
       price: parseFloat(req.body.price),
-      stock: parseInt(req.body.stock) || 0,
       updatedAt: new Date(),
     };
 
@@ -240,24 +288,21 @@ const updateProduct = async (req, res) => {
     if (req.body.images && Array.isArray(req.body.images)) {
       updateData.images = req.body.images;
     }
-    if (req.body.sizes && Array.isArray(req.body.sizes)) {
-      updateData.sizes = req.body.sizes;
-    }
-    if (req.body.colors && Array.isArray(req.body.colors)) {
-      updateData.colors = req.body.colors;
+    if (req.body.availableSizes && Array.isArray(req.body.availableSizes)) {
+      updateData.availableSizes = req.body.availableSizes;
     }
 
-    console.log(
-      "📝 Sanitized Update Data:",
-      JSON.stringify(updateData, null, 2),
-    );
+    // Ensure booleans
+    if (typeof req.body.isFeatured !== "undefined") {
+      updateData.isFeatured = req.body.isFeatured === true;
+    }
+    if (typeof req.body.isActive !== "undefined") {
+      updateData.isActive = req.body.isActive !== false;
+    }
 
     const result = await Product.update(id, updateData);
 
-    console.log("📊 Update Result:", result);
-
     if (result.matchedCount === 0) {
-      console.log("❌ Product not found for ID:", id);
       return res.status(404).json({
         success: false,
         error: "Product not found",
@@ -268,11 +313,9 @@ const updateProduct = async (req, res) => {
     res.json({ success: true, message: "Product updated successfully" });
   } catch (error) {
     console.error("💥 Product Update Error:", error);
-    console.error("Error Stack:", error.stack);
     res.status(500).json({
       success: false,
       error: error.message,
-      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 };
@@ -280,15 +323,18 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const Product = req.app.locals.models.Product;
-    const result = await Product.delete(req.params.id);
+    const { id } = req.params;
 
-    if (result.deletedCount === 0) {
+    // Soft delete - set isActive to false instead of deleting
+    const result = await Product.update(id, { isActive: false });
+
+    if (result.matchedCount === 0) {
       return res
         .status(404)
         .json({ success: false, error: "Product not found" });
     }
 
-    res.json({ success: true, message: "Product deleted" });
+    res.json({ success: true, message: "Product deleted (soft delete)" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -303,13 +349,14 @@ const searchProducts = async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Simple text search - in production, you'd use MongoDB text search or Elasticsearch
-    const products = await Product.findAll();
+    // Search in name, description, fabric, and style
+    const products = await Product.findAll({ isActive: { $ne: false } });
     const searchResults = products.filter(
       (product) =>
-        product.title.toLowerCase().includes(q.toLowerCase()) ||
-        (product.description &&
-          product.description.toLowerCase().includes(q.toLowerCase())),
+        product.name?.toLowerCase().includes(q.toLowerCase()) ||
+        product.description?.toLowerCase().includes(q.toLowerCase()) ||
+        product.fabric?.toLowerCase().includes(q.toLowerCase()) ||
+        product.style?.toLowerCase().includes(q.toLowerCase()),
     );
 
     res.json({ success: true, data: searchResults });

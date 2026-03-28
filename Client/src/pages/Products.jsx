@@ -19,6 +19,13 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [sortBy, setSortBy] = useState("newest");
+  // Burka filters
+  const [selectedFabric, setSelectedFabric] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("");
+  const [selectedOccasion, setSelectedOccasion] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchCategories();
@@ -26,7 +33,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts();
-  }, [currentPage, selectedCategory, priceRange, sortBy]);
+  }, [currentPage, selectedCategory, priceRange, sortBy, selectedFabric, selectedStyle, selectedOccasion, selectedSize, inStockOnly, searchQuery]);
 
   const fetchCategories = async () => {
     try {
@@ -53,6 +60,32 @@ export default function Products() {
 
       if (priceRange[1] < 1000) {
         queryParams.maxPrice = priceRange[1];
+      }
+
+      // Burka filters
+      if (selectedFabric) {
+        queryParams.fabric = selectedFabric;
+      }
+
+      if (selectedStyle) {
+        queryParams.style = selectedStyle;
+      }
+
+      if (selectedOccasion) {
+        queryParams.occasion = selectedOccasion;
+      }
+
+      if (selectedSize) {
+        queryParams.sizes = selectedSize;
+      }
+
+      if (inStockOnly) {
+        queryParams.inStock = true;
+      }
+
+      // Search query
+      if (searchQuery && searchQuery.trim()) {
+        queryParams.search = searchQuery.trim();
       }
 
       // Add sorting parameters
@@ -107,6 +140,12 @@ export default function Products() {
     setSelectedCategory("");
     setPriceRange([0, 1000]);
     setSortBy("newest");
+    setSelectedFabric("");
+    setSelectedStyle("");
+    setSelectedOccasion("");
+    setSelectedSize("");
+    setInStockOnly(false);
+    setSearchQuery("");
     setCurrentPage(1);
   };
 
@@ -211,7 +250,7 @@ export default function Products() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 All Products
@@ -239,6 +278,46 @@ export default function Products() {
               </svg>
               Back to Home
             </Link>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="relative max-w-2xl">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search by name, fabric, style, or occasion..."
+              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <svg
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setCurrentPage(1);
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -325,6 +404,114 @@ export default function Products() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Burka Filters */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  Fabric
+                </h3>
+                <select
+                  value={selectedFabric}
+                  onChange={(e) => {
+                    setSelectedFabric(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Fabrics</option>
+                  <option value="Nida">Nida</option>
+                  <option value="Georgette">Georgette</option>
+                  <option value="Crepe">Crepe</option>
+                  <option value="Chiffon">Chiffon</option>
+                  <option value="Jersey">Jersey</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  Style
+                </h3>
+                <select
+                  value={selectedStyle}
+                  onChange={(e) => {
+                    setSelectedStyle(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Styles</option>
+                  <option value="Overhead">Overhead</option>
+                  <option value="Front Open">Front Open</option>
+                  <option value="Pullover">Pullover</option>
+                  <option value="Two Piece">Two Piece</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  Occasion
+                </h3>
+                <select
+                  value={selectedOccasion}
+                  onChange={(e) => {
+                    setSelectedOccasion(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Occasions</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Formal">Formal</option>
+                  <option value="Party">Party</option>
+                  <option value="Daily Wear">Daily Wear</option>
+                  <option value="Prayer">Prayer</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  Size
+                </h3>
+                <select
+                  value={selectedSize}
+                  onChange={(e) => {
+                    setSelectedSize(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Sizes</option>
+                  <option value="38">38</option>
+                  <option value="40">40</option>
+                  <option value="42">42</option>
+                  <option value="44">44</option>
+                  <option value="46">46</option>
+                  <option value="48">48</option>
+                  <option value="50">50</option>
+                  <option value="52">52</option>
+                  <option value="54">54</option>
+                  <option value="56">56</option>
+                  <option value="58">58</option>
+                  <option value="60">60</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="flex items-center cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={inStockOnly}
+                    onChange={(e) => {
+                      setInStockOnly(e.target.checked);
+                      setCurrentPage(1);
+                    }}
+                    className="w-4 h-4 text-primary-500 focus:ring-primary-500 rounded"
+                  />
+                  <span className="ml-3 text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                    In Stock Only
+                  </span>
+                </label>
               </div>
 
               {/* Sort By */}
