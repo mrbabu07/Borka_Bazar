@@ -11,6 +11,9 @@ export default function ProductCardPremium({ product }) {
   const [isAdding, setIsAdding] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || "");
+  const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || "");
 
   // Track product view
   useProductView(product._id);
@@ -43,6 +46,7 @@ export default function ProductCardPremium({ product }) {
       : 0;
 
   return (
+    <>
     <Link 
       to={`/product/${product._id}`} 
       className="block group"
@@ -116,7 +120,7 @@ export default function ProductCardPremium({ product }) {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    // Quick view functionality can be added here
+                    setQuickViewOpen(true);
                   }}
                   className="w-full py-3 bg-black/80 backdrop-blur-sm text-white text-sm tracking-widest uppercase font-medium hover:bg-black transition-all"
                 >
@@ -162,5 +166,125 @@ export default function ProductCardPremium({ product }) {
         </div>
       </div>
     </Link>
+
+    {/* Quick View Modal */}
+    {quickViewOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/50"
+          onClick={() => setQuickViewOpen(false)}
+        />
+        <div className="relative bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <button
+            onClick={() => setQuickViewOpen(false)}
+            className="absolute top-4 right-4 z-10 p-2 bg-white hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+            {/* Image */}
+            <div className="aspect-[3/4] overflow-hidden bg-gray-50">
+              <img
+                src={product.image}
+                alt={product.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Info */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="font-display text-2xl md:text-3xl text-black mb-2">
+                  {product.title}
+                </h2>
+                <p className="text-2xl font-semibold text-black">
+                  {formatPrice(product.price)}
+                </p>
+              </div>
+
+              {product.description && (
+                <p className="text-gray-600 leading-relaxed">
+                  {product.description}
+                </p>
+              )}
+
+              {/* Size Selector */}
+              {product.sizes && product.sizes.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                    Select Size
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-2 border text-sm transition-all ${
+                          selectedSize === size
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 hover:border-black"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Color Selector */}
+              {product.colors && product.colors.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                    Select Color
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.colors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={`px-4 py-2 border text-sm transition-all ${
+                          selectedColor === color
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 hover:border-black"
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="space-y-3 pt-4">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAddToCart(e);
+                    setQuickViewOpen(false);
+                  }}
+                  disabled={isAdding || product.stock === 0}
+                  className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {product.stock === 0 ? "Out of Stock" : isAdding ? "Adding..." : "Add to Cart"}
+                </button>
+                <Link
+                  to={`/product/${product._id}`}
+                  onClick={() => setQuickViewOpen(false)}
+                  className="block w-full py-4 border-2 border-black text-black text-center text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors"
+                >
+                  View Full Details
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
