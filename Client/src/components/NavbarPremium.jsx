@@ -16,6 +16,7 @@ export default function NavbarPremium() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [scrolled, setScrolled] = useState(false);
 
@@ -124,7 +125,10 @@ export default function NavbarPremium() {
             {/* Right Actions */}
             <div className="flex items-center space-x-4">
               {/* Search Icon - Desktop */}
-              <button className="hidden lg:block p-2 hover:text-gold-500 transition-colors">
+              <button 
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="hidden lg:block p-2 hover:text-gold-500 transition-colors"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -284,6 +288,40 @@ export default function NavbarPremium() {
           </div>
         )}
       </nav>
+
+      {/* Desktop Search Modal */}
+      {searchOpen && (
+        <div className="fixed inset-0 z-50 lg:block hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setSearchOpen(false)}
+          />
+          <div className="absolute top-0 left-0 right-0 bg-white shadow-xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="flex items-center gap-4">
+                <SearchBar
+                  placeholder="Search for modest fashion..."
+                  onSearch={(query) => {
+                    handleSearch(query);
+                    setSearchOpen(false);
+                  }}
+                  className="flex-1 h-14 px-6 pr-14 border-2 border-gray-300 focus:border-black focus:outline-none transition-colors text-lg"
+                  showSuggestions={true}
+                  autoFocus={true}
+                />
+                <button
+                  onClick={() => setSearchOpen(false)}
+                  className="p-3 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
