@@ -6,13 +6,13 @@ export default function CartPremium() {
   const navigate = useNavigate();
   const { cart, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
 
-  const handleQuantityChange = (itemId, newQuantity) => {
+  const handleQuantityChange = (item, newQuantity) => {
     if (newQuantity < 1) return;
-    updateQuantity(itemId, newQuantity);
+    updateQuantity(item._id, newQuantity, item.selectedSize, item.selectedColor);
   };
 
-  const handleRemove = (itemId) => {
-    removeFromCart(itemId);
+  const handleRemove = (item) => {
+    removeFromCart(item._id, item.selectedSize, item.selectedColor);
     toast.success("Item removed from cart");
   };
 
@@ -68,17 +68,17 @@ export default function CartPremium() {
           <div className="lg:col-span-2 space-y-6">
             {cart.map((item) => (
               <div
-                key={item.id}
+                key={`${item._id}_${item.selectedSize || 'no-size'}_${item.selectedColor?.name || 'no-color'}`}
                 className="flex gap-6 pb-6 border-b border-gray-100 last:border-0"
               >
                 {/* Product Image */}
                 <Link
-                  to={`/product/${item.product._id}`}
+                  to={`/product/${item._id}`}
                   className="flex-shrink-0 w-24 h-32 md:w-32 md:h-40 overflow-hidden bg-gray-50"
                 >
                   <img
-                    src={item.product.image}
-                    alt={item.product.title}
+                    src={item.selectedImage || item.image}
+                    alt={item.title}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 </Link>
@@ -86,40 +86,41 @@ export default function CartPremium() {
                 {/* Product Info */}
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/product/${item.product._id}`}
+                    to={`/product/${item._id}`}
                     className="font-display text-lg text-black hover:text-gold-500 transition-colors block mb-2"
                   >
-                    {item.product.title}
+                    {item.title}
                   </Link>
 
                   <div className="space-y-1 text-sm text-gray-600 mb-4">
-                    {item.size && (
+                    {item.selectedSize && (
                       <p>
-                        <span className="font-medium text-black">Size:</span> {item.size}
+                        <span className="font-medium text-black">Size:</span> {item.selectedSize}
                       </p>
                     )}
-                    {item.color && (
+                    {item.selectedColor && (
                       <p>
-                        <span className="font-medium text-black">Color:</span> {item.color}
+                        <span className="font-medium text-black">Color:</span>{" "}
+                        {typeof item.selectedColor === 'string' ? item.selectedColor : item.selectedColor?.name}
                       </p>
                     )}
-                    {item.product.fabric && (
+                    {item.fabric && (
                       <p>
                         <span className="font-medium text-black">Fabric:</span>{" "}
-                        {item.product.fabric}
+                        {item.fabric}
                       </p>
                     )}
                   </div>
 
                   <p className="text-xl font-semibold text-black mb-4">
-                    ৳{(item.product.price * item.quantity).toLocaleString()}
+                    ৳{(item.price * item.quantity).toLocaleString()}
                   </p>
 
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        onClick={() => handleQuantityChange(item, item.quantity - 1)}
                         className="w-8 h-8 border border-gray-300 hover:border-black transition-colors flex items-center justify-center"
                       >
                         <svg
@@ -140,7 +141,7 @@ export default function CartPremium() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={() => handleQuantityChange(item, item.quantity + 1)}
                         className="w-8 h-8 border border-gray-300 hover:border-black transition-colors flex items-center justify-center"
                       >
                         <svg
@@ -160,7 +161,7 @@ export default function CartPremium() {
                     </div>
 
                     <button
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => handleRemove(item)}
                       className="text-sm text-gray-500 hover:text-red-600 transition-colors uppercase tracking-wide"
                     >
                       Remove
