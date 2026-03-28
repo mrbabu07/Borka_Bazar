@@ -8,7 +8,7 @@ async function testTransactionId() {
     await client.connect();
     console.log("✅ Connected to MongoDB");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const ordersCollection = db.collection("orders");
 
     // Get the most recent order

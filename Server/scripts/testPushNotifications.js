@@ -38,7 +38,7 @@ async function testPushNotifications() {
     await client.connect();
     console.log("✅ Connected to MongoDB");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const subscriptionsCollection = db.collection("notificationSubscriptions");
 
     // Check for existing subscriptions

@@ -10,7 +10,7 @@ async function addViewCounts() {
     await client.connect();
     console.log("Connected to MongoDB");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const products = db.collection("products");
 
     // Get all products

@@ -10,7 +10,7 @@ async function createTestOrdersForReviews() {
     await client.connect();
     console.log("Connected to MongoDB");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const orders = db.collection("orders");
     const products = db.collection("products");
 

@@ -7,7 +7,7 @@ async function checkOrderTransactionId() {
     await client.connect();
     console.log("✅ Connected to MongoDB\n");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
 
     // Get last 5 orders
     const orders = await db

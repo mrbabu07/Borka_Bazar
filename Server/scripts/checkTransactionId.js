@@ -7,7 +7,7 @@ async function checkTransactionId() {
     await client.connect();
     console.log("✅ Connected to MongoDB\n");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const order = await db
       .collection("orders")
       .findOne({}, { sort: { createdAt: -1 } });

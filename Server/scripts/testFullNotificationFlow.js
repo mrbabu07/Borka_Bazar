@@ -56,7 +56,7 @@ async function testFullNotificationFlow() {
     await client.connect();
     console.log("✅ MongoDB connected successfully");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const subscriptionsCollection = db.collection("notificationSubscriptions");
 
     // Test 3: Check Subscription Collection

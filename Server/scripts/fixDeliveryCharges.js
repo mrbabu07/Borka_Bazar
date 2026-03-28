@@ -24,7 +24,7 @@ async function fixDeliveryCharges() {
     await client.connect();
     console.log("✅ Connected to MongoDB");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const ordersCollection = db.collection("orders");
 
     // Find orders with negative or zero delivery charges

@@ -25,7 +25,7 @@ async function fixAllOrders() {
     await client.connect();
     console.log("✅ Connected to MongoDB\n");
 
-    const db = client.db("HnilaBazar");
+    const db = client.db("Borka_Bazar");
     const ordersCollection = db.collection("orders");
 
     // Find all orders
