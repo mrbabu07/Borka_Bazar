@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
 import useAuth from "../hooks/useAuth";
@@ -21,6 +21,13 @@ export default function CheckoutPremium() {
   });
 
   const [loading, setLoading] = useState(false);
+
+  // Redirect to cart if empty
+  useEffect(() => {
+    if (cart.length === 0) {
+      navigate("/cart");
+    }
+  }, [cart.length, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -88,9 +95,15 @@ export default function CheckoutPremium() {
     }
   };
 
+  // Show loading or empty state while redirecting
   if (cart.length === 0) {
-    navigate("/cart");
-    return null;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center px-4">
+          <p className="text-gray-500">Redirecting to cart...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
