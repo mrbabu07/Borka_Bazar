@@ -166,19 +166,19 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Premium Header with Gradient */}
-      <div className="bg-gradient-to-br from-black via-gray-900 to-black border-b border-gold-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-white">
+      {/* Minimal Header */}
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1400px] mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <Link
                 to="/"
-                className="p-3 bg-white/10 hover:bg-white/20 transition-all rounded-lg backdrop-blur-sm"
+                className="p-2 hover:bg-gray-50 transition-colors rounded-lg"
                 title="Back to Home"
               >
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-5 h-5 text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -192,10 +192,10 @@ export default function AdminDashboard() {
                 </svg>
               </Link>
               <div>
-                <h1 className="font-display text-4xl text-white mb-2">
+                <h1 className="font-display text-3xl text-black">
                   Dashboard
                 </h1>
-                <p className="text-gold-500 text-sm tracking-wider uppercase">
+                <p className="text-gray-500 text-sm mt-1">
                   Welcome back, Admin
                 </p>
               </div>
@@ -204,20 +204,20 @@ export default function AdminDashboard() {
               <select
                 value={timeframe}
                 onChange={(e) => setTimeframe(e.target.value)}
-                className="border border-white/20 px-4 py-3 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:border-gold-500 transition-all rounded-lg"
+                className="border border-gray-200 px-4 py-2.5 bg-white text-gray-900 focus:outline-none focus:border-black transition-all rounded-lg text-sm"
               >
                 {timeframeOptions.map((option) => (
-                  <option key={option.value} value={option.value} className="bg-gray-900 text-white">
+                  <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
               <Link
                 to="/admin/products/add"
-                className="px-6 py-3 bg-gold-500 text-black text-sm tracking-wider uppercase font-semibold hover:bg-gold-400 transition-all flex items-center gap-2 rounded-lg shadow-lg shadow-gold-500/20"
+                className="px-5 py-2.5 bg-black text-white text-sm font-medium hover:bg-gray-900 transition-all flex items-center gap-2 rounded-lg"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -236,14 +236,14 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[1400px] mx-auto px-6 py-8">
         {/* Low Stock Alert */}
-        <div className="mb-6">
+        <div className="mb-8">
           <LowStockAlert threshold={5} />
         </div>
 
-        {/* Key Metrics - Premium Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Key Metrics - Clean Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Revenue"
             value={stats.revenue}
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
             loading={loading}
             icon={
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -274,7 +274,7 @@ export default function AdminDashboard() {
             loading={loading}
             icon={
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
             loading={loading}
             icon={
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -317,7 +317,7 @@ export default function AdminDashboard() {
             loading={loading}
             icon={
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -333,74 +333,71 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* Analytics Section */}
-        <div className="mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
-              <h2 className="font-display text-xl text-black">Analytics Overview</h2>
-              <p className="text-sm text-gray-500 mt-1">Real-time business insights</p>
-            </div>
-            <div className="p-6">
-              <BasicAnalytics />
-            </div>
-          </div>
-        </div>
-
-        {/* Real-time Stats */}
-        <div className="mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
-              <h2 className="font-display text-xl text-black">Live Statistics</h2>
-              <p className="text-sm text-gray-500 mt-1">Monitor your store in real-time</p>
-            </div>
-            <div className="p-6">
-              <RealtimeStats />
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Section - Premium Design */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-50 to-white px-6 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-black">Revenue Trend</h3>
-              <p className="text-xs text-gray-500 mt-1">Track your earnings over time</p>
-            </div>
-            <div className="p-6">
-              <AnalyticsChart
-                data={chartData.revenue}
-                type="area"
-                title=""
-                color="#C9A961"
-                height={300}
-              />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-50 to-white px-6 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-black">Orders Trend</h3>
-              <p className="text-xs text-gray-500 mt-1">Monitor order volume patterns</p>
-            </div>
-            <div className="p-6">
-              <AnalyticsChart
-                data={chartData.orders}
-                type="bar"
-                title=""
-                color="#000000"
-                height={300}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Section - Improved Layout */}
+        {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Top Products - Premium Card */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-50 to-white px-6 py-4 border-b border-gray-100">
-                <h2 className="font-display text-xl text-black">Top Performing Products</h2>
-                <p className="text-sm text-gray-500 mt-1">Best sellers this period</p>
+          {/* Main Content - 2 columns */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Analytics Overview */}
+            <div className="bg-white rounded-lg border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="font-display text-lg text-black">Analytics Overview</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Real-time business insights</p>
+              </div>
+              <div className="p-6">
+                <BasicAnalytics />
+              </div>
+            </div>
+
+            {/* Live Statistics */}
+            <div className="bg-white rounded-lg border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="font-display text-lg text-black">Live Statistics</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Monitor your store in real-time</p>
+              </div>
+              <div className="p-6">
+                <RealtimeStats />
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg border border-gray-100">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="font-medium text-black text-sm">Revenue Trend</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Track your earnings</p>
+                </div>
+                <div className="p-6">
+                  <AnalyticsChart
+                    data={chartData.revenue}
+                    type="area"
+                    title=""
+                    color="#C9A961"
+                    height={250}
+                  />
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-gray-100">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="font-medium text-black text-sm">Orders Trend</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Monitor order volume</p>
+                </div>
+                <div className="p-6">
+                  <AnalyticsChart
+                    data={chartData.orders}
+                    type="bar"
+                    title=""
+                    color="#000000"
+                    height={250}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Top Products */}
+            <div className="bg-white rounded-lg border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="font-display text-lg text-black">Top Performing Products</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Best sellers this period</p>
               </div>
               <div className="p-6">
                 <TopProducts />
@@ -857,19 +854,19 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-            {/* Recent Orders - Premium Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+            {/* Recent Orders */}
+            <div className="bg-white rounded-lg border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="font-semibold text-black uppercase tracking-wider text-sm">
+                    <h2 className="font-medium text-black text-sm">
                       Recent Orders
                     </h2>
-                    <p className="text-xs text-gray-500 mt-1">Latest transactions</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Latest transactions</p>
                   </div>
                   <Link
                     to="/admin/orders"
-                    className="text-black hover:text-gold-500 text-xs font-medium transition-colors flex items-center gap-1"
+                    className="text-black hover:text-gray-600 text-xs font-medium transition-colors flex items-center gap-1"
                   >
                     View All
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -879,40 +876,40 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="p-4">
+              <div className="p-3">
                 {loading ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div
                         key={i}
-                        className="animate-pulse flex items-center gap-3 p-3"
+                        className="animate-pulse flex items-center gap-3 p-2.5"
                       >
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg"></div>
+                        <div className="w-8 h-8 bg-gray-100 rounded-md"></div>
                         <div className="flex-1">
-                          <div className="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
-                          <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                          <div className="h-3 bg-gray-100 rounded w-3/4 mb-2"></div>
+                          <div className="h-2.5 bg-gray-100 rounded w-1/2"></div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : recentOrders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
-                    <p className="text-gray-500 text-sm">No orders yet</p>
+                    <p className="text-gray-500 text-xs">No orders yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {recentOrders.map((order) => (
                       <div
                         key={order._id}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-all group"
+                        className="flex items-center justify-between p-2.5 rounded-md hover:bg-gray-50 transition-colors group"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center rounded-lg group-hover:from-gold-100 group-hover:to-gold-50 transition-all">
+                          <div className="w-8 h-8 bg-gray-50 flex items-center justify-center rounded-md group-hover:bg-gray-100 transition-colors">
                             <span className="text-xs font-bold text-black">
                               #{order._id.slice(-4).toUpperCase()}
                             </span>
@@ -931,7 +928,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <span
-                          className={`px-3 py-1 text-xs font-medium uppercase tracking-wider rounded-full ${statusColors[order.status]}`}
+                          className={`px-2.5 py-1 text-xs font-medium uppercase tracking-wider rounded-full ${statusColors[order.status]}`}
                         >
                           {order.status}
                         </span>

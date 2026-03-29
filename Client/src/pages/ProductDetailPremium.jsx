@@ -6,6 +6,9 @@ import useWishlist from "../hooks/useWishlist";
 import ProductCardPremium from "../components/ProductCardPremium";
 import ReviewsSection from "../components/reviews/ReviewsSection";
 import ProductQA from "../components/ProductQA";
+import ProductRecommendations from "../components/ProductRecommendations";
+import SocialShare from "../components/SocialShare";
+import SizeGuide from "../components/SizeGuide";
 import { toast } from "react-hot-toast";
 
 export default function ProductDetailPremium() {
@@ -365,6 +368,15 @@ export default function ProductDetailPremium() {
               </button>
             </div>
 
+            {/* Social Share */}
+            <div className="border-t border-gray-100 pt-6">
+              <SocialShare 
+                url={window.location.href}
+                title={product.title}
+                image={product.images?.[0] || product.image}
+              />
+            </div>
+
             {/* Description */}
             {product.description && (
               <div className="border-t border-gray-100 pt-8">
@@ -421,8 +433,18 @@ export default function ProductDetailPremium() {
           </div>
 
           {/* Q&A Section */}
-          <div className="border-t border-gray-100 pt-16">
+          <div className="border-t border-gray-100 pt-16 mb-16">
             <ProductQA productId={id} />
+          </div>
+
+          {/* Product Recommendations */}
+          <div className="border-t border-gray-100 pt-16">
+            <ProductRecommendations 
+              currentProductId={id}
+              category={product?.category}
+              title="You May Also Like"
+              limit={4}
+            />
           </div>
         </div>
 
@@ -627,6 +649,13 @@ export default function ProductDetailPremium() {
           </div>
         </div>
       )}
+
+      {/* Size Guide Modal */}
+      <SizeGuide 
+        isOpen={showSizeGuide}
+        onClose={() => setShowSizeGuide(false)}
+        category={product?.category || "burka"}
+      />
     </div>
   );
 }

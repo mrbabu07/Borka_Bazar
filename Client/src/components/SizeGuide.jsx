@@ -1,336 +1,297 @@
 import { useState } from "react";
-import Modal from "./Modal";
 
-const SizeGuide = ({ product, isOpen, onClose }) => {
-  const [selectedCategory, setSelectedCategory] = useState("general");
-  const [userMeasurements, setUserMeasurements] = useState({
-    height: "",
-    weight: "",
-    chest: "",
+export default function SizeGuide({ isOpen, onClose, category = "burka" }) {
+  const [activeTab, setActiveTab] = useState("chart");
+  const [measurements, setMeasurements] = useState({
+    bust: "",
     waist: "",
     hips: "",
+    height: "",
   });
   const [recommendedSize, setRecommendedSize] = useState(null);
 
-  // Size charts for different categories
   const sizeCharts = {
-    general: {
-      title: "General Size Guide",
-      sizes: [
-        { size: "XS", chest: "32-34", waist: "26-28", hips: "34-36" },
-        { size: "S", chest: "34-36", waist: "28-30", hips: "36-38" },
-        { size: "M", chest: "36-38", waist: "30-32", hips: "38-40" },
-        { size: "L", chest: "38-40", waist: "32-34", hips: "40-42" },
-        { size: "XL", chest: "40-42", waist: "34-36", hips: "42-44" },
-        { size: "XXL", chest: "42-44", waist: "36-38", hips: "44-46" },
-      ],
-    },
-    mens: {
-      title: "Men's Clothing",
-      sizes: [
-        { size: "S", chest: "34-36", waist: "28-30", neck: "14-14.5" },
-        { size: "M", chest: "38-40", waist: "32-34", neck: "15-15.5" },
-        { size: "L", chest: "42-44", waist: "36-38", neck: "16-16.5" },
-        { size: "XL", chest: "46-48", waist: "40-42", neck: "17-17.5" },
-        { size: "XXL", chest: "50-52", waist: "44-46", neck: "18-18.5" },
-      ],
-    },
-    womens: {
-      title: "Women's Clothing",
-      sizes: [
-        { size: "XS", chest: "30-32", waist: "24-26", hips: "34-36" },
-        { size: "S", chest: "32-34", waist: "26-28", hips: "36-38" },
-        { size: "M", chest: "34-36", waist: "28-30", hips: "38-40" },
-        { size: "L", chest: "36-38", waist: "30-32", hips: "40-42" },
-        { size: "XL", chest: "38-40", waist: "32-34", hips: "42-44" },
-      ],
-    },
-    shoes: {
-      title: "Shoe Size Guide",
-      sizes: [
-        { size: "6", us: "6", uk: "5.5", eu: "39", cm: "24" },
-        { size: "7", us: "7", uk: "6.5", eu: "40", cm: "25" },
-        { size: "8", us: "8", uk: "7.5", eu: "41", cm: "26" },
-        { size: "9", us: "9", uk: "8.5", eu: "42", cm: "27" },
-        { size: "10", us: "10", uk: "9.5", eu: "43", cm: "28" },
-        { size: "11", us: "11", uk: "10.5", eu: "44", cm: "29" },
-        { size: "12", us: "12", uk: "11.5", eu: "45", cm: "30" },
-      ],
-    },
+    burka: [
+      { size: "S", bust: "32-34", waist: "26-28", hips: "34-36", height: "5'0\"-5'3\"" },
+      { size: "M", bust: "36-38", waist: "30-32", hips: "38-40", height: "5'3\"-5'6\"" },
+      { size: "L", bust: "40-42", waist: "34-36", hips: "42-44", height: "5'6\"-5'9\"" },
+      { size: "XL", bust: "44-46", waist: "38-40", hips: "46-48", height: "5'9\"-6'0\"" },
+      { size: "XXL", bust: "48-50", waist: "42-44", hips: "50-52", height: "6'0\"-6'3\"" },
+    ],
+    abaya: [
+      { size: "S", bust: "34-36", waist: "28-30", hips: "36-38", height: "5'0\"-5'3\"" },
+      { size: "M", bust: "38-40", waist: "32-34", hips: "40-42", height: "5'3\"-5'6\"" },
+      { size: "L", bust: "42-44", waist: "36-38", hips: "44-46", height: "5'6\"-5'9\"" },
+      { size: "XL", bust: "46-48", waist: "40-42", hips: "48-50", height: "5'9\"-6'0\"" },
+    ],
   };
 
-  // Determine category based on product
-  const getProductCategory = () => {
-    if (!product) return "general";
-    const category = product.category?.name?.toLowerCase() || "";
-    if (category.includes("men")) return "mens";
-    if (category.includes("women")) return "womens";
-    if (category.includes("shoe") || category.includes("footwear"))
-      return "shoes";
-    return "general";
-  };
+  const chart = sizeCharts[category] || sizeCharts.burka;
 
-  // Size recommendation algorithm
-  const calculateRecommendedSize = () => {
-    if (!userMeasurements.chest || !userMeasurements.waist) {
-      return null;
+  const calculateSize = () => {
+    const { bust, waist, hips, height } = measurements;
+    
+    if (!bust || !waist || !hips || !height) {
+      alert("Please fill in all measurements");
+      return;
     }
 
-    const category = getProductCategory();
-    const chart = sizeCharts[category];
-    const chest = parseInt(userMeasurements.chest);
-    const waist = parseInt(userMeasurements.waist);
+    const bustNum = parseFloat(bust);
+    const waistNum = parseFloat(waist);
+    const hipsNum = parseFloat(hips);
+    const heightNum = parseFloat(height);
 
-    for (const sizeInfo of chart.sizes) {
-      const chestRange = sizeInfo.chest?.split("-").map((n) => parseInt(n));
-      const waistRange = sizeInfo.waist?.split("-").map((n) => parseInt(n));
+    // Simple size recommendation logic
+    let size = "M"; // default
 
-      if (chestRange && waistRange) {
-        if (
-          chest >= chestRange[0] &&
-          chest <= chestRange[1] &&
-          waist >= waistRange[0] &&
-          waist <= waistRange[1]
-        ) {
-          return sizeInfo.size;
-        }
-      }
+    if (bustNum <= 34 && waistNum <= 28 && hipsNum <= 36) {
+      size = "S";
+    } else if (bustNum <= 38 && waistNum <= 32 && hipsNum <= 40) {
+      size = "M";
+    } else if (bustNum <= 42 && waistNum <= 36 && hipsNum <= 44) {
+      size = "L";
+    } else if (bustNum <= 46 && waistNum <= 40 && hipsNum <= 48) {
+      size = "XL";
+    } else {
+      size = "XXL";
     }
 
-    return null;
+    setRecommendedSize(size);
   };
 
-  const handleCalculateSize = () => {
-    const recommended = calculateRecommendedSize();
-    setRecommendedSize(recommended);
-  };
-
-  const currentChart = sizeCharts[selectedCategory] || sizeCharts.general;
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Size Guide & Fit Predictor">
-      <div className="space-y-6">
-        {/* Category Tabs */}
-        <div className="flex flex-wrap gap-2 border-b">
-          {Object.entries(sizeCharts).map(([key, chart]) => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+          <h2 className="font-display text-2xl text-black">Size Guide</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-black transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <div className="flex gap-8 px-6">
             <button
-              key={key}
-              onClick={() => setSelectedCategory(key)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                selectedCategory === key
-                  ? "bg-primary-500 text-white"
-                  : "text-gray-600 hover:text-primary-500 hover:bg-gray-50"
+              onClick={() => setActiveTab("chart")}
+              className={`py-4 border-b-2 transition-colors ${
+                activeTab === "chart"
+                  ? "border-black text-black font-medium"
+                  : "border-transparent text-gray-500 hover:text-black"
               }`}
             >
-              {chart.title}
+              Size Chart
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab("finder")}
+              className={`py-4 border-b-2 transition-colors ${
+                activeTab === "finder"
+                  ? "border-black text-black font-medium"
+                  : "border-transparent text-gray-500 hover:text-black"
+              }`}
+            >
+              Size Finder
+            </button>
+            <button
+              onClick={() => setActiveTab("measure")}
+              className={`py-4 border-b-2 transition-colors ${
+                activeTab === "measure"
+                  ? "border-black text-black font-medium"
+                  : "border-transparent text-gray-500 hover:text-black"
+              }`}
+            >
+              How to Measure
+            </button>
+          </div>
         </div>
 
-        {/* Size Chart */}
-        <div className="overflow-x-auto">
-          <h3 className="text-lg font-semibold mb-4">{currentChart.title}</h3>
-          <table className="w-full border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-900">
-                  Size
-                </th>
-                {selectedCategory === "shoes" ? (
-                  <>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      US
-                    </th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      UK
-                    </th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      EU
-                    </th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      CM
-                    </th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      Chest (inches)
-                    </th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-900">
-                      Waist (inches)
-                    </th>
-                    {currentChart.sizes[0]?.hips && (
-                      <th className="px-4 py-2 text-left font-medium text-gray-900">
-                        Hips (inches)
-                      </th>
-                    )}
-                    {currentChart.sizes[0]?.neck && (
-                      <th className="px-4 py-2 text-left font-medium text-gray-900">
-                        Neck (inches)
-                      </th>
-                    )}
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {currentChart.sizes.map((sizeInfo, index) => (
-                <tr key={index} className="border-t border-gray-200">
-                  <td className="px-4 py-2 font-medium">{sizeInfo.size}</td>
-                  {selectedCategory === "shoes" ? (
-                    <>
-                      <td className="px-4 py-2">{sizeInfo.us}</td>
-                      <td className="px-4 py-2">{sizeInfo.uk}</td>
-                      <td className="px-4 py-2">{sizeInfo.eu}</td>
-                      <td className="px-4 py-2">{sizeInfo.cm}</td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-4 py-2">{sizeInfo.chest}</td>
-                      <td className="px-4 py-2">{sizeInfo.waist}</td>
-                      {sizeInfo.hips && (
-                        <td className="px-4 py-2">{sizeInfo.hips}</td>
-                      )}
-                      {sizeInfo.neck && (
-                        <td className="px-4 py-2">{sizeInfo.neck}</td>
-                      )}
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Fit Predictor */}
-        {selectedCategory !== "shoes" && (
-          <div className="bg-blue-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              Fit Predictor
-            </h3>
-            <p className="text-sm text-blue-700 mb-4">
-              Enter your measurements to get a personalized size recommendation
-            </p>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Chest (inches)
-                </label>
-                <input
-                  type="number"
-                  value={userMeasurements.chest}
-                  onChange={(e) =>
-                    setUserMeasurements((prev) => ({
-                      ...prev,
-                      chest: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="e.g., 36"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Waist (inches)
-                </label>
-                <input
-                  type="number"
-                  value={userMeasurements.waist}
-                  onChange={(e) =>
-                    setUserMeasurements((prev) => ({
-                      ...prev,
-                      waist: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="e.g., 32"
-                />
+        {/* Content */}
+        <div className="p-6">
+          {/* Size Chart Tab */}
+          {activeTab === "chart" && (
+            <div>
+              <p className="text-gray-600 mb-6">
+                All measurements are in inches. If you're between sizes, we recommend sizing up for a comfortable fit.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-black">Size</th>
+                      <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-black">Bust</th>
+                      <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-black">Waist</th>
+                      <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-black">Hips</th>
+                      <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-black">Height</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chart.map((row, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-4 py-3 font-semibold">{row.size}</td>
+                        <td className="border border-gray-200 px-4 py-3">{row.bust}"</td>
+                        <td className="border border-gray-200 px-4 py-3">{row.waist}"</td>
+                        <td className="border border-gray-200 px-4 py-3">{row.hips}"</td>
+                        <td className="border border-gray-200 px-4 py-3">{row.height}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
+          )}
 
-            <button
-              onClick={handleCalculateSize}
-              disabled={!userMeasurements.chest || !userMeasurements.waist}
-              className="w-full bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Calculate My Size
-            </button>
-
-            {recommendedSize && (
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="font-medium text-green-800">
-                    Recommended Size:{" "}
-                    <span className="text-xl">{recommendedSize}</span>
-                  </span>
+          {/* Size Finder Tab */}
+          {activeTab === "finder" && (
+            <div>
+              <p className="text-gray-600 mb-6">
+                Enter your measurements to find your perfect size.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Bust (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={measurements.bust}
+                    onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                    placeholder="e.g., 36"
+                  />
                 </div>
-                <p className="text-sm text-green-700 mt-1">
-                  Based on your measurements, this size should provide the best
-                  fit.
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Waist (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={measurements.waist}
+                    onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                    placeholder="e.g., 30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Hips (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={measurements.hips}
+                    onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                    placeholder="e.g., 38"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Height (feet)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={measurements.height}
+                    onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                    placeholder="e.g., 5.5"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={calculateSize}
+                className="mt-6 px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Find My Size
+              </button>
+
+              {recommendedSize && (
+                <div className="mt-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-semibold text-green-900 text-lg mb-2">
+                    Your Recommended Size: {recommendedSize}
+                  </h3>
+                  <p className="text-green-800 text-sm">
+                    Based on your measurements, we recommend size {recommendedSize}. For a looser fit, consider sizing up.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* How to Measure Tab */}
+          {activeTab === "measure" && (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-semibold text-black mb-4">Measuring Tips</h3>
+                  <ul className="space-y-3 text-gray-700">
+                    <li className="flex gap-3">
+                      <span className="text-black font-semibold">1.</span>
+                      <span>Use a soft measuring tape for accurate measurements</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-black font-semibold">2.</span>
+                      <span>Measure over light clothing or undergarments</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-black font-semibold">3.</span>
+                      <span>Keep the tape snug but not tight</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-black font-semibold">4.</span>
+                      <span>Stand straight and relax while measuring</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-black mb-4">Body Measurements</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-black mb-1">Bust</h4>
+                      <p className="text-sm text-gray-600">
+                        Measure around the fullest part of your bust, keeping the tape parallel to the floor.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-black mb-1">Waist</h4>
+                      <p className="text-sm text-gray-600">
+                        Measure around your natural waistline, typically the narrowest part of your torso.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-black mb-1">Hips</h4>
+                      <p className="text-sm text-gray-600">
+                        Measure around the fullest part of your hips, approximately 8 inches below your waist.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-black mb-1">Height</h4>
+                      <p className="text-sm text-gray-600">
+                        Stand against a wall and measure from the floor to the top of your head.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold text-black">Need help?</span> Contact our customer service team for personalized sizing assistance.
                 </p>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Measurement Tips */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-2">📏 How to Measure</h4>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>
-              <strong>Chest:</strong> Measure around the fullest part of your
-              chest, keeping the tape horizontal.
-            </p>
-            <p>
-              <strong>Waist:</strong> Measure around your natural waistline,
-              keeping the tape comfortably loose.
-            </p>
-            <p>
-              <strong>Hips:</strong> Measure around the fullest part of your
-              hips, about 8 inches below your waist.
-            </p>
-          </div>
-        </div>
-
-        {/* Size Disclaimer */}
-        <div className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-          <p className="font-medium text-yellow-800 mb-1">⚠️ Important Note</p>
-          <p>
-            Sizes may vary between brands and styles. These are general
-            guidelines. When in doubt, we recommend ordering one size up or
-            contacting our customer service for personalized advice.
-          </p>
+            </div>
+          )}
         </div>
       </div>
-    </Modal>
+    </div>
   );
-};
-
-export default SizeGuide;
+}

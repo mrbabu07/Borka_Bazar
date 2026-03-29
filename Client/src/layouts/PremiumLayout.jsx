@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import NavbarPremium from "../components/NavbarPremium";
 import FooterPremium from "../components/FooterPremium";
 import ScrollToTop from "../components/ScrollToTop";
+import LiveChat from "../components/LiveChat";
 
 export default function PremiumLayout() {
   return (
@@ -12,6 +13,7 @@ export default function PremiumLayout() {
       </main>
       <FooterPremium />
       <ScrollToTop />
+      <LiveChat />
     </div>
   );
 }
