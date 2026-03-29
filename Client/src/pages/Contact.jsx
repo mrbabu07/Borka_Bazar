@@ -178,10 +178,10 @@ export default function Contact() {
                     <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
                     <p className="text-gray-600">
                       <a
-                        href="mailto:info@hnilabazar.com"
+                        href="mailto:info@borkabazar.com"
                         className="hover:text-accent-600 transition-colors"
                       >
-                        info@hnilabazar.com
+                        info@borkabazar.com
                       </a>
                       <br />
                       <a

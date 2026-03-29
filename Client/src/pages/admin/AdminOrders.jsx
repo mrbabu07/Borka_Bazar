@@ -159,7 +159,7 @@ export default function AdminOrders() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Order #${order._id.slice(-8).toUpperCase()} - HnilaBazar</title>
+        <title>Order #${order._id.slice(-8).toUpperCase()} - Borka Bazar</title>
         <style>
           * {
             margin: 0;
@@ -396,8 +396,8 @@ export default function AdminOrders() {
       <body>
         <!-- Header -->
         <div class="header">
-          <div class="company-name">HnilaBazar</div>
-          <div class="company-tagline">Your Trusted E-commerce Partner</div>
+          <div class="company-name">Borka Bazar</div>
+          <div class="company-tagline">Elegant Modest Fashion</div>
         </div>
 
         <!-- Order Header -->
@@ -602,7 +602,7 @@ export default function AdminOrders() {
 
         <!-- Footer -->
         <div class="footer">
-          <div><strong>HnilaBazar</strong> - Your Trusted E-commerce Partner</div>
+          <div><strong>Borka Bazar</strong> - Elegant Modest Fashion</div>
           <div>📞 Contact: +880 1521-721946 | 📧 Email: mdjahedulislamjaved@gmail.com</div>
           <div class="print-date">Printed on: ${new Date().toLocaleString()}</div>
         </div>
