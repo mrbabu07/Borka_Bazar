@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
 import useAuth from "../hooks/useAuth";
-import { createOrder } from "../services/api";
+import { createOrder, validateCoupon } from "../services/api";
 import { toast } from "react-hot-toast";
 
 export default function CheckoutPremium() {
@@ -95,35 +95,21 @@ export default function CheckoutPremium() {
 
     try {
       setCouponLoading(true);
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/coupons/validate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            code: couponCode.toUpperCase(),
-            cartTotal: cartTotal,
-          }),
-        }
-      );
+      const response = await validateCoupon(couponCode.toUpperCase(), cartTotal);
 
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        const discount = data.data.discountAmount || 0;
+      if (response.data.success && response.data.data) {
+        const discount = response.data.data.discountAmount || 0;
         setCouponDiscount(discount);
         setCouponApplied(true);
         toast.success(`Coupon applied! Discount: ৳${discount.toLocaleString()}`);
       } else {
-        toast.error(data.message || "Invalid coupon code");
+        toast.error(response.data.message || "Invalid coupon code");
         setCouponDiscount(0);
         setCouponApplied(false);
       }
     } catch (error) {
       console.error("Error validating coupon:", error);
-      toast.error("Failed to validate coupon");
+      toast.error(error.response?.data?.message || "Failed to validate coupon");
       setCouponDiscount(0);
       setCouponApplied(false);
     } finally {
