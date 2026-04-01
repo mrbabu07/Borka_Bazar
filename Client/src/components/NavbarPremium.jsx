@@ -6,6 +6,7 @@ import useCart from "../hooks/useCart";
 import useWishlist from "../hooks/useWishlist";
 import { getCategories } from "../services/api";
 import SearchBar from "./SearchBar";
+import ThemeToggle from "./ThemeToggle";
 
 export default function NavbarPremium() {
   const { t } = useTranslation();
@@ -56,7 +57,7 @@ export default function NavbarPremium() {
   return (
     <>
       {/* Top Bar - Minimal & Elegant */}
-      <div className="bg-black text-white text-xs py-2">
+      <div className="bg-black dark:bg-gray-900 text-white text-xs py-2 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <p className="hidden sm:block tracking-wide">
@@ -85,8 +86,8 @@ export default function NavbarPremium() {
 
       {/* Main Navbar - Premium & Clean */}
       <nav
-        className={`bg-white sticky top-0 z-50 transition-all duration-300 ${
-          scrolled ? "shadow-md border-b border-gray-100" : "border-b border-gray-100"
+        className={`bg-white dark:bg-gray-900 sticky top-0 z-50 transition-all duration-300 ${
+          scrolled ? "shadow-md border-b border-gray-100 dark:border-gray-800" : "border-b border-gray-100 dark:border-gray-800"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,10 +95,10 @@ export default function NavbarPremium() {
             {/* Logo - Elegant Typography */}
             <Link to="/" className="flex items-center group">
               <div className="text-center">
-                <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black group-hover:text-gold-500 transition-colors">
+                <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black dark:text-white group-hover:text-gold-500 transition-colors">
                   ELEGANCE
                 </h1>
-                <p className="text-[10px] tracking-[0.3em] text-gray-500 uppercase">
+                <p className="text-[10px] tracking-[0.3em] text-gray-500 dark:text-gray-400 uppercase">
                   Modest Fashion
                 </p>
               </div>
@@ -112,8 +113,8 @@ export default function NavbarPremium() {
                   className={({ isActive }) =>
                     `text-sm tracking-wide uppercase font-medium transition-colors ${
                       isActive
-                        ? "text-black border-b-2 border-gold-500"
-                        : "text-gray-600 hover:text-black"
+                        ? "text-black dark:text-white border-b-2 border-gold-500"
+                        : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white"
                     }`
                   }
                 >
@@ -124,10 +125,13 @@ export default function NavbarPremium() {
 
             {/* Right Actions */}
             <div className="flex items-center space-x-4">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
               {/* Search Icon - Desktop */}
               <button 
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="hidden lg:block p-2 hover:text-gold-500 transition-colors"
+                className="hidden lg:block p-2 text-gray-700 dark:text-gray-300 hover:text-gold-500 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -136,12 +140,12 @@ export default function NavbarPremium() {
 
               {/* Wishlist */}
               {user && (
-                <Link to="/wishlist" className="relative p-2 hover:text-gold-500 transition-colors">
+                <Link to="/wishlist" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-gold-500 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                   {wishlistCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-black dark:bg-white text-white dark:text-black text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
                       {wishlistCount}
                     </span>
                   )}
@@ -149,12 +153,12 @@ export default function NavbarPremium() {
               )}
 
               {/* Cart */}
-              <Link to="/cart" className="relative p-2 hover:text-gold-500 transition-colors">
+              <Link to="/cart" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-gold-500 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-black dark:bg-white text-white dark:text-black text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
@@ -165,7 +169,7 @@ export default function NavbarPremium() {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="p-2 hover:text-gold-500 transition-colors"
+                    className="p-2 text-gray-700 dark:text-gray-300 hover:text-gold-500 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -173,49 +177,49 @@ export default function NavbarPremium() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-2 z-50">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-black">
+                    <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                        <p className="text-sm font-semibold text-black dark:text-white">
                           {user.displayName || user.email?.split("@")[0]}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
 
                       <div className="py-2">
                         <Link
                           to="/profile"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                          <span className="text-sm text-gray-700">My Profile</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">My Profile</span>
                         </Link>
                         <Link
                           to="/orders"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                          <span className="text-sm text-gray-700">My Orders</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">My Orders</span>
                         </Link>
                         {isAdmin && (
                           <Link
                             to="/admin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                            className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
-                            <span className="text-sm text-gold-600 font-medium">Admin Dashboard</span>
+                            <span className="text-sm text-gold-600 dark:text-gold-400 font-medium">Admin Dashboard</span>
                           </Link>
                         )}
                       </div>
 
-                      <div className="border-t border-gray-100 pt-2">
+                      <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
                         <button
                           onClick={() => {
                             logout();
                             setUserMenuOpen(false);
                           }}
-                          className="flex items-center space-x-3 w-full px-4 py-2 hover:bg-red-50 transition-colors"
+                          className="flex items-center space-x-3 w-full px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
-                          <span className="text-sm text-red-600">Sign Out</span>
+                          <span className="text-sm text-red-600 dark:text-red-400">Sign Out</span>
                         </button>
                       </div>
                     </div>
@@ -224,7 +228,7 @@ export default function NavbarPremium() {
               ) : (
                 <Link
                   to="/login"
-                  className="hidden lg:block px-6 py-2 bg-black text-white text-sm tracking-wide uppercase font-medium hover:bg-gold-500 transition-colors"
+                  className="hidden lg:block px-6 py-2 bg-black dark:bg-white text-white dark:text-black text-sm tracking-wide uppercase font-medium hover:bg-gold-500 dark:hover:bg-gold-500 dark:hover:text-black transition-colors"
                 >
                   Sign In
                 </Link>

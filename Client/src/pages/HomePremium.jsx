@@ -73,12 +73,12 @@ export default function HomePremium() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
       {/* Hero Section */}
       <HeroSectionPremium />
 
       {/* Features Bar */}
-      <section className="border-y border-gray-100 py-12">
+      <section className="border-y border-gray-100 dark:border-gray-800 py-12 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
@@ -86,10 +86,10 @@ export default function HomePremium() {
                 <div className="inline-flex items-center justify-center w-16 h-16 mb-4 text-gold-500">
                   {feature.icon}
                 </div>
-                <h3 className="text-sm tracking-widest uppercase font-medium text-black mb-2">
+                <h3 className="text-sm tracking-widest uppercase font-medium text-black dark:text-white mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-gray-500">{feature.description}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -104,10 +104,10 @@ export default function HomePremium() {
               <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
                 Explore
               </p>
-              <h2 className="font-display text-3xl md:text-4xl text-black mb-4">
+              <h2 className="font-display text-3xl md:text-4xl text-black dark:text-white mb-4">
                 Shop by Category
               </h2>
-              <p className="text-gray-500 max-w-2xl mx-auto">
+              <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
                 Discover our curated collections designed for every occasion
               </p>
             </div>
@@ -137,16 +137,16 @@ export default function HomePremium() {
       )}
 
       {/* Featured Products */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
               Curated Selection
             </p>
-            <h2 className="font-display text-3xl md:text-4xl text-black mb-4">
+            <h2 className="font-display text-3xl md:text-4xl text-black dark:text-white mb-4">
               Featured Collection
             </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
+            <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
               Handpicked pieces that embody elegance and modesty
             </p>
           </div>
@@ -175,7 +175,7 @@ export default function HomePremium() {
           <div className="text-center mt-12">
             <Link
               to="/products"
-              className="inline-block px-12 py-4 border-2 border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-all"
+              className="inline-block px-12 py-4 border-2 border-black dark:border-white text-black dark:text-white text-sm tracking-widest uppercase font-medium hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all"
             >
               View All Products
             </Link>
@@ -191,10 +191,10 @@ export default function HomePremium() {
               <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
                 Just In
               </p>
-              <h2 className="font-display text-3xl md:text-4xl text-black mb-4">
+              <h2 className="font-display text-3xl md:text-4xl text-black dark:text-white mb-4">
                 New Arrivals
               </h2>
-              <p className="text-gray-500 max-w-2xl mx-auto">
+              <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
                 Be the first to discover our latest designs
               </p>
             </div>
@@ -208,90 +208,68 @@ export default function HomePremium() {
         </section>
       )}
 
-      {/* Testimonials */}
-      <section className="py-20 bg-gray-50">
+      {/* Best Sellers */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
-              Testimonials
+              Popular Choices
             </p>
-            <h2 className="font-display text-3xl md:text-4xl text-black mb-4">
-              What Our Customers Say
+            <h2 className="font-display text-3xl md:text-4xl text-black dark:text-white mb-4">
+              Best Sellers
             </h2>
+            <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+              Our most loved pieces, chosen by customers like you
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Ayesha Rahman",
-                comment: "Exceptional quality and elegant designs. The fabric is luxurious and the fit is perfect.",
-                rating: 5,
-              },
-              {
-                name: "Fatima Khan",
-                comment: "Beautiful collection! The attention to detail is remarkable. Highly recommend.",
-                rating: 5,
-              },
-              {
-                name: "Zainab Ahmed",
-                comment: "Premium quality burkas at reasonable prices. Fast delivery and excellent customer service.",
-                rating: 5,
-              },
-            ].map((testimonial, index) => (
-              <div key={index} className="bg-white p-8 text-center">
-                <div className="flex justify-center gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <svg
-                      key={i}
-                      className="w-5 h-5 text-gold-500 fill-current"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  "{testimonial.comment}"
-                </p>
-                <p className="font-medium text-black">{testimonial.name}</p>
-                <p className="text-sm text-gray-400">Verified Customer</p>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+              {products.slice(0, 4).map((product) => (
+                <ProductCardPremium key={product._id} product={product} />
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* Instagram Feed Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
-              Follow Us
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl text-black mb-4">
-              @elegance_fashion
-            </h2>
-            <p className="text-gray-500">
-              Join our community and get inspired
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <a
-                key={i}
-                href="#"
-                className="relative aspect-square overflow-hidden group"
-              >
-                <img
-                  src={`https://images.unsplash.com/photo-${1580000000000 + i * 1000000}?w=600&h=600&fit=crop`}
-                  alt={`Instagram post ${i}`}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-              </a>
-            ))}
-          </div>
+      {/* Newsletter */}
+      <section className="py-20 bg-black dark:bg-gray-950 text-white transition-colors duration-300">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
+            Stay Connected
+          </p>
+          <h2 className="font-display text-3xl md:text-4xl mb-4">
+            Join Our Community
+          </h2>
+          <p className="text-gray-400 dark:text-gray-500 mb-8 max-w-2xl mx-auto">
+            Subscribe to receive exclusive offers, style tips, and be the first to know about new arrivals
+          </p>
+          
+          <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="flex-1 px-6 py-4 bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-gold-500"
+              required
+            />
+            <button
+              type="submit"
+              className="px-8 py-4 bg-gold-500 text-black text-sm tracking-widest uppercase font-medium hover:bg-gold-600 transition-colors"
+            >
+              Subscribe
+            </button>
+          </form>
+          
+          <p className="text-xs text-gray-500 mt-4">
+            By subscribing, you agree to our Privacy Policy and consent to receive updates
+          </p>
         </div>
       </section>
     </div>
