@@ -238,40 +238,6 @@ export default function HomePremium() {
           ) : null}
         </div>
       </section>
-
-      {/* Newsletter */}
-      <section className="py-20 bg-black dark:bg-gray-950 text-white transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
-            Stay Connected
-          </p>
-          <h2 className="font-display text-3xl md:text-4xl mb-4">
-            Join Our Community
-          </h2>
-          <p className="text-gray-400 dark:text-gray-500 mb-8 max-w-2xl mx-auto">
-            Subscribe to receive exclusive offers, style tips, and be the first to know about new arrivals
-          </p>
-          
-          <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-6 py-4 bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-gold-500"
-              required
-            />
-            <button
-              type="submit"
-              className="px-8 py-4 bg-gold-500 text-black text-sm tracking-widest uppercase font-medium hover:bg-gold-600 transition-colors"
-            >
-              Subscribe
-            </button>
-          </form>
-          
-          <p className="text-xs text-gray-500 mt-4">
-            By subscribing, you agree to our Privacy Policy and consent to receive updates
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

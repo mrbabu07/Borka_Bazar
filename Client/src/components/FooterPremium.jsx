@@ -32,33 +32,6 @@ export default function FooterPremium() {
 
   return (
     <footer className="bg-black dark:bg-gray-950 text-white transition-colors duration-300">
-      {/* Newsletter Section */}
-      <div className="border-b border-gray-800 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="max-w-2xl mx-auto text-center">
-            <h3 className="font-display text-2xl md:text-3xl mb-4">
-              Stay Updated
-            </h3>
-            <p className="text-gray-400 dark:text-gray-500 mb-8 text-sm tracking-wide">
-              Subscribe to receive updates on new arrivals, special offers, and exclusive collections
-            </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-6 py-3 bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:border-gold-500 transition-colors"
-              />
-              <button
-                type="submit"
-                className="px-8 py-3 bg-gold-500 text-black text-sm tracking-widest uppercase font-medium hover:bg-gold-600 transition-colors"
-              >
-                Subscribe
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
