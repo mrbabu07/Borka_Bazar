@@ -10,6 +10,8 @@ export default function OrderTracking({ order }) {
   }, [order]);
 
   const generateTrackingSteps = () => {
+    if (!order) return;
+    
     const steps = [
       {
         id: 1,
@@ -140,93 +142,101 @@ export default function OrderTracking({ order }) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="font-display text-xl text-black mb-6">Order Tracking</h3>
+    <>
+      {!order ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+          <p className="text-gray-500">No order data available</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="font-display text-xl text-black mb-6">Order Tracking</h3>
 
-      {/* Tracking Timeline */}
-      <div className="relative">
-        {trackingSteps.map((step, index) => (
-          <div key={step.id} className="relative pb-8 last:pb-0">
-            {/* Connecting Line */}
-            {index < trackingSteps.length - 1 && (
-              <div
-                className={`absolute left-5 top-12 w-0.5 h-full -ml-px ${getLineColor(step.status, trackingSteps[index + 1]?.status)}`}
-              ></div>
-            )}
-
-            {/* Step Content */}
-            <div className="relative flex items-start gap-4">
-              {/* Icon */}
-              <div
-                className={`flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center ${getStepColor(step.status)}`}
-              >
-                {getIcon(step.icon)}
-              </div>
-
-              {/* Details */}
-              <div className="flex-1 pt-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-black">{step.title}</h4>
-                  {step.date && (
-                    <span className="text-xs text-gray-500">
-                      {new Date(step.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 mt-1">{step.description}</p>
-
-                {/* Additional Info for Current Step */}
-                {step.status === "current" && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-700">
-                      {step.id === 2 && "We're confirming your order details and payment."}
-                      {step.id === 3 && "Your order is being carefully prepared for shipment."}
-                      {step.id === 4 && "Your order is on its way to you!"}
-                    </p>
-                  </div>
+          {/* Tracking Timeline */}
+          <div className="relative">
+            {trackingSteps.map((step, index) => (
+              <div key={step.id} className="relative pb-8 last:pb-0">
+                {/* Connecting Line */}
+                {index < trackingSteps.length - 1 && (
+                  <div
+                    className={`absolute left-5 top-12 w-0.5 h-full -ml-px ${getLineColor(step.status, trackingSteps[index + 1]?.status)}`}
+                  ></div>
                 )}
+
+                {/* Step Content */}
+                <div className="relative flex items-start gap-4">
+                  {/* Icon */}
+                  <div
+                    className={`flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center ${getStepColor(step.status)}`}
+                  >
+                    {getIcon(step.icon)}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-black">{step.title}</h4>
+                      {step.date && (
+                        <span className="text-xs text-gray-500">
+                          {new Date(step.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+
+                    {/* Additional Info for Current Step */}
+                    {step.status === "current" && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-700">
+                          {step.id === 2 && "We're confirming your order details and payment."}
+                          {step.id === 3 && "Your order is being carefully prepared for shipment."}
+                          {step.id === 4 && "Your order is on its way to you!"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Estimated Delivery */}
+          {order.status !== "delivered" && order.status !== "cancelled" && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-gray-700">
+                  <span className="font-medium">Estimated Delivery:</span>{" "}
+                  {new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
 
-      {/* Estimated Delivery */}
-      {order.status !== "delivered" && order.status !== "cancelled" && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <div className="flex items-center gap-2 text-sm">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-gray-700">
-              <span className="font-medium">Estimated Delivery:</span>{" "}
-              {new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
+          {/* Delivery Address */}
+          {order.shippingAddress && (
+            <div className="mt-6 p-4 border border-gray-200 rounded-lg">
+              <h4 className="font-medium text-black mb-2 text-sm">Delivery Address</h4>
+              <p className="text-sm text-gray-700">
+                {order.shippingAddress.name}<br />
+                {order.shippingAddress.address}<br />
+                {order.shippingAddress.city}, {order.shippingAddress.postalCode}<br />
+                {order.shippingAddress.phone}
+              </p>
+            </div>
+          )}
         </div>
       )}
-
-      {/* Delivery Address */}
-      {order.shippingAddress && (
-        <div className="mt-6 p-4 border border-gray-200 rounded-lg">
-          <h4 className="font-medium text-black mb-2 text-sm">Delivery Address</h4>
-          <p className="text-sm text-gray-700">
-            {order.shippingAddress.name}<br />
-            {order.shippingAddress.address}<br />
-            {order.shippingAddress.city}, {order.shippingAddress.postalCode}<br />
-            {order.shippingAddress.phone}
-          </p>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
