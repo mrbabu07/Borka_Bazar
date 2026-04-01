@@ -23,7 +23,7 @@ export default function ProductsPremium() {
   });
 
   const fabrics = ["Cotton", "Silk", "Chiffon", "Georgette", "Crepe", "Nida"];
-  const sizes = ["S", "M", "L", "XL", "XXL", "Free Size"];
+  const sizes = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
   const colors = ["Black", "White", "Navy", "Maroon", "Green", "Brown", "Gray"];
 
   useEffect(() => {
@@ -62,8 +62,24 @@ export default function ProductsPremium() {
         );
       }
       if (filters.size) {
+        // Map burka sizes to database sizes
+        const sizeMap = {
+          "38": "S",
+          "40": "S",
+          "42": "M",
+          "44": "L",
+          "46": "L",
+          "48": "XL",
+          "50": "XL",
+          "52": "XXL",
+          "54": "XXL",
+          "56": "Free Size",
+          "58": "Free Size",
+          "60": "Free Size",
+        };
+        const dbSize = sizeMap[filters.size] || filters.size;
         filteredProducts = filteredProducts.filter(
-          (p) => p.sizes?.includes(filters.size)
+          (p) => p.sizes?.includes(dbSize)
         );
       }
       if (filters.color) {
