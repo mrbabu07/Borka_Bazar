@@ -38,6 +38,7 @@ export default function AdvancedFilters({
     "New Balance",
     "Under Armour",
   ];
+  // Burka sizes - mapped from standard sizes
   const sizes = ["46", "48", "50", "52", "54", "56", "58", "60"];
   const colors = [
     { name: "Black", hex: "#000000" },
@@ -68,9 +69,22 @@ export default function AdvancedFilters({
   };
 
   const handleSizeToggle = (size) => {
-    const newSizes = filters.sizes.includes(size)
-      ? filters.sizes.filter((s) => s !== size)
-      : [...filters.sizes, size];
+    // Map burka sizes to database sizes
+    const sizeMap = {
+      "46": "S",
+      "48": "M",
+      "50": "L",
+      "52": "XL",
+      "54": "XXL",
+      "56": "Free Size",
+      "58": "Free Size",
+      "60": "Free Size",
+    };
+    
+    const dbSize = sizeMap[size] || size;
+    const newSizes = filters.sizes.includes(dbSize)
+      ? filters.sizes.filter((s) => s !== dbSize)
+      : [...filters.sizes, dbSize];
     setFilters({ ...filters, sizes: newSizes });
   };
 
@@ -323,19 +337,35 @@ export default function AdvancedFilters({
       {/* Sizes */}
       <FilterSection title="Sizes" section="size">
         <div className="flex flex-wrap gap-2">
-          {sizes.map((size) => (
-            <button
-              key={size}
-              onClick={() => handleSizeToggle(size)}
-              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                filters.sizes.includes(size)
-                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-300 dark:hover:border-primary-700"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
+          {sizes.map((size) => {
+            // Map burka sizes to database sizes for checking
+            const sizeMap = {
+              "46": "S",
+              "48": "M",
+              "50": "L",
+              "52": "XL",
+              "54": "XXL",
+              "56": "Free Size",
+              "58": "Free Size",
+              "60": "Free Size",
+            };
+            const dbSize = sizeMap[size] || size;
+            const isSelected = filters.sizes.includes(dbSize);
+            
+            return (
+              <button
+                key={size}
+                onClick={() => handleSizeToggle(size)}
+                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                  isSelected
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                    : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-300 dark:hover:border-primary-700"
+                }`}
+              >
+                {size}
+              </button>
+            );
+          })}
         </div>
       </FilterSection>
 
