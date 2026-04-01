@@ -38,7 +38,7 @@ export default function AdvancedFilters({
     "New Balance",
     "Under Armour",
   ];
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  const sizes = ["46", "48", "50", "52", "54", "56", "58", "60"];
   const colors = [
     { name: "Black", hex: "#000000" },
     { name: "White", hex: "#FFFFFF" },
