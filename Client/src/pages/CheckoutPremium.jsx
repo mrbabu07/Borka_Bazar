@@ -22,6 +22,10 @@ export default function CheckoutPremium() {
 
   const [loading, setLoading] = useState(false);
   const [deliverySettings, setDeliverySettings] = useState(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Fetch delivery settings
   useEffect(() => {
@@ -67,7 +71,7 @@ export default function CheckoutPremium() {
       ? 0
       : deliveryChargeAmount;
   
-  const finalTotal = cartTotal + deliveryCharge;
+  const finalTotal = cartTotal + deliveryCharge - couponDiscount;
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -81,6 +85,57 @@ export default function CheckoutPremium() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+
+    try {
+      setCouponLoading(true);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/coupons/validate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code: couponCode.toUpperCase(),
+            cartTotal: cartTotal,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const discount = data.data.discountAmount || 0;
+        setCouponDiscount(discount);
+        setCouponApplied(true);
+        toast.success(`Coupon applied! Discount: ৳${discount.toLocaleString()}`);
+      } else {
+        toast.error(data.message || "Invalid coupon code");
+        setCouponDiscount(0);
+        setCouponApplied(false);
+      }
+    } catch (error) {
+      console.error("Error validating coupon:", error);
+      toast.error("Failed to validate coupon");
+      setCouponDiscount(0);
+      setCouponApplied(false);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setCouponDiscount(0);
+    setCouponApplied(false);
+    toast.success("Coupon removed");
   };
 
   const handleSubmit = async (e) => {
@@ -120,11 +175,9 @@ export default function CheckoutPremium() {
         paymentMethod: "cod",
         transactionId: null,
         specialInstructions: formData.notes || "",
-        couponCode: null,
-        redeemedPoints: null,
-        pointsDiscount: 0,
-        couponDiscount: 0,
-        totalDiscount: 0,
+        couponCode: couponApplied ? couponCode : null,
+        couponDiscount: couponDiscount,
+        totalDiscount: couponDiscount,
       };
 
       const response = await createOrder(orderData);
@@ -386,12 +439,58 @@ export default function CheckoutPremium() {
 
               {/* Totals */}
               <div className="space-y-3 mb-6 pb-6 border-b border-gray-200">
+                {/* Coupon Section */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                    Promo Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      disabled={couponApplied}
+                      placeholder="Enter coupon code"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    {!couponApplied ? (
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading}
+                        className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {couponLoading ? "..." : "Apply"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="px-6 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {couponApplied && (
+                    <p className="text-xs text-green-600 mt-2">✓ Coupon applied successfully</p>
+                  )}
+                </div>
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium text-black">
                     ৳{cartTotal.toLocaleString()}
                   </span>
                 </div>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Discount</span>
+                    <span className="font-medium text-green-600">
+                      -৳{couponDiscount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-black'}`}>
