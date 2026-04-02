@@ -199,9 +199,9 @@ export default function ProductForm() {
     try {
       // Only send fields that the backend expects
       const data = {
-        title: formData.title,
+        name: formData.title, // Backend expects 'name' not 'title'
         price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : formData.price,
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : parseFloat(formData.price),
         image: formData.image,
         images: formData.images,
         categoryId: formData.categoryId,
@@ -229,7 +229,7 @@ export default function ProductForm() {
     } catch (error) {
       console.error("Failed to save:", error);
       console.error("Error response:", error.response?.data);
-      alert("Failed to save product: " + (error.response?.data?.message || error.message));
+      alert("Failed to save product: " + (error.response?.data?.error || error.response?.data?.message || error.message));
     } finally {
       setSubmitting(false);
     }
