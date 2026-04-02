@@ -197,11 +197,29 @@ export default function ProductForm() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Only send fields that the backend expects
       const data = {
-        ...formData,
+        title: formData.title,
         price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : formData.price,
+        image: formData.image,
+        images: formData.images,
+        categoryId: formData.categoryId,
         stock: parseInt(formData.stock),
+        description: formData.description,
+        sizes: formData.sizes,
+        colors: formData.colors,
+        sizeChart: formData.sizeChart,
+        variants: formData.variants,
+        // Burka-specific fields
+        fabric: formData.fabric || "",
+        style: formData.style || "",
+        occasion: formData.occasion || "",
+        sleeveType: formData.sleeveType || "",
+        color: formData.color || "",
+        availableSizes: formData.availableSizes || [],
       };
+      
       if (isEdit) {
         await updateProduct(id, data);
       } else {
@@ -210,7 +228,8 @@ export default function ProductForm() {
       navigate("/admin/products");
     } catch (error) {
       console.error("Failed to save:", error);
-      alert("Failed to save product");
+      console.error("Error response:", error.response?.data);
+      alert("Failed to save product: " + (error.response?.data?.message || error.message));
     } finally {
       setSubmitting(false);
     }
