@@ -8,6 +8,7 @@ export default function ProductsPremium() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [availableFabrics, setAvailableFabrics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -22,7 +23,6 @@ export default function ProductsPremium() {
     sort: searchParams.get("sort") || "newest",
   });
 
-  const fabrics = ["Cotton", "Silk", "Chiffon", "Georgette", "Crepe", "Nida"];
   const sizes = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
   const colors = ["Black", "White", "Navy", "Maroon", "Green", "Brown", "Gray"];
 
@@ -39,6 +39,14 @@ export default function ProductsPremium() {
       ]);
 
       let filteredProducts = productsRes.data.data;
+
+      // Extract unique fabrics from products
+      const uniqueFabrics = [...new Set(
+        filteredProducts
+          .map(p => p.fabric)
+          .filter(f => f && f.trim() !== "")
+      )].sort();
+      setAvailableFabrics(uniqueFabrics);
 
       // Apply filters
       if (filters.category) {
@@ -243,7 +251,7 @@ export default function ProductsPremium() {
                     All Fabrics
                   </span>
                 </label>
-                {fabrics.map((fabric) => (
+                {availableFabrics.map((fabric) => (
                   <label key={fabric} className="flex items-center gap-3 cursor-pointer group">
                     <input
                       type="radio"
@@ -464,7 +472,7 @@ export default function ProductsPremium() {
                         All Fabrics
                       </span>
                     </label>
-                    {fabrics.map((fabric) => (
+                    {availableFabrics.map((fabric) => (
                       <label key={fabric} className="flex items-center gap-3 cursor-pointer group">
                         <input
                           type="radio"
