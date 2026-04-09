@@ -437,14 +437,14 @@ export default function CheckoutPremium() {
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       disabled={couponApplied}
                       placeholder="Enter coupon code"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
                     />
                     {!couponApplied ? (
                       <button
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={couponLoading}
-                        className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="flex-shrink-0 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         {couponLoading ? "..." : "Apply"}
                       </button>
@@ -452,7 +452,7 @@ export default function CheckoutPremium() {
                       <button
                         type="button"
                         onClick={handleRemoveCoupon}
-                        className="px-6 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+                        className="flex-shrink-0 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
                       >
                         Remove
                       </button>

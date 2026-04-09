@@ -43,7 +43,7 @@ export default function AdminProducts() {
   };
 
   const filteredProducts = products.filter((product) =>
-    product.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    (product.title || product.name || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) return <Loading />;
@@ -203,12 +203,12 @@ export default function AdminProducts() {
                               product.image ||
                               "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=100&h=100&fit=crop"
                             }
-                            alt={product.title}
+                            alt={product.title || product.name}
                             className="w-12 h-12 object-cover rounded-lg"
                           />
                           <div>
                             <p className="font-medium text-gray-900">
-                              {product.title}
+                              {product.title || product.name}
                             </p>
                             <p className="text-sm text-gray-500 truncate max-w-xs">
                               {product.description}

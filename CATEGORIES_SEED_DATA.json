@@ -1,0 +1,62 @@
+{
+  "categories": [
+    {
+      "name": "Classic Borka",
+      "slug": "classic-borka",
+      "description": "Timeless elegance with traditional craftsmanship",
+      "isActive": true
+    },
+    {
+      "name": "Premium Borka",
+      "slug": "premium-borka",
+      "description": "Luxurious designs with premium embellishments",
+      "isActive": true
+    },
+    {
+      "name": "Artisan Borka",
+      "slug": "artisan-borka",
+      "description": "Handcrafted pieces with unique designs",
+      "isActive": true
+    },
+    {
+      "name": "Summer Collection",
+      "slug": "summer-collection",
+      "description": "Lightweight and breathable for warm weather",
+      "isActive": true
+    },
+    {
+      "name": "Modern Abaya",
+      "slug": "modern-abaya",
+      "description": "Contemporary styles with modern silhouettes",
+      "isActive": true
+    },
+    {
+      "name": "Printed Collection",
+      "slug": "printed-collection",
+      "description": "Vibrant prints and patterns",
+      "isActive": true
+    },
+    {
+      "name": "Occasion Wear",
+      "slug": "occasion-wear",
+      "description": "Special designs for celebrations and events",
+      "isActive": true
+    },
+    {
+      "name": "Custom Design",
+      "slug": "custom-design",
+      "description": "Personalized pieces tailored to your preferences",
+      "isActive": true
+    }
+  ],
+  "fabrics": [
+    "Aroya Premium",
+    "Zoom Embroidery",
+    "Dubai Cherry",
+    "Bhabla Blend",
+    "Jacket Weave",
+    "Nida Premium",
+    "Japran Silk",
+    "Elix Georgette"
+  ]
+}

@@ -46,6 +46,17 @@ export default function ProductForm() {
 
   const availableSizes = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
 
+  const availableFabrics = [
+    "Aroya Premium",
+    "Zoom Embroidery",
+    "Dubai Cherry",
+    "Bhabla Blend",
+    "Jacket Weave",
+    "Nida Premium",
+    "Japran Silk",
+    "Elix Georgette",
+  ];
+
   const availableColors = [
     { name: "Black", value: "#000000" },
     { name: "White", value: "#FFFFFF" },
@@ -653,14 +664,20 @@ export default function ProductForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Fabric
                 </label>
-                <input
-                  type="text"
+                <select
                   name="fabric"
                   value={formData.fabric}
                   onChange={handleChange}
-                  placeholder="e.g., Nida, Georgette, Crepe"
                   className="input-field"
-                />
+                >
+                  <option value="">Select fabric</option>
+                  {availableFabrics.map((fabric) => (
+                    <option key={fabric} value={fabric}>
+                      {fabric}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Choose from premium fabric options</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

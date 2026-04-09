@@ -18,6 +18,7 @@ export default function ProductsPremium() {
     minPrice: searchParams.get("minPrice") || "",
     maxPrice: searchParams.get("maxPrice") || "",
     fabric: searchParams.get("fabric") || "",
+    name: searchParams.get("name") || "",
     size: searchParams.get("size") || "",
     color: searchParams.get("color") || "",
     sort: searchParams.get("sort") || "newest",
@@ -67,6 +68,12 @@ export default function ProductsPremium() {
       if (filters.fabric) {
         filteredProducts = filteredProducts.filter(
           (p) => p.fabric?.toLowerCase() === filters.fabric.toLowerCase()
+        );
+      }
+      if (filters.name) {
+        filteredProducts = filteredProducts.filter(
+          (p) => p.title?.toLowerCase().includes(filters.name.toLowerCase()) ||
+                 p.name?.toLowerCase().includes(filters.name.toLowerCase())
         );
       }
       if (filters.size) {
@@ -132,6 +139,7 @@ export default function ProductsPremium() {
       minPrice: "",
       maxPrice: "",
       fabric: "",
+      name: "",
       size: "",
       color: "",
       sort: "newest",
@@ -231,6 +239,20 @@ export default function ProductsPremium() {
                   className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
                 />
               </div>
+            </div>
+
+            {/* Search by Name */}
+            <div>
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                Search Name
+              </h3>
+              <input
+                type="text"
+                placeholder="Search product name..."
+                value={filters.name}
+                onChange={(e) => handleFilterChange("name", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+              />
             </div>
 
             {/* Fabric Filter */}
