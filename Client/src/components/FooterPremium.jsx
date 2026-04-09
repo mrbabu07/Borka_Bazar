@@ -139,12 +139,12 @@ export default function FooterPremium() {
         </div>
       </div>
 
-      {/* Bottom Bar */}
+          {/* Bottom Bar */}
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-gray-400 text-sm">
-              © {currentYear} Elegance. All rights reserved.
+              © {currentYear} Borka Bazar. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               {footerLinks.policy.map((link) => (
