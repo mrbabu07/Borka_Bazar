@@ -241,6 +241,10 @@ export default function Contact() {
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
                   title="Facebook"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open("https://www.facebook.com/anamulhaque.joy.188?rdid=GvkM4bROFIYCRxEl&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FBQeH3fwk%2F", "_blank", "noopener,noreferrer");
+                  }}
                 >
                   <svg
                     className="w-6 h-6"
@@ -256,6 +260,10 @@ export default function Contact() {
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
                   title="TikTok"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open("https://www.tiktok.com/@anamulhaquejoy359?_r=1&_t=ZS-95KcW5yHJPZfb", "_blank", "noopener,noreferrer");
+                  }}
                 >
                   <svg
                     className="w-6 h-6"
@@ -271,6 +279,10 @@ export default function Contact() {
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center text-white hover:bg-green-600 transition-colors"
                   title="WhatsApp"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open("https://api.whatsapp.com/message/OSBDQIJSDBKUP1?autoload=1&app_absent=0", "_blank", "noopener,noreferrer");
+                  }}
                 >
                   <svg
                     className="w-6 h-6"
