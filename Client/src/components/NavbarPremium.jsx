@@ -7,6 +7,7 @@ import useWishlist from "../hooks/useWishlist";
 import { getCategories } from "../services/api";
 import SearchBar from "./SearchBar";
 import ThemeToggle from "./ThemeToggle";
+import { socialLinks } from "../config/socialLinks";
 
 export default function NavbarPremium() {
   const { t } = useTranslation();
@@ -69,7 +70,7 @@ export default function NavbarPremium() {
               </a>
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => window.open("https://www.facebook.com/anamulhaque.joy.188?rdid=GvkM4bROFIYCRxEl&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FBQeH3fwk%2F", "_blank", "noopener,noreferrer")}
+                  onClick={() => window.open(socialLinks.facebook.url, "_blank", "noopener,noreferrer")}
                   className="hover:text-gold-500 transition-colors" 
                   title="Facebook"
                 >
@@ -78,7 +79,7 @@ export default function NavbarPremium() {
                   </svg>
                 </button>
                 <button 
-                  onClick={() => window.open("https://www.tiktok.com/@anamulhaquejoy359?_r=1&_t=ZS-95KcW5yHJPZfb", "_blank", "noopener,noreferrer")}
+                  onClick={() => window.open(socialLinks.tiktok.url, "_blank", "noopener,noreferrer")}
                   className="hover:text-gold-500 transition-colors" 
                   title="TikTok"
                 >

@@ -58,6 +58,11 @@
       content="Discover elegant burkas, abayas, and hijabs with fast delivery across Bangladesh"
     />
 
+    <!-- Social Media Links -->
+    <link rel="alternate" href="https://www.facebook.com/anamulhaque.joy.188" />
+    <link rel="alternate" href="https://www.tiktok.com/@anamulhaquejoy359" />
+    <link rel="alternate" href="https://api.whatsapp.com/message/OSBDQIJSDBKUP1" />
+
     <title>Borka Bazar - Elegant Modest Fashion</title>
   </head>
   <body>
@@ -79,5 +84,21 @@
       })();
     </script>
     <!--End of Tawk.to Script-->
+
+    <!-- WhatsApp Integration -->
+    <script>
+      // WhatsApp integration with Tawk.to
+      window.addEventListener('load', function() {
+        if (window.Tawk_API) {
+          // Set WhatsApp as a communication channel
+          Tawk_API.onLoad = function() {
+            // WhatsApp link for direct messaging
+            var whatsappLink = "https://api.whatsapp.com/message/OSBDQIJSDBKUP1?autoload=1&app_absent=0";
+            // Store for potential use in custom integrations
+            window.borkaBazarWhatsApp = whatsappLink;
+          };
+        }
+      });
+    </script>
   </body>
 </html>
