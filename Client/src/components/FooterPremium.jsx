@@ -43,7 +43,7 @@ export default function FooterPremium() {
           <div className="lg:col-span-2">
             <Link to="/" className="inline-block mb-6">
               <h2 className="font-display text-3xl font-bold tracking-tight">
-                ELEGANCE
+                BORKA BAZAR
               </h2>
               <p className="text-[10px] tracking-[0.3em] text-gray-400 uppercase">
                 Modest Fashion

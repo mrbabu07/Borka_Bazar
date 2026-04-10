@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { getProductById, getProducts } from "../services/api";
 import useCart from "../hooks/useCart";
 import useWishlist from "../hooks/useWishlist";
+import { useCurrency } from "../hooks/useCurrency";
 import ProductCardPremium from "../components/ProductCardPremium";
 import ReviewsSection from "../components/reviews/ReviewsSection";
 import ProductQA from "../components/ProductQA";
@@ -16,6 +17,7 @@ export default function ProductDetailPremium() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { formatPrice } = useCurrency();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -185,7 +187,7 @@ export default function ProductDetailPremium() {
                 {product.title}
               </h1>
               <p className="text-3xl font-semibold text-black">
-                ৳{product.price?.toLocaleString()}
+                {formatPrice(product.price)}
               </p>
             </div>
 

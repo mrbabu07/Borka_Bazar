@@ -104,7 +104,7 @@ export default function NavbarPremium() {
             <Link to="/" className="flex items-center group">
               <div className="text-center">
                 <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black dark:text-white group-hover:text-gold-500 transition-colors">
-                  ELEGANCE
+                  BORKA BAZAR
                 </h1>
                 <p className="text-[10px] tracking-[0.3em] text-gray-500 dark:text-gray-400 uppercase">
                   Modest Fashion
