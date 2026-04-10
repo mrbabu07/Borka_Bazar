@@ -3,12 +3,14 @@ import { getProducts, deleteProduct } from "../../services/api";
 import { Link } from "react-router-dom";
 import Loading from "../../components/Loading";
 import toast, { Toaster } from "react-hot-toast";
+import { useCurrency } from "../../hooks/useCurrency";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState(null);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     fetchProducts();
@@ -218,7 +220,7 @@ export default function AdminProducts() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-semibold text-gray-900">
-                          ${product.price}
+                          {formatPrice(product.price)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
