@@ -132,7 +132,7 @@ export default function Compare() {
                           product.originalPrice > product.price && (
                             <div className="text-sm">
                               <span className="text-gray-500 line-through">
-                                ${product.originalPrice}
+                                {formatPrice(product.originalPrice)}
                               </span>
                               <span className="text-green-600 ml-2">
                                 {Math.round(
