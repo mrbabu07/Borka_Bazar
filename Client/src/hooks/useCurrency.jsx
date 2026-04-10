@@ -1,23 +1,22 @@
 // Currency hook - Fixed to BDT only
-// All prices are stored in USD in database, converted to BDT for display
+// All prices are stored in BDT in database (no conversion needed)
 
-const BDT_RATE = 110; // 1 USD = 110 BDT
 const BDT_SYMBOL = "৳";
 
 export function useCurrency() {
   // Always return BDT - no currency switching
   const currency = "BDT";
 
-  const convertPrice = (priceInUSD) => {
-    if (!priceInUSD && priceInUSD !== 0) return 0;
-    return priceInUSD * BDT_RATE;
+  const convertPrice = (priceInBDT) => {
+    if (!priceInBDT && priceInBDT !== 0) return 0;
+    // No conversion needed - prices are already in BDT
+    return priceInBDT;
   };
 
-  const formatPrice = (priceInUSD) => {
-    if (!priceInUSD && priceInUSD !== 0) return `${BDT_SYMBOL}0`;
-    const converted = convertPrice(priceInUSD);
+  const formatPrice = (priceInBDT) => {
+    if (!priceInBDT && priceInBDT !== 0) return `${BDT_SYMBOL}0`;
     // Format with comma separators for BDT (no decimals)
-    return `${BDT_SYMBOL}${Math.round(converted).toLocaleString()}`;
+    return `${BDT_SYMBOL}${Math.round(priceInBDT).toLocaleString()}`;
   };
 
   return {
