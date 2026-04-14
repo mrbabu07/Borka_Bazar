@@ -42,7 +42,17 @@ export const createCategory = (data) => api.post("/categories", data);
 export const updateCategory = (id, data) => api.put(`/categories/${id}`, data);
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
 
-// Orders
+// Orders - Partial Payment System (New)
+export const createPartialPaymentOrder = (data) => 
+  api.post("/orders/create", data);
+export const getOrderById = (id) => api.get(`/orders/${id}`);
+export const confirmOrderPayment = (id, data) =>
+  api.patch(`/orders/${id}/confirm-payment`, data);
+export const rejectOrderPayment = (id, data) =>
+  api.patch(`/orders/${id}/reject-payment`, data);
+export const getOrderStats = () => api.get("/orders/stats/overview");
+
+// Legacy Orders (kept for backward compatibility)
 export const getUserOrders = () => api.get("/orders/my-orders");
 export const getAllOrders = () => api.get("/orders");
 export const createOrder = (data) => api.post("/orders", data);
