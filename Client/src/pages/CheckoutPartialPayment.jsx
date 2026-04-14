@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCart from '../hooks/useCart';
 import { useCurrency } from '../hooks/useCurrency';
-import PaymentProcessModal from '../components/PaymentProcessModal';
 import toast from 'react-hot-toast';
 
 export default function CheckoutPartialPayment() {
@@ -11,13 +10,12 @@ export default function CheckoutPartialPayment() {
   const { formatPrice } = useCurrency();
 
   const [loading, setLoading] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [formData, setFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    customerAddress: '',
-    paymentMethod: 'bKash',
+  const [orderCode, setOrderCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const [paymentData, setPaymentData] = useState({
+    method: 'bKash',
+    transactionId: '',
   });
 
   const [orderSummary, setOrderSummary] = useState({
@@ -28,6 +26,15 @@ export default function CheckoutPartialPayment() {
 
   const [errors, setErrors] = useState({});
 
+  // Generate order code on mount
+  useEffect(() => {
+    const code = `ORD-${Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, '0')}`;
+    setOrderCode(code);
+  }, []);
+
+  // Calculate totals
   useEffect(() => {
     if (cart.length > 0) {
       const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -41,50 +48,40 @@ export default function CheckoutPartialPayment() {
     }
   }, [cart]);
 
-  const validateForm = () => {
-    const newErrors = {};
+  const handleCopyPhone = () => {
+    navigator.clipboard.writeText('01978305319');
+    toast.success('Phone number copied!');
+  };
 
-    if (!formData.customerName.trim()) {
-      newErrors.customerName = 'Full name is required';
-    }
-
-    if (!formData.customerPhone.trim()) {
-      newErrors.customerPhone = 'Phone number is required';
-    } else if (!/^[0-9]{10,15}$/.test(formData.customerPhone.replace(/\D/g, ''))) {
-      newErrors.customerPhone = 'Invalid phone number';
-    }
-
-    if (!formData.customerAddress.trim()) {
-      newErrors.customerAddress = 'Delivery address is required';
-    }
-
-    if (!formData.paymentMethod) {
-      newErrors.paymentMethod = 'Payment method is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleCopyOrderCode = () => {
+    navigator.clipboard.writeText(orderCode);
+    setCopied(true);
+    toast.success('Order code copied!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setPaymentData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  const handleSubmit = (e) => {
+  const validatePayment = () => {
+    const newErrors = {};
+    if (!paymentData.transactionId.trim()) {
+      newErrors.transactionId = 'Transaction ID is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      toast.error('Please fill all required fields correctly');
+    if (!validatePayment()) {
+      toast.error('Please enter transaction ID');
       return;
     }
 
@@ -93,38 +90,32 @@ export default function CheckoutPartialPayment() {
       return;
     }
 
-    setShowPaymentModal(true);
-  };
-
-  const handlePaymentComplete = async (transactionId, orderCode) => {
     setLoading(true);
 
     try {
       const orderData = {
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail,
-        customerAddress: formData.customerAddress,
+        customerName: 'User',
+        customerPhone: '01978305319',
+        customerEmail: '',
+        customerAddress: 'Address will be collected from checkout',
         products: cart.map((item) => ({
           productId: item._id,
           title: item.title,
           price: item.price,
           quantity: item.quantity,
           image: item.image,
-          size: item.size,
-          color: item.color,
+          size: item.selectedSize,
+          color: item.selectedColor?.name,
         })),
         subtotal: orderSummary.subtotal,
         deliveryFee: orderSummary.deliveryFee,
-        paymentMethod: formData.paymentMethod,
-        transactionId: transactionId,
+        paymentMethod: paymentData.method,
+        transactionId: paymentData.transactionId,
       };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/create`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
       });
 
@@ -135,8 +126,7 @@ export default function CheckoutPartialPayment() {
       }
 
       clearCart();
-      toast.success('Order created successfully!');
-      setShowPaymentModal(false);
+      toast.success('Payment submitted! Waiting for verification...');
 
       navigate('/order-confirmation', {
         state: {
@@ -145,12 +135,12 @@ export default function CheckoutPartialPayment() {
           total: result.data.total,
           deliveryFee: result.data.deliveryFee,
           remainingAmount: result.data.remainingAmount,
-          paymentMethod: formData.paymentMethod,
+          paymentMethod: paymentData.method,
         },
       });
     } catch (error) {
-      console.error('Order creation error:', error);
-      toast.error(error.message || 'Failed to create order');
+      console.error('Order error:', error);
+      toast.error(error.message || 'Failed to submit payment');
     } finally {
       setLoading(false);
     }
@@ -177,10 +167,12 @@ export default function CheckoutPartialPayment() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Payment</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Order Summary */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
 
@@ -216,153 +208,164 @@ export default function CheckoutPartialPayment() {
               </div>
             </div>
 
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4">Payment Instructions</h3>
-
-              <div className="space-y-4">
-                <div className="bg-white rounded p-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Send Delivery Fee via {formData.paymentMethod}:
-                  </p>
-                  <p className="text-2xl font-bold text-primary-600 mb-3">
-                    {formatPrice(orderSummary.deliveryFee)}
-                  </p>
-                  <p className="text-sm text-gray-600 mb-3">
-                    <strong>Payment Number:</strong> 01978305319
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <strong>Reference:</strong> Use your Order Code as reference
-                  </p>
-                </div>
-
-                <div className="bg-white rounded p-4">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Steps:</p>
-                  <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
-                    <li>Open {formData.paymentMethod} app</li>
-                    <li>Select "Send Money"</li>
-                    <li>Enter number: 01978305319</li>
-                    <li>Enter amount: {formatPrice(orderSummary.deliveryFee)}</li>
-                    <li>Use Order Code as reference</li>
-                    <li>Complete the transaction</li>
-                    <li>Enter Transaction ID in next step</li>
-                  </ol>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Remaining amount ({formatPrice(orderSummary.subtotal)}) will be collected during delivery via Cash on Delivery.
-                  </p>
-                </div>
+            {/* Payment Method Selection */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Payment Method</h2>
+              <div className="space-y-3">
+                {['bKash', 'Nagad'].map((method) => (
+                  <label
+                    key={method}
+                    className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition ${
+                      paymentData.method === method
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="method"
+                      value={method}
+                      checked={paymentData.method === method}
+                      onChange={handleChange}
+                      className="w-5 h-5"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-900">{method}</p>
+                      <p className="text-sm text-gray-600">Send money via {method}</p>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
+            {/* Payment Instructions */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Instructions</h2>
+
+              {/* Order Code */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700 mb-2">Your Order Code</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-3xl font-bold text-blue-600 font-mono">{orderCode}</p>
+                  <button
+                    onClick={handleCopyOrderCode}
+                    className="p-2 hover:bg-blue-100 rounded-lg transition"
+                    title="Copy order code"
+                  >
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Payment Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700 mb-2">Amount to Send</p>
+                  <p className="text-3xl font-bold text-green-600">{formatPrice(orderSummary.deliveryFee)}</p>
+                </div>
+
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <p className="text-sm text-purple-700 mb-2">Payment Number</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-bold text-purple-600">01978305319</p>
+                    <button
+                      onClick={handleCopyPhone}
+                      className="p-2 hover:bg-purple-100 rounded-lg transition"
+                      title="Copy phone number"
+                    >
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Steps */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="font-semibold text-gray-900 mb-3">Steps to Follow:</p>
+                <ol className="space-y-2 text-sm text-gray-700">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                    <span>Open your {paymentData.method} app</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                    <span>Select "Send Money"</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">3</span>
+                    <span>Enter number: <strong>01978305319</strong></span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">4</span>
+                    <span>Enter amount: <strong>{formatPrice(orderSummary.deliveryFee)}</strong></span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">5</span>
+                    <span>Use order code as reference: <strong>{orderCode}</strong></span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">6</span>
+                    <span>Complete the transaction</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Transaction ID Input */}
             <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Payment</h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name *
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction ID *
                 </label>
                 <input
                   type="text"
-                  name="customerName"
-                  value={formData.customerName}
+                  name="transactionId"
+                  value={paymentData.transactionId}
                   onChange={handleChange}
-                  placeholder="Enter your full name"
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    errors.customerName ? 'border-red-500' : 'border-gray-300'
+                  placeholder="Enter your transaction ID"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    errors.transactionId ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
-                {errors.customerName && (
-                  <p className="text-red-500 text-sm mt-1">{errors.customerName}</p>
+                {errors.transactionId && (
+                  <p className="text-red-500 text-sm mt-1">{errors.transactionId}</p>
                 )}
+                <p className="text-xs text-gray-500 mt-2">
+                  You will receive a notification from {paymentData.method} after payment
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  name="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={handleChange}
-                  placeholder="01XXXXXXXXX"
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    errors.customerPhone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.customerPhone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.customerPhone}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email (Optional)
-                </label>
-                <input
-                  type="email"
-                  name="customerEmail"
-                  value={formData.customerEmail}
-                  onChange={handleChange}
-                  placeholder="your@email.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Address *
-                </label>
-                <textarea
-                  name="customerAddress"
-                  value={formData.customerAddress}
-                  onChange={handleChange}
-                  placeholder="Enter your complete delivery address"
-                  rows="3"
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    errors.customerAddress ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.customerAddress && (
-                  <p className="text-red-500 text-sm mt-1">{errors.customerAddress}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Method *
-                </label>
-                <select
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    errors.paymentMethod ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="bKash">bKash</option>
-                  <option value="Nagad">Nagad</option>
-                </select>
-                {errors.paymentMethod && (
-                  <p className="text-red-500 text-sm mt-1">{errors.paymentMethod}</p>
-                )}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-900">
+                  ⚠️ After payment, you will receive a notification from {paymentData.method}. Our team will verify your payment within 24 hours.
+                </p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? 'Processing...' : 'Proceed to Payment'}
+                {loading && (
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                {loading ? 'Submitting...' : 'Submit Payment'}
               </button>
             </form>
           </div>
 
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-6 sticky top-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Total</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h3>
 
               <div className="space-y-3 pb-4 border-b">
                 <div className="flex justify-between text-gray-600">
@@ -371,9 +374,7 @@ export default function CheckoutPartialPayment() {
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Fee:</span>
-                  <span className="text-primary-600 font-semibold">
-                    {formatPrice(orderSummary.deliveryFee)}
-                  </span>
+                  <span className="text-primary-600 font-semibold">{formatPrice(orderSummary.deliveryFee)}</span>
                 </div>
               </div>
 
@@ -382,7 +383,7 @@ export default function CheckoutPartialPayment() {
                 <span>{formatPrice(orderSummary.total)}</span>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded p-4 mb-4">
+              <div className="bg-green-50 border border-green-200 rounded p-4">
                 <p className="text-sm text-green-800">
                   <strong>Pay Now:</strong> {formatPrice(orderSummary.deliveryFee)}
                 </p>
@@ -390,23 +391,10 @@ export default function CheckoutPartialPayment() {
                   <strong>Pay on Delivery:</strong> {formatPrice(orderSummary.subtotal)}
                 </p>
               </div>
-
-              <div className="text-xs text-gray-500 text-center">
-                <p>✓ Secure checkout</p>
-                <p>✓ Manual payment verification</p>
-              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <PaymentProcessModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        orderData={orderSummary}
-        paymentMethod={formData.paymentMethod}
-        onPaymentComplete={handlePaymentComplete}
-      />
     </div>
   );
 }
