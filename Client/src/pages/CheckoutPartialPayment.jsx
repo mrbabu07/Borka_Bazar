@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 export default function CheckoutPartialPayment() {
   const navigate = useNavigate();
-  const { cartItems, clearCart } = useCart();
+  const { cart, clearCart } = useCart();
   const { formatPrice } = useCurrency();
 
   const [loading, setLoading] = useState(false);
@@ -29,8 +29,8 @@ export default function CheckoutPartialPayment() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (cartItems.length > 0) {
-      const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (cart.length > 0) {
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const total = subtotal + orderSummary.deliveryFee;
 
       setOrderSummary({
@@ -39,7 +39,7 @@ export default function CheckoutPartialPayment() {
         total,
       });
     }
-  }, [cartItems]);
+  }, [cart]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -88,7 +88,7 @@ export default function CheckoutPartialPayment() {
       return;
     }
 
-    if (cartItems.length === 0) {
+    if (cart.length === 0) {
       toast.error('Your cart is empty');
       return;
     }
@@ -105,7 +105,7 @@ export default function CheckoutPartialPayment() {
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail,
         customerAddress: formData.customerAddress,
-        products: cartItems.map((item) => ({
+        products: cart.map((item) => ({
           productId: item._id,
           title: item.title,
           price: item.price,
@@ -156,7 +156,7 @@ export default function CheckoutPartialPayment() {
     }
   };
 
-  if (cartItems.length === 0) {
+  if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4">
@@ -185,7 +185,7 @@ export default function CheckoutPartialPayment() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
 
               <div className="space-y-4 mb-6 pb-6 border-b">
-                {cartItems.map((item) => (
+                {cart.map((item) => (
                   <div key={item._id} className="flex justify-between items-start">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{item.title}</p>
