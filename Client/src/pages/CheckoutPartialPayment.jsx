@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCart from '../hooks/useCart';
+import useAuth from '../hooks/useAuth';
 import { useCurrency } from '../hooks/useCurrency';
 import toast from 'react-hot-toast';
 
 export default function CheckoutPartialPayment() {
   const navigate = useNavigate();
   const { cart, clearCart } = useCart();
+  const { user } = useAuth();
   const { formatPrice } = useCurrency();
 
   const [loading, setLoading] = useState(false);
@@ -94,9 +96,9 @@ export default function CheckoutPartialPayment() {
 
     try {
       const orderData = {
-        customerName: 'User',
+        customerName: user?.displayName || 'User',
         customerPhone: '01978305319',
-        customerEmail: '',
+        customerEmail: user?.email || '',
         customerAddress: 'Address will be collected from checkout',
         products: cart.map((item) => ({
           productId: item._id,
