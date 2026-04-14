@@ -26,6 +26,7 @@ export default function CheckoutPremium() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod', 'bkash', 'nagad'
 
   // Fetch delivery settings
   useEffect(() => {
@@ -133,6 +134,13 @@ export default function CheckoutPremium() {
       return;
     }
 
+    // If partial payment is selected, redirect to partial payment checkout
+    if (paymentMethod === 'partial') {
+      navigate('/checkout-partial-payment');
+      return;
+    }
+
+    // Otherwise, proceed with COD order
     try {
       setLoading(true);
 
@@ -335,13 +343,33 @@ export default function CheckoutPremium() {
                 <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
                   Payment Method
                 </h2>
-                <div className="bg-gray-50 p-6 border border-gray-200">
-                  <label className="flex items-center gap-3 cursor-pointer">
+                <div className="space-y-3">
+                  {/* Partial Payment Option */}
+                  <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition" style={{borderColor: paymentMethod === 'partial' ? '#1e7098' : '#e5e7eb'}}>
                     <input
                       type="radio"
                       name="payment"
-                      checked
-                      readOnly
+                      value="partial"
+                      checked={paymentMethod === 'partial'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-5 h-5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-black">Partial Payment (bKash/Nagad)</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Pay delivery fee now via bKash/Nagad, remaining on delivery
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Cash on Delivery Option */}
+                  <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition" style={{borderColor: paymentMethod === 'cod' ? '#1e7098' : '#e5e7eb'}}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-5 h-5"
                     />
                     <div>
