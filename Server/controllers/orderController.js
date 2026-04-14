@@ -175,10 +175,24 @@ exports.getUserOrders = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const userEmail = req.user?.email;
 
+    console.log('📋 getUserOrders called with:', {
+      userEmail,
+      userId: req.user?.uid,
+      allUserData: req.user
+    });
+
     if (!userEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'User email is required',
+      console.warn('⚠️ No email found in user token');
+      // Return empty array instead of error - user might not have email in token
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: 0,
+        },
       });
     }
 
@@ -191,6 +205,8 @@ exports.getUserOrders = async (req, res) => {
 
     const total = await Order.countDocuments({ 'customer.email': userEmail });
 
+    console.log(`✅ Found ${total} orders for user ${userEmail}`);
+
     res.status(200).json({
       success: true,
       data: orders,
@@ -202,7 +218,7 @@ exports.getUserOrders = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get user orders error:', error);
+    console.error('❌ Get user orders error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user orders',
