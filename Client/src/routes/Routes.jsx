@@ -18,6 +18,8 @@ import Wishlist from "../pages/Wishlist";
 import SharedWishlist from "../pages/SharedWishlist";
 import Checkout from "../pages/Checkout";
 import CheckoutPremium from "../pages/CheckoutPremium";
+import CheckoutPartialPayment from "../pages/CheckoutPartialPayment";
+import OrderConfirmation from "../pages/OrderConfirmation";
 import Orders from "../pages/Orders";
 import Profile from "../pages/Profile";
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -86,6 +88,18 @@ const router = createBrowserRouter([
             <CheckoutPremium />
           </PrivateRoute>
         ),
+      },
+      {
+        path: "/checkout-partial-payment",
+        element: (
+          <PrivateRoute>
+            <CheckoutPartialPayment />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/order-confirmation",
+        element: <OrderConfirmation />,
       },
       {
         path: "/orders",
