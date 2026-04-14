@@ -113,7 +113,7 @@ export default function CheckoutPartialPayment() {
         transactionId: paymentData.transactionId,
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/create`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
