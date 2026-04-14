@@ -1,446 +1,423 @@
-const emailService = require("../services/emailService");
-const invoiceService = require("../services/invoiceService");
+const Order = require('../models/Order');
+const Product = require('../models/Product');
 
-const getAllOrders = async (req, res) => {
-  try {
-    const Order = req.app.locals.models.Order;
-    const orders = await Order.findAll();
-    res.json({ success: true, data: orders });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+// Generate unique order code
+const generateOrderCode = async () => {
+  let orderCode;
+  let exists = true;
+
+  while (exists) {
+    const randomNum = Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, '0');
+    orderCode = `ORD-${randomNum}`;
+    const existingOrder = await Order.findOne({ orderCode });
+    exists = !!existingOrder;
   }
+
+  return orderCode;
 };
 
-const getUserOrders = async (req, res) => {
+// Create new order
+exports.createOrder = async (req, res) => {
   try {
-    const Order = req.app.locals.models.Order;
-    const orders = await Order.findByUserId(req.user.uid);
-    res.json({ success: true, data: orders });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-const createOrder = async (req, res) => {
-  try {
-    const Order = req.app.locals.models.Order;
-    const Product = req.app.locals.models.Product;
     const {
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
       products,
-      total,
-      shippingInfo,
+      subtotal,
+      deliveryFee,
       paymentMethod,
-      transactionId,
-      specialInstructions,
-      couponCode,
-      isGuest = false,
     } = req.body;
 
-    // Log the received data for debugging
-    console.log("📦 Creating order with data:", {
-      userId: req.user?.uid || "guest",
-      productsCount: products?.length,
-      total,
-      shippingInfo: shippingInfo ? "provided" : "missing",
-      paymentMethod,
-      transactionId: transactionId || "none",
-      specialInstructions: specialInstructions ? "provided" : "none",
-      couponCode: couponCode || "none",
-      isGuest,
-    });
-
-    if (!products || !Array.isArray(products) || products.length === 0) {
-      console.error("❌ Order creation failed: Invalid products");
-      return res
-        .status(400)
-        .json({ success: false, error: "Invalid products" });
-    }
-
-    // Validate required shipping information
-    if (
-      !shippingInfo ||
-      !shippingInfo.name ||
-      !shippingInfo.email ||
-      !shippingInfo.phone ||
-      !shippingInfo.address ||
-      !shippingInfo.city
-    ) {
-      console.error(
-        "❌ Order creation failed: Missing shipping info",
-        shippingInfo,
-      );
+    // Validation
+    if (!customerName || !customerPhone || !products || !subtotal || !deliveryFee) {
       return res.status(400).json({
         success: false,
-        error: "Missing required shipping information",
+        message: 'Missing required fields',
       });
     }
 
-    // Validate product availability and update stock
-    for (const item of products) {
-      if (!item.productId) {
-        console.error(
-          "❌ Order creation failed: Missing productId in item",
-          item,
-        );
-        return res.status(400).json({
-          success: false,
-          error: "Missing product ID in order items",
-        });
-      }
-
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        console.error(
-          "❌ Order creation failed: Product not found",
-          item.productId,
-        );
-        return res.status(400).json({
-          success: false,
-          error: `Product not found: ${item.productId}`,
-        });
-      }
-
-      if (product.stock < item.quantity) {
-        console.error("❌ Order creation failed: Insufficient stock", {
-          product: product.title,
-          available: product.stock,
-          requested: item.quantity,
-        });
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient stock for ${product.title}. Available: ${product.stock}, Requested: ${item.quantity}`,
-        });
-      }
+    if (!['bKash', 'Nagad'].includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment method',
+      });
     }
 
-    // Create order with coupon support
-    const orderData = {
-      userId: req.user?.uid || null,
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Products array is required and cannot be empty',
+      });
+    }
+
+    // Validate phone number (basic validation)
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(customerPhone.replace(/\D/g, ''))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number',
+      });
+    }
+
+    // Calculate total
+    const total = subtotal + deliveryFee;
+    const remainingAmount = subtotal; // Remaining to be paid via COD
+
+    // Generate unique order code
+    const orderCode = await generateOrderCode();
+
+    // Create order
+    const order = new Order({
+      orderCode,
+      customer: {
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail || '',
+        address: customerAddress || '',
+      },
       products,
-      subtotal: total, // This will be recalculated in the model
-      shippingInfo,
-      paymentMethod,
-      transactionId: transactionId || null,
-      specialInstructions,
-      couponCode,
-      isGuest: isGuest || false,
-    };
+      pricing: {
+        subtotal,
+        deliveryFee,
+        total,
+        remainingAmount,
+      },
+      payment: {
+        method: paymentMethod,
+        status: 'Pending',
+      },
+      order: {
+        status: 'Pending',
+      },
+    });
 
-    console.log("📦 Creating order in database...");
-    const orderId = await Order.create(orderData);
-    console.log("✅ Order created successfully:", orderId);
+    await order.save();
 
-    // Update product stock
-    console.log("📦 Updating product stock...");
-    for (const item of products) {
-      await Product.updateStock(item.productId, item.quantity);
-
-      // Check for low stock and send alert
-      const product = await Product.findById(item.productId);
-      if (product && product.stock <= 10) {
-        await emailService.sendLowStockAlert({
-          productTitle: product.title,
-          currentStock: product.stock,
-          productId: product._id,
-        });
-      }
-    }
-    console.log("✅ Product stock updated successfully");
-
-    // Redeem loyalty points if used
-    if (req.body.redeemedPoints && req.body.redeemedPoints > 0) {
-      try {
-        console.log("🎁 Redeeming loyalty points for order:", {
-          orderId: orderId.toString(),
-          userId: req.user.uid,
-          points: req.body.redeemedPoints,
-        });
-
-        const loyaltyService = require("../services/loyaltyService");
-        await loyaltyService.redeemPoints(
-          req.user.uid,
-          req.body.redeemedPoints,
-          orderId.toString(),
-        );
-
-        console.log("✅ Loyalty points redeemed successfully");
-      } catch (loyaltyError) {
-        console.error("⚠️ Failed to redeem loyalty points:", loyaltyError);
-        // Don't fail the order creation if loyalty redemption fails
-        // The order is already created, so we continue
-      }
-    }
-
-    // Send order confirmation email
-    try {
-      console.log("📧 Sending order confirmation email...");
-      await emailService.sendOrderConfirmation({
-        userEmail: shippingInfo.email,
-        userName: shippingInfo.name,
-        orderId: orderId.toString(),
-        orderTotal: total,
-        items: products,
-        shippingAddress: shippingInfo,
-      });
-      console.log("✅ Order confirmation email sent");
-    } catch (emailError) {
-      console.error("⚠️ Failed to send order confirmation email:", emailError);
-      // Don't fail the order creation if email fails
-    }
-
-    // Generate invoice PDF
-    try {
-      console.log("📄 Generating invoice PDF...");
-      const order = await Order.findById(orderId);
-      await invoiceService.generateInvoice(order);
-      console.log("✅ Invoice PDF generated successfully");
-    } catch (invoiceError) {
-      console.error("⚠️ Failed to generate invoice:", invoiceError);
-      // Don't fail the order creation if invoice generation fails
-    }
-
-    console.log("🎉 Order creation completed successfully");
     res.status(201).json({
       success: true,
-      data: { orderId },
-      message: "Order created successfully",
+      message: 'Order created successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        total: order.pricing.total,
+        deliveryFee: order.pricing.deliveryFee,
+        remainingAmount: order.pricing.remainingAmount,
+      },
     });
   } catch (error) {
-    console.error("❌ Error creating order:", error);
-    console.error("❌ Error stack:", error.stack);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Create order error:', error);
+
+    // Handle duplicate transaction ID
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `${field} already exists`,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create order',
+      error: error.message,
+    });
   }
 };
 
-const updateOrderStatus = async (req, res) => {
+// Get all orders (Admin)
+exports.getAllOrders = async (req, res) => {
   try {
-    const Order = req.app.locals.models.Order;
-    const loyaltyService = require("../services/loyaltyService");
-    const NotificationService = require("../services/notificationService");
-    const { id } = req.params;
-    const { status, trackingNumber } = req.body;
+    const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
-    if (!status) {
-      return res.status(400).json({
+    // Build filter
+    const filter = {};
+    if (status) filter['order.status'] = status;
+    if (paymentStatus) filter['payment.status'] = paymentStatus;
+
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('admin.confirmedBy', 'name email')
+      .populate('admin.rejectedBy', 'name email');
+
+    const total = await Order.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch orders',
+      error: error.message,
+    });
+  }
+};
+
+// Get single order
+exports.getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate('admin.confirmedBy', 'name email')
+      .populate('admin.rejectedBy', 'name email');
+
+    if (!order) {
+      return res.status(404).json({
         success: false,
-        error: "Status is required",
+        message: 'Order not found',
       });
     }
 
-    const validStatuses = [
-      "pending",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
-    ];
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    console.error('Get order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch order',
+      error: error.message,
+    });
+  }
+};
+
+// Confirm payment (Admin)
+exports.confirmPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { transactionId, adminId } = req.body;
+
+    if (!transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID is required',
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.payment.status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot confirm payment. Current status: ${order.payment.status}`,
+      });
+    }
+
+    // Check for duplicate transaction ID
+    const existingTransaction = await Order.findOne({
+      'payment.transactionId': transactionId,
+      _id: { $ne: id },
+    });
+
+    if (existingTransaction) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID already used',
+      });
+    }
+
+    // Update order
+    order.payment.transactionId = transactionId;
+    order.payment.status = 'Confirmed';
+    order.payment.confirmedAt = new Date();
+    order.order.status = 'Processing';
+    if (adminId) {
+      order.admin.confirmedBy = adminId;
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment confirmed successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        paymentStatus: order.payment.status,
+        orderStatus: order.order.status,
+      },
+    });
+  } catch (error) {
+    console.error('Confirm payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm payment',
+      error: error.message,
+    });
+  }
+};
+
+// Reject payment (Admin)
+exports.rejectPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, adminId } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.payment.status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reject payment. Current status: ${order.payment.status}`,
+      });
+    }
+
+    // Update order
+    order.payment.status = 'Rejected';
+    order.payment.rejectionReason = reason || 'No reason provided';
+    order.order.status = 'Cancelled';
+    if (adminId) {
+      order.admin.rejectedBy = adminId;
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment rejected successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        paymentStatus: order.payment.status,
+        orderStatus: order.order.status,
+      },
+    });
+  } catch (error) {
+    console.error('Reject payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject payment',
+      error: error.message,
+    });
+  }
+};
+
+// Update order status (Admin)
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        error: `Status must be one of: ${validStatuses.join(", ")}`,
+        message: 'Invalid order status',
       });
     }
 
-    // Get order details for email notification and loyalty points
-    const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        error: "Order not found",
-      });
-    }
-
-    const result = await Order.updateStatus(id, status);
-
-    if (result.matchedCount === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Order not found",
-      });
-    }
-
-    // Send push notification for order status update
-    try {
-      console.log("📱 Sending push notification for order status update:", {
-        orderId: id,
-        userId: order.userId,
-        status,
-      });
-
-      await NotificationService.sendOrderStatusNotification(order.userId, {
-        _id: id,
-        status,
-        trackingNumber,
-        ...order,
-      });
-
-      console.log("✅ Push notification sent successfully");
-    } catch (notificationError) {
-      console.error("⚠️ Failed to send push notification:", notificationError);
-      // Don't fail the status update if notification fails
-    }
-
-    // Award loyalty points when order is delivered
-    if (status === "delivered" && order.userId) {
-      try {
-        console.log("🎁 Awarding loyalty points for delivered order:", {
-          orderId: id,
-          userId: order.userId,
-          orderTotal: order.total,
-        });
-
-        await loyaltyService.awardPointsForOrder(
-          order.userId,
-          order.shippingInfo?.email || "unknown@email.com",
-          order.total,
-          id,
-        );
-
-        console.log("✅ Loyalty points awarded successfully");
-      } catch (loyaltyError) {
-        console.error("⚠️ Failed to award loyalty points:", loyaltyError);
-        // Don't fail the status update if loyalty points fail
-      }
-    }
-
-    // Send status update email
-    try {
-      console.log("📧 Sending order status update email...");
-      console.log("   Email to:", order.shippingInfo.email);
-      console.log("   User name:", order.shippingInfo.name);
-      console.log("   Order ID:", id);
-      console.log("   New status:", status);
-
-      const emailResult = await emailService.sendOrderStatusUpdate({
-        userEmail: order.shippingInfo.email,
-        userName: order.shippingInfo.name,
-        orderId: id,
-        status,
-        trackingNumber,
-      });
-
-      if (emailResult.success) {
-        console.log("✅ Order status email sent successfully");
-        if (emailResult.messageId) {
-          console.log("   Message ID:", emailResult.messageId);
-        }
-      } else {
-        console.error("❌ Failed to send order status email");
-        console.error("   Error:", emailResult.error);
-      }
-    } catch (emailError) {
-      console.error(
-        "❌ Exception sending order status email:",
-        emailError.message,
-      );
-      console.error("   Stack:", emailError.stack);
-      // Don't fail the status update if email fails
-    }
-
-    res.json({
-      success: true,
-      message: "Order status updated successfully",
-    });
-  } catch (error) {
-    console.error("Error updating order status:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-const cancelOrder = async (req, res) => {
-  try {
-    const Order = req.app.locals.models.Order;
-    const { id } = req.params;
-    const userId = req.user.uid;
-
-    // Get order details before cancelling
-    const order = await Order.findById(id);
-
-    await Order.cancelOrder(id, userId);
-
-    // Send cancellation email
-    try {
-      await emailService.sendOrderStatusUpdate({
-        userEmail: order.shippingInfo.email,
-        userName: order.shippingInfo.name,
-        orderId: id,
-        status: "cancelled",
-      });
-    } catch (emailError) {
-      console.error("Failed to send cancellation email:", emailError);
-    }
-
-    res.json({
-      success: true,
-      message: "Order cancelled successfully",
-    });
-  } catch (error) {
-    console.error("Error cancelling order:", error);
-    const statusCode = error.message.includes("not found")
-      ? 404
-      : error.message.includes("Unauthorized")
-        ? 403
-        : error.message.includes("expired")
-          ? 400
-          : 500;
-    res.status(statusCode).json({ success: false, error: error.message });
-  }
-};
-
-const downloadInvoice = async (req, res) => {
-  try {
-    const Order = req.app.locals.models.Order;
-    const { id } = req.params;
-    const userId = req.user?.uid;
-
-    // Get order
-    const order = await Order.findById(id);
+    const order = await Order.findByIdAndUpdate(
+      id,
+      {
+        'order.status': status,
+        'order.notes': notes || order.order.notes,
+      },
+      { new: true }
+    );
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        error: "Order not found",
+        message: 'Order not found',
       });
     }
 
-    // Check if user owns this order (unless admin)
-    if (userId && order.userId !== userId && !req.user.isAdmin) {
-      return res.status(403).json({
-        success: false,
-        error: "Unauthorized to access this invoice",
-      });
-    }
-
-    // Check if invoice exists, if not generate it
-    if (!invoiceService.invoiceExists(id)) {
-      console.log("📄 Invoice not found, generating...");
-      await invoiceService.generateInvoice(order);
-    }
-
-    // Get invoice path
-    const invoicePath = invoiceService.getInvoicePath(id);
-
-    // Send file
-    res.download(invoicePath, `invoice-${id}.pdf`, (err) => {
-      if (err) {
-        console.error("Error downloading invoice:", err);
-        res.status(500).json({
-          success: false,
-          error: "Failed to download invoice",
-        });
-      }
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: order,
     });
   } catch (error) {
-    console.error("Error downloading invoice:", error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Update order status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update order status',
+      error: error.message,
+    });
   }
 };
 
-module.exports = {
-  getAllOrders,
-  getUserOrders,
-  createOrder,
-  updateOrderStatus,
-  cancelOrder,
-  downloadInvoice,
+// Get order statistics (Admin)
+exports.getOrderStats = async (req, res) => {
+  try {
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          pendingPayments: {
+            $sum: {
+              $cond: [{ $eq: ['$payment.status', 'Pending'] }, 1, 0],
+            },
+          },
+          confirmedPayments: {
+            $sum: {
+              $cond: [{ $eq: ['$payment.status', 'Confirmed'] }, 1, 0],
+            },
+          },
+          rejectedPayments: {
+            $sum: {
+              $cond: [{ $eq: ['$payment.status', 'Rejected'] }, 1, 0],
+            },
+          },
+          totalRevenue: {
+            $sum: {
+              $cond: [{ $eq: ['$payment.status', 'Confirmed'] }, '$pricing.total', 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: stats[0] || {
+        totalOrders: 0,
+        pendingPayments: 0,
+        confirmedPayments: 0,
+        rejectedPayments: 0,
+        totalRevenue: 0,
+      },
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: error.message,
+    });
+  }
 };

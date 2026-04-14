@@ -1,21 +1,25 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { verifyToken, verifyAdmin } = require("../middleware/auth");
 const {
-  getAllOrders,
-  getUserOrders,
   createOrder,
+  getAllOrders,
+  getOrderById,
+  confirmPayment,
+  rejectPayment,
   updateOrderStatus,
-  cancelOrder,
-  downloadInvoice,
-} = require("../controllers/orderController");
+  getOrderStats,
+} = require('../controllers/orderController');
+const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
-router.get("/", verifyToken, verifyAdmin, getAllOrders);
-router.get("/my-orders", verifyToken, getUserOrders);
-router.post("/", verifyToken, createOrder);
-router.post("/guest", createOrder); // Guest checkout - no auth required
-router.patch("/:id/status", verifyToken, verifyAdmin, updateOrderStatus);
-router.post("/:id/cancel", verifyToken, cancelOrder); // Cancel order within 30 min
-router.get("/:id/invoice", downloadInvoice); // Download invoice (public for guest orders)
+// Public routes
+router.post('/create', createOrder);
+router.get('/:id', getOrderById);
+
+// Admin routes
+router.get('/', verifyToken, verifyAdmin, getAllOrders);
+router.patch('/:id/confirm-payment', verifyToken, verifyAdmin, confirmPayment);
+router.patch('/:id/reject-payment', verifyToken, verifyAdmin, rejectPayment);
+router.patch('/:id/update-status', verifyToken, verifyAdmin, updateOrderStatus);
+router.get('/stats/overview', verifyToken, verifyAdmin, getOrderStats);
 
 module.exports = router;
