@@ -169,6 +169,48 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
+// Get user's own orders
+exports.getUserOrders = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'User email is required',
+      });
+    }
+
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find({ 'customer.email': userEmail })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Order.countDocuments({ 'customer.email': userEmail });
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Get user orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user orders',
+      error: error.message,
+    });
+  }
+};
+
 // Get single order
 exports.getOrderById = async (req, res) => {
   try {

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   createOrder,
   getAllOrders,
+  getUserOrders,
   getOrderById,
   confirmPayment,
   rejectPayment,
@@ -14,6 +15,9 @@ const { verifyToken, verifyAdmin } = require('../middleware/auth');
 // Public routes
 router.post('/create', createOrder);
 router.get('/:id', getOrderById);
+
+// User routes
+router.get('/my-orders', verifyToken, getUserOrders);
 
 // Admin routes
 router.get('/', verifyToken, verifyAdmin, getAllOrders);

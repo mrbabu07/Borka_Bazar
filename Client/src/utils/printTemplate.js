@@ -108,20 +108,20 @@ export const generateProfessionalInvoice = (order) => {
                 <div class="flex justify-between">
                   <span class="text-gray-600 text-xs">Status:</span>
                   <span class="px-2 py-0.5 rounded text-xs font-semibold ${
-                    order.status === "delivered"
+                    (order.status || order.order?.status || "pending") === "delivered"
                       ? "bg-green-100 text-green-800"
-                      : order.status === "shipped"
+                      : (order.status || order.order?.status || "pending") === "shipped"
                         ? "bg-purple-100 text-purple-800"
-                        : order.status === "processing"
+                        : (order.status || order.order?.status || "pending") === "processing"
                           ? "bg-blue-100 text-blue-800"
-                          : order.status === "cancelled"
+                          : (order.status || order.order?.status || "pending") === "cancelled"
                             ? "bg-red-100 text-red-800"
                             : "bg-yellow-100 text-yellow-800"
-                  }">${order.status.toUpperCase()}</span>
+                  }">${(order.status || order.order?.status || "pending").toUpperCase()}</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Payment:</span>
-                  <span class="font-semibold text-gray-900">${order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A"}</span>
+                  <span class="font-semibold text-gray-900">${(order.paymentMethod || order.payment?.method || "N/A").toUpperCase()}</span>
                 </div>
                 ${
                   order.transactionId
@@ -214,7 +214,7 @@ export const generateProfessionalInvoice = (order) => {
               <div class="text-sm space-y-1.5">
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Method:</span>
-                  <span class="font-semibold text-gray-900">${order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A"}</span>
+                  <span class="font-semibold text-gray-900">${(order.paymentMethod || order.payment?.method || "N/A").toUpperCase()}</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Status:</span>
