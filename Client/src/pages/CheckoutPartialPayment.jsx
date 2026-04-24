@@ -166,15 +166,17 @@ export default function CheckoutPartialPayment() {
       toast.success('Payment submitted! Waiting for verification...');
 
       // Save order ID to localStorage for fallback
-      localStorage.setItem('lastOrderId', result.data.orderId);
+      localStorage.setItem('lastOrderId', result.data._id);
 
+      // Extract order data from response
+      const responseOrderData = result.data;
       navigate('/order-confirmation', {
         state: {
-          orderCode: result.data.orderCode,
-          orderId: result.data.orderId,
-          total: result.data.total,
-          deliveryFee: result.data.deliveryFee,
-          remainingAmount: result.data.remainingAmount,
+          orderCode: responseOrderData.orderCode,
+          orderId: responseOrderData._id,
+          total: responseOrderData.pricing?.total || responseOrderData.totalPrice || responseOrderData.total,
+          deliveryFee: responseOrderData.pricing?.deliveryFee || responseOrderData.deliveryCharge,
+          remainingAmount: responseOrderData.pricing?.remainingAmount || responseOrderData.subtotal,
           paymentMethod: paymentData.method,
         },
       });
