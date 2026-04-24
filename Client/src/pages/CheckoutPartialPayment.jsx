@@ -165,6 +165,9 @@ export default function CheckoutPartialPayment() {
       clearCart();
       toast.success('Payment submitted! Waiting for verification...');
 
+      // Save order ID to localStorage for fallback
+      localStorage.setItem('lastOrderId', result.data.orderId);
+
       navigate('/order-confirmation', {
         state: {
           orderCode: result.data.orderCode,

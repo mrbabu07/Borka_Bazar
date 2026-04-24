@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../hooks/useCurrency';
+import { getOrderById } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function OrderConfirmation() {
@@ -8,23 +9,68 @@ export default function OrderConfirmation() {
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
   const [copied, setCopied] = useState(false);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const state = location.state;
 
   useEffect(() => {
-    // Redirect to home if no order data
-    if (!state?.orderCode) {
-      navigate('/');
+    // If we have state data, use it
+    if (state?.orderCode) {
+      setOrder(state);
+      setLoading(false);
       return;
+    }
+
+    // Try to get the last order from localStorage as fallback
+    const lastOrderId = localStorage.getItem('lastOrderId');
+    if (lastOrderId) {
+      fetchOrder(lastOrderId);
+    } else {
+      // Redirect to home if no order data
+      setLoading(false);
+      navigate('/');
     }
   }, [state, navigate]);
 
-  if (!state?.orderCode) {
+  const fetchOrder = async (orderId) => {
+    try {
+      const response = await getOrderById(orderId);
+      if (response.data?.data) {
+        const orderData = response.data.data;
+        setOrder({
+          orderCode: orderData.orderCode,
+          orderId: orderData._id,
+          total: orderData.pricing?.total || orderData.total,
+          deliveryFee: orderData.pricing?.deliveryFee || orderData.deliveryCharge,
+          remainingAmount: orderData.pricing?.remainingAmount || (orderData.pricing?.subtotal || orderData.subtotal),
+          paymentMethod: orderData.payment?.advance?.method || orderData.paymentMethod,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch order:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="mt-4 text-gray-600">Loading order details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order?.orderCode) {
     return null;
   }
 
   const handleCopyOrderCode = () => {
-    navigator.clipboard.writeText(state.orderCode);
+    navigator.clipboard.writeText(order.orderCode);
     setCopied(true);
     toast.success('Order code copied!');
     setTimeout(() => setCopied(false), 2000);
@@ -59,7 +105,7 @@ export default function OrderConfirmation() {
           <div className="text-center mb-6">
             <p className="text-sm text-gray-500 mb-2">Your Order Code</p>
             <div className="flex items-center justify-center gap-3">
-              <p className="text-4xl font-bold text-primary-600 font-mono">{state.orderCode}</p>
+              <p className="text-4xl font-bold text-primary-600 font-mono">{order.orderCode}</p>
               <button
                 onClick={handleCopyOrderCode}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -89,15 +135,15 @@ export default function OrderConfirmation() {
             <div className="space-y-3">
               <div className="flex justify-between text-gray-600">
                 <span>Delivery Fee (Paid Now):</span>
-                <span className="font-semibold text-green-600">{formatPrice(state.deliveryFee)}</span>
+                <span className="font-semibold text-green-600">{formatPrice(order.deliveryFee)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Product Amount (COD):</span>
-                <span className="font-semibold text-blue-600">{formatPrice(state.remainingAmount)}</span>
+                <span className="font-semibold text-blue-600">{formatPrice(order.remainingAmount)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t">
                 <span>Total Order Value:</span>
-                <span>{formatPrice(state.total)}</span>
+                <span>{formatPrice(order.total)}</span>
               </div>
             </div>
           </div>
@@ -150,7 +196,7 @@ export default function OrderConfirmation() {
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-semibold text-sm">4</span>
-              <span className="text-gray-700">Pay the remaining amount ({formatPrice(state.remainingAmount)}) when the delivery arrives</span>
+              <span className="text-gray-700">Pay the remaining amount ({formatPrice(order.remainingAmount)}) when the delivery arrives</span>
             </li>
           </ol>
         </div>
@@ -159,7 +205,7 @@ export default function OrderConfirmation() {
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
           <h4 className="font-semibold text-yellow-900 mb-2">Important Notes:</h4>
           <ul className="text-sm text-yellow-800 space-y-1">
-            <li>• Keep your Order Code ({state.orderCode}) safe for reference</li>
+            <li>• Keep your Order Code ({order.orderCode}) safe for reference</li>
             <li>• Payment verification may take up to 24 hours</li>
             <li>• You'll receive order updates via SMS and Email</li>
             <li>• Contact us if you don't receive updates within 24 hours</li>
