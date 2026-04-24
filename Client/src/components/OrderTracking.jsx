@@ -1,16 +1,23 @@
 import { useState, useEffect } from "react";
 
-export default function OrderTracking({ order }) {
+export default function OrderTracking({ order, orderId, currentStatus, orderDate, estimatedDelivery }) {
   const [trackingSteps, setTrackingSteps] = useState([]);
 
   useEffect(() => {
-    if (order) {
+    if (order || orderId) {
       generateTrackingSteps();
     }
-  }, [order]);
+  }, [order, orderId, currentStatus, orderDate]);
 
   const generateTrackingSteps = () => {
-    if (!order) return;
+    if (!order && !orderId) return;
+    
+    // Use order object if available, otherwise create a minimal object from props
+    const orderData = order || {
+      createdAt: orderDate,
+      status: currentStatus,
+      updatedAt: new Date(),
+    };
     
     const steps = [
       {
@@ -18,15 +25,15 @@ export default function OrderTracking({ order }) {
         title: "Order Placed",
         description: "Your order has been received",
         status: "completed",
-        date: order.createdAt,
+        date: orderData.createdAt,
         icon: "check",
       },
       {
         id: 2,
         title: "Order Confirmed",
         description: "Your order has been confirmed",
-        status: order.status === "pending" ? "current" : "completed",
-        date: order.status !== "pending" ? order.updatedAt : null,
+        status: orderData.status === "pending" ? "current" : "completed",
+        date: orderData.status !== "pending" ? orderData.updatedAt : null,
         icon: "clipboard",
       },
       {
@@ -34,12 +41,12 @@ export default function OrderTracking({ order }) {
         title: "Processing",
         description: "Your order is being prepared",
         status:
-          order.status === "processing"
+          orderData.status === "processing"
             ? "current"
-            : order.status === "pending"
+            : orderData.status === "pending"
               ? "pending"
               : "completed",
-        date: order.status === "processing" || order.status === "shipped" || order.status === "delivered" ? order.updatedAt : null,
+        date: orderData.status === "processing" || orderData.status === "shipped" || orderData.status === "delivered" ? orderData.updatedAt : null,
         icon: "package",
       },
       {
@@ -47,26 +54,26 @@ export default function OrderTracking({ order }) {
         title: "Shipped",
         description: "Your order is on the way",
         status:
-          order.status === "shipped"
+          orderData.status === "shipped"
             ? "current"
-            : order.status === "delivered"
+            : orderData.status === "delivered"
               ? "completed"
               : "pending",
-        date: order.status === "shipped" || order.status === "delivered" ? order.updatedAt : null,
+        date: orderData.status === "shipped" || orderData.status === "delivered" ? orderData.updatedAt : null,
         icon: "truck",
       },
       {
         id: 5,
         title: "Delivered",
         description: "Your order has been delivered",
-        status: order.status === "delivered" ? "completed" : "pending",
-        date: order.status === "delivered" ? order.updatedAt : null,
+        status: orderData.status === "delivered" ? "completed" : "pending",
+        date: orderData.status === "delivered" ? orderData.updatedAt : null,
         icon: "home",
       },
     ];
 
     // Handle cancelled orders
-    if (order.status === "cancelled") {
+    if (orderData.status === "cancelled") {
       steps.forEach((step) => {
         if (step.status === "pending") {
           step.status = "cancelled";
@@ -77,7 +84,7 @@ export default function OrderTracking({ order }) {
         title: "Cancelled",
         description: "Your order has been cancelled",
         status: "cancelled",
-        date: order.updatedAt,
+        date: orderData.updatedAt,
         icon: "x",
       });
     }
@@ -143,7 +150,7 @@ export default function OrderTracking({ order }) {
 
   return (
     <>
-      {!order ? (
+      {!order && !orderId ? (
         <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
           <p className="text-gray-500">No order data available</p>
         </div>
@@ -205,7 +212,7 @@ export default function OrderTracking({ order }) {
           </div>
 
           {/* Estimated Delivery */}
-          {order.status !== "delivered" && order.status !== "cancelled" && (
+          {(order?.status || currentStatus) !== "delivered" && (order?.status || currentStatus) !== "cancelled" && (
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-2 text-sm">
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +220,11 @@ export default function OrderTracking({ order }) {
                 </svg>
                 <span className="text-gray-700">
                   <span className="font-medium">Estimated Delivery:</span>{" "}
-                  {new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
+                  {estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  }) : new Date(new Date(order?.createdAt || orderDate).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
                     year: "numeric",

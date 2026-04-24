@@ -119,8 +119,8 @@ exports.createOrder = async (req, res) => {
         remainingAmount: paymentMethod === 'COD' ? finalTotal : 0,
       },
       payment: {
-        advance: { status: 'Pending', method: paymentMethod || 'COD', amount: 0 },
-        remaining: { status: 'Pending', method: 'COD', amount: finalTotal },
+        advance: { status: 'Pending', method: paymentMethod || 'COD', amount: finalDeliveryCharge },
+        remaining: { status: 'Pending', method: 'COD', amount: finalSubtotal },
         paymentStatus: 'partial',
       },
       order: {
