@@ -419,42 +419,10 @@ export default function Orders() {
 
   if (loading) return <Loading />;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      {/* Back Button */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <BackButton />
-      </div>
-
-      {/* Success Message */}
-      {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl shadow-lg animate-slide-up">
-          <div className="flex items-center gap-3">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <div>
-              <p className="font-semibold">Order Placed Successfully!</p>
-              <p className="text-sm opacity-90">
-                You'll receive updates via SMS/Email
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="bg-white border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
