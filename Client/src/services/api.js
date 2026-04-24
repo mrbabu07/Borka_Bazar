@@ -52,6 +52,16 @@ export const rejectOrderPayment = (id, data) =>
   api.patch(`/orders/${id}/reject-payment`, data);
 export const getOrderStats = () => api.get("/orders/stats/overview");
 
+// 2-Step Payment System
+export const payRemainingAmount = (orderId, data) =>
+  api.patch(`/orders/${orderId}/pay-remaining`, data);
+export const confirmAdvancePayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/confirm-advance-payment`, data);
+export const rejectAdvancePayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/reject-advance-payment`, data);
+export const confirmRemainingPayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/confirm-remaining`, data);
+
 // Legacy Orders (kept for backward compatibility)
 export const getUserOrders = () => api.get("/orders/my-orders");
 export const getAllOrders = () => api.get("/orders");

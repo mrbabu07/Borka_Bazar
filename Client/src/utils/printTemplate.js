@@ -8,21 +8,25 @@ export const generateProfessionalInvoice = (order) => {
     day: "numeric",
   });
 
-  const subtotal = order.subtotal || order.total || 0;
-  const deliveryCharge = order.deliveryCharge || 0;
+  // Support both new and legacy schema field names
+  const subtotal = order.subtotal || order.pricing?.subtotal || 0;
+  const deliveryCharge = order.deliveryCharge || order.pricing?.deliveryFee || 0;
   const tax = order.tax || 0;
-  const total = order.total || 0;
+  const total = order.totalPrice || order.pricing?.total || order.total || (subtotal + deliveryCharge);
+  const paymentMethod = order.paymentInfo?.method || order.payment?.advance?.method || order.paymentMethod || 'N/A';
+  const paymentStatus = order.paymentInfo?.status || order.payment?.paymentStatus || 'Pending';
+  const transactionId = order.paymentInfo?.transactionId || order.payment?.advance?.transactionId || order.transactionId;
+  const orderStatus = (order.orderStatus || order.order?.status || order.status || 'pending').toLowerCase();
+  const items = order.orderItems || order.products || [];
 
   // Fixed to BDT only - no currency conversion
   const BDT_RATE = 110; // 1 USD = 110 BDT
   const BDT_SYMBOL = "৳";
 
-  // Format price in BDT (prices stored in USD in database)
-  const formatPrice = (priceInUSD) => {
-    if (!priceInUSD && priceInUSD !== 0) return `${BDT_SYMBOL}0`;
-    const priceInBDT = priceInUSD * BDT_RATE;
-    // Format with comma separators for BDT (no decimals)
-    return `${BDT_SYMBOL}${Math.round(priceInBDT).toLocaleString()}`;
+  // Format price in BDT (prices already stored in BDT in database)
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return `${BDT_SYMBOL}0`;
+    return `${BDT_SYMBOL}${Math.round(price).toLocaleString()}`;
   };
 
   // Utility function to safely render color
@@ -73,12 +77,12 @@ export const generateProfessionalInvoice = (order) => {
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Bill To</div>
               ${
-                order.shippingInfo
+                order.customer || order.shippingInfo
                   ? `
                 <div class="text-sm space-y-1">
-                  <div class="font-semibold text-gray-900">${order.shippingInfo.name || "N/A"}</div>
-                  <div class="text-gray-600">${order.shippingInfo.phone || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${order.shippingInfo.email || "N/A"}</div>
+                  <div class="font-semibold text-gray-900">${(order.customer?.name || order.shippingInfo?.name) || "N/A"}</div>
+                  <div class="text-gray-600">${(order.customer?.phone || order.shippingInfo?.phone) || "N/A"}</div>
+                  <div class="text-gray-600 text-xs">${(order.customer?.email || order.shippingInfo?.email) || "N/A"}</div>
                 </div>
               `
                   : `<div class="text-xs text-gray-500">No information</div>`
@@ -89,12 +93,12 @@ export const generateProfessionalInvoice = (order) => {
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Ship To</div>
               ${
-                order.shippingInfo
+                order.customer || order.shippingInfo
                   ? `
                 <div class="text-sm space-y-1">
-                  <div class="font-semibold text-gray-900">${order.shippingInfo.name || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${order.shippingInfo.address || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${order.shippingInfo.city || "N/A"} ${order.shippingInfo.zipCode || ""}</div>
+                  <div class="font-semibold text-gray-900">${(order.customer?.name || order.shippingInfo?.name) || "N/A"}</div>
+                  <div class="text-gray-600 text-xs">${(order.customer?.address || order.shippingInfo?.address) || "N/A"}</div>
+                  <div class="text-gray-600 text-xs">${(order.shippingInfo?.city || "N/A")} ${order.shippingInfo?.zipCode || ""}</div>
                 </div>
               `
                   : `<div class="text-xs text-gray-500">No information</div>`
@@ -108,27 +112,27 @@ export const generateProfessionalInvoice = (order) => {
                 <div class="flex justify-between">
                   <span class="text-gray-600 text-xs">Status:</span>
                   <span class="px-2 py-0.5 rounded text-xs font-semibold ${
-                    (order.status || order.order?.status || "pending") === "delivered"
+                    orderStatus === "delivered"
                       ? "bg-green-100 text-green-800"
-                      : (order.status || order.order?.status || "pending") === "shipped"
+                      : orderStatus === "shipped"
                         ? "bg-purple-100 text-purple-800"
-                        : (order.status || order.order?.status || "pending") === "processing"
+                        : orderStatus === "processing"
                           ? "bg-blue-100 text-blue-800"
-                          : (order.status || order.order?.status || "pending") === "cancelled"
+                          : orderStatus === "cancelled"
                             ? "bg-red-100 text-red-800"
                             : "bg-yellow-100 text-yellow-800"
-                  }">${(order.status || order.order?.status || "pending").toUpperCase()}</span>
+                  }">${orderStatus.toUpperCase()}</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Payment:</span>
-                  <span class="font-semibold text-gray-900">${(order.paymentMethod || order.payment?.method || "N/A").toUpperCase()}</span>
+                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()}</span>
                 </div>
                 ${
-                  order.transactionId
+                  transactionId
                     ? `
                 <div class="flex justify-between text-xs mt-2 pt-2 border-t border-gray-200">
                   <span class="text-gray-600">Transaction ID:</span>
-                  <span class="font-mono font-bold text-green-700">${order.transactionId}</span>
+                  <span class="font-mono font-bold text-green-700">${transactionId}</span>
                 </div>
                 `
                     : ""
@@ -152,23 +156,10 @@ export const generateProfessionalInvoice = (order) => {
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   ${
-                    order.products && order.products.length > 0
-                      ? order.products
+                    items.length > 0
+                      ? items
                           .map(
-                            (item) => {
-                              // Debug logging
-                              console.log('Invoice Item:', {
-                                title: item.title,
-                                selectedSize: item.selectedSize,
-                                size: item.size,
-                                variantSize: item.variant?.size,
-                                selectedColor: item.selectedColor,
-                                color: item.color,
-                                variantColor: item.variant?.color,
-                                fullItem: item
-                              });
-                              
-                              return `
+                            (item) => `
                     <tr class="hover:bg-gray-50">
                       <td class="py-3 px-3">
                         <div class="flex items-center gap-3">
@@ -180,9 +171,9 @@ export const generateProfessionalInvoice = (order) => {
                           <div class="flex-1">
                             <div class="font-medium text-gray-900 text-sm">${item.title || "Product"}</div>
                             <div class="flex gap-1 mt-1 flex-wrap">
-                              ${(item.selectedSize || item.size || item.variant?.size) ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">Size: ${item.selectedSize || item.size || item.variant?.size}</span>` : ""}
-                              ${(item.selectedColor || item.color || item.variant?.color) ? `<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">Color: ${renderColor(item.selectedColor || item.color || item.variant?.color)}</span>` : ""}
-                              ${(item.productId || item._id) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">ID: ${(item.productId || item._id).slice(-6)}</span>` : ""}
+                              ${(item.size || item.selectedSize || item.variant?.size) ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">Size: ${item.size || item.selectedSize || item.variant?.size}</span>` : ""}
+                              ${(item.color || item.selectedColor || item.variant?.color) ? `<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">Color: ${renderColor(item.color || item.selectedColor || item.variant?.color)}</span>` : ""}
+                              ${(item.productId || item._id) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">ID: ${String(item.productId || item._id).slice(-6)}</span>` : ""}
                             </div>
                           </div>
                         </div>
@@ -191,8 +182,7 @@ export const generateProfessionalInvoice = (order) => {
                       <td class="py-3 px-3 text-right text-gray-900">${formatPrice(item.price || 0)}</td>
                       <td class="py-3 px-3 text-right font-semibold text-gray-900">${formatPrice((item.price || 0) * (item.quantity || 1))}</td>
                     </tr>
-                  `;
-                            }
+                  `
                           )
                           .join("")
                       : `
@@ -214,15 +204,15 @@ export const generateProfessionalInvoice = (order) => {
               <div class="text-sm space-y-1.5">
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Method:</span>
-                  <span class="font-semibold text-gray-900">${(order.paymentMethod || order.payment?.method || "N/A").toUpperCase()}</span>
+                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()}</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Status:</span>
-                  <span class="font-semibold text-green-600">PAID</span>
+                  <span class="font-semibold ${paymentStatus === 'Paid' || paymentStatus === 'full' ? 'text-green-600' : 'text-yellow-600'}">${paymentStatus === 'full' ? 'PAID' : paymentStatus.toUpperCase()}</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Transaction:</span>
-                  <span class="font-mono text-xs text-gray-900">${order._id.slice(-8)}</span>
+                  <span class="font-mono text-xs text-gray-900">${transactionId || order._id.slice(-8)}</span>
                 </div>
               </div>
             </div>

@@ -22,11 +22,46 @@ export default function CheckoutPartialPayment() {
 
   const [orderSummary, setOrderSummary] = useState({
     subtotal: 0,
-    deliveryFee: 200,
+    deliveryFee: 0,
     total: 0,
   });
 
   const [errors, setErrors] = useState({});
+  const [deliverySettings, setDeliverySettings] = useState(null);
+
+  // Fetch delivery settings on mount
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
+        );
+        const data = await response.json();
+        if (data.success) {
+          setDeliverySettings(data.data);
+          setOrderSummary(prev => ({
+            ...prev,
+            deliveryFee: data.data.standardDeliveryCharge || 200
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching delivery settings:", err);
+        // Use default if fetch fails
+        setOrderSummary(prev => ({
+          ...prev,
+          deliveryFee: 200
+        }));
+      }
+    };
+    fetchDeliverySettings();
+  }, []);
 
   // Generate order code on mount
   useEffect(() => {

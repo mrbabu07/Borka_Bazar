@@ -67,8 +67,8 @@ export default function Checkout() {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 50,
-          standardDeliveryCharge: 100 / 110,
+          freeDeliveryThreshold: 2000,  // ৳2,000 BDT default
+          standardDeliveryCharge: 100,  // ৳100 BDT default
           freeDeliveryEnabled: true,
         });
       }
@@ -76,10 +76,9 @@ export default function Checkout() {
     fetchDeliverySettings();
   }, []);
 
-  // Use delivery settings or defaults
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
-  const deliveryChargeAmount =
-    deliverySettings?.standardDeliveryCharge || 100 / 110;
+  // Use delivery settings or BDT defaults
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+  const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge ?? 100;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
 
   // Validate cart items have product IDs
@@ -108,15 +107,13 @@ export default function Checkout() {
 
   // Debug logging
   console.log('💰 Delivery Charge Calculation:', {
-    deliverySettings,
     freeDeliveryThreshold,
     deliveryChargeAmount,
     freeDeliveryEnabled,
     subtotal,
     totalDiscount,
-    calculatedDeliveryCharge: deliveryCharge,
+    deliveryCharge,
     finalTotal,
-    deliveryChargeInBDT: Math.round(deliveryCharge * 110)
   });
 
   // Fetch default address and set user email on mount
@@ -259,7 +256,7 @@ export default function Checkout() {
       }
 
       const orderData = {
-        products: cart.map((item) => {
+        orderItems: cart.map((item) => {
           // Ensure we have a valid product ID
           if (!item._id) {
             console.error("Cart item missing _id:", item);
@@ -268,25 +265,17 @@ export default function Checkout() {
             );
           }
           
-          // Debug: Log cart item to see what data we have
-          console.log('Cart item before order creation:', {
-            title: item.title,
-            selectedSize: item.selectedSize,
-            selectedColor: item.selectedColor,
-            fullItem: item
-          });
-          
           return {
             productId: item._id,
             title: item.title,
             price: item.price,
             quantity: item.quantity,
-            selectedSize: item.selectedSize || null,
-            selectedColor: item.selectedColor || null,
+            size: item.selectedSize || item.size || null,
+            color: item.selectedColor || item.color || null,
             image: item.selectedImage || item.image,
           };
         }),
-        total: finalTotal,
+        totalPrice: finalTotal,
         subtotal: subtotal,
         deliveryCharge: deliveryCharge,
         shippingInfo: {
@@ -309,12 +298,10 @@ export default function Checkout() {
         totalDiscount: totalDiscount,
       };
 
-      console.log('📦 Order Data being sent:', {
-        total: finalTotal,
-        subtotal: subtotal,
-        deliveryCharge: deliveryCharge,
-        deliveryChargeInBDT: Math.round(deliveryCharge * 110),
-        totalInBDT: Math.round(finalTotal * 110)
+      console.log('📦 Order Data being sent (all in BDT):', {
+        subtotal,
+        deliveryCharge,
+        totalPrice: finalTotal,
       });
 
       const response = await createOrder(orderData);

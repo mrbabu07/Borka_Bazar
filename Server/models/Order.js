@@ -8,27 +8,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    customer: {
-      name: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      phone: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      email: {
-        type: String,
-        trim: true,
-      },
-      address: {
-        type: String,
-        trim: true,
-      },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
-    products: [
+    orderItems: [
       {
         productId: {
           type: mongoose.Schema.Types.ObjectId,
@@ -47,54 +31,70 @@ const orderSchema = new mongoose.Schema(
         color: String,
       },
     ],
-    pricing: {
-      subtotal: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      deliveryFee: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      total: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      remainingAmount: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
+    shippingInfo: {
+      name: { type: String, required: true, trim: true },
+      phone: { type: String, required: true, trim: true },
+      email: { type: String, trim: true },
+      address: { type: String, required: true, trim: true },
+      city: { type: String, trim: true },
+      area: { type: String, trim: true },
+      zipCode: { type: String, trim: true },
     },
-    payment: {
+    paymentInfo: {
       method: {
         type: String,
-        enum: ['bKash', 'Nagad'],
-        required: true,
+        enum: ['COD', 'bKash', 'Nagad', 'rocket'],
+        default: 'COD',
       },
       transactionId: {
         type: String,
-        unique: true,
         sparse: true,
         trim: true,
       },
       status: {
         type: String,
-        enum: ['Pending', 'Confirmed', 'Rejected'],
+        enum: ['Pending', 'Confirmed', 'Paid', 'Failed', 'Rejected'],
         default: 'Pending',
       },
-      confirmedAt: Date,
-      rejectionReason: String,
     },
+    totalPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    subtotal: {
+      type: Number,
+      required: true,
+    },
+    deliveryCharge: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    orderStatus: {
+      type: String,
+      enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+      default: 'Pending',
+    },
+    specialInstructions: String,
+    
+    // Keeping backward compatibility fields optional 
+    customer: {
+      name: String,
+      phone: String,
+      email: String,
+      address: String,
+    },
+    products: [mongoose.Schema.Types.Mixed],
+    pricing: {
+      subtotal: Number,
+      deliveryFee: Number,
+      total: Number,
+      remainingAmount: Number,
+    },
+    payment: mongoose.Schema.Types.Mixed,
     order: {
-      status: {
-        type: String,
-        enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-        default: 'Pending',
-      },
+      status: String,
       notes: String,
     },
     admin: {
@@ -113,9 +113,11 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
-orderSchema.index({ 'payment.status': 1, createdAt: -1 });
-orderSchema.index({ 'customer.phone': 1 });
+// Indexes for faster queries
+orderSchema.index({ 'shippingInfo.email': 1 });
+orderSchema.index({ 'shippingInfo.phone': 1 });
 orderSchema.index({ orderCode: 1 });
+orderSchema.index({ user: 1 });
+orderSchema.index({ orderStatus: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -10,6 +10,8 @@ import { uploadToImgBB } from "../services/imageUpload";
 import { useCurrency } from "../hooks/useCurrency";
 import Loading from "../components/Loading";
 import Modal from "../components/Modal";
+import PaymentBreakdown from "../components/PaymentBreakdown";
+import PayRemainingForm from "../components/PayRemainingForm";
 import { useNotifications } from "../context/NotificationContext";
 import { useToast } from "../context/ToastContext";
 import useCart from "../hooks/useCart";
@@ -48,6 +50,10 @@ export default function Orders() {
   });
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+
   useEffect(() => {
     fetchOrders();
     if (location.state?.orderSuccess) {
@@ -65,6 +71,18 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to safely get order status from both legacy and new order structures
+  const getOrderStatus = (order) => {
+    const status = order.orderStatus || order.status || order.order?.status || 'pending';
+    return status.toLowerCase();
+  };
+
+  // Helper function to safely get payment status
+  const getPaymentStatus = (order) => {
+    const status = order.paymentInfo?.status || order.paymentStatus || order.payment?.status || 'pending';
+    return status.toLowerCase();
   };
 
   const statusConfig = {
@@ -103,7 +121,7 @@ export default function Orders() {
   const filteredOrders =
     filter === "all"
       ? orders
-      : orders.filter((order) => order.status === filter);
+      : orders.filter((order) => getOrderStatus(order) === filter);
 
   const handleReturnRequest = (order, product) => {
     setSelectedOrder(order);
@@ -261,7 +279,7 @@ export default function Orders() {
 
   // Check if order is eligible for returns (delivered within 7 days)
   const isReturnEligible = (order) => {
-    if (order.status !== "delivered") return false;
+    if (getOrderStatus(order) !== "delivered") return false;
     const deliveryDate = new Date(order.updatedAt || order.createdAt);
     const daysSinceDelivery =
       (new Date() - deliveryDate) / (1000 * 60 * 60 * 24);
@@ -315,7 +333,8 @@ export default function Orders() {
 
     try {
       let successCount = 0;
-      for (const item of order.products) {
+      const items = order.orderItems || order.products || [];
+      for (const item of items) {
         try {
           await addToCart(
             {
@@ -327,8 +346,8 @@ export default function Orders() {
             },
             item.quantity,
             item.image,
-            item.selectedSize,
-            item.selectedColor,
+            item.size || item.selectedSize,
+            item.color || item.selectedColor,
           );
           successCount++;
         } catch (itemError) {
@@ -336,7 +355,7 @@ export default function Orders() {
         }
       }
 
-      if (successCount === order.products.length) {
+      if (successCount === items.length) {
         success(`All ${successCount} items added to cart!`, {
           title: "Order Reordered Successfully",
         });
@@ -344,7 +363,7 @@ export default function Orders() {
         navigate("/checkout");
       } else if (successCount > 0) {
         success(
-          `${successCount} of ${order.products.length} items added to cart`,
+          `${successCount} of ${items.length} items added to cart`,
           {
             title: "Partial Reorder Successful",
           },
@@ -387,7 +406,7 @@ export default function Orders() {
 
   // Check if order can be cancelled (within 30 minutes and pending)
   const canCancelOrder = (order) => {
-    if (order.status !== "pending") return false;
+    if (getOrderStatus(order) !== "pending") return false;
 
     const createdAt = new Date(order.createdAt);
     const canCancelUntil = order.canCancelUntil
@@ -602,13 +621,13 @@ export default function Orders() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${statusConfig[order.status]?.color}`}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${statusConfig[getOrderStatus(order)]?.color}`}
                       >
                         <span className="text-lg">
-                          {statusConfig[order.status]?.icon}
+                          {statusConfig[getOrderStatus(order)]?.icon}
                         </span>
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
+                        {getOrderStatus(order).charAt(0).toUpperCase() +
+                          getOrderStatus(order).slice(1)}
                       </span>
                     </div>
                   </div>
@@ -618,7 +637,7 @@ export default function Orders() {
                   {/* Status Description */}
                   <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                     <p className="text-sm text-blue-800 font-medium">
-                      📋 {statusConfig[order.status]?.description}
+                      📋 {statusConfig[getOrderStatus(order)]?.description}
                     </p>
                   </div>
 
@@ -626,7 +645,7 @@ export default function Orders() {
                   <div className="mb-6">
                     <OrderTracking
                       orderId={order._id}
-                      currentStatus={order.status}
+                      currentStatus={getOrderStatus(order)}
                       orderDate={order.createdAt}
                       estimatedDelivery={order.estimatedDelivery}
                     />
@@ -634,7 +653,7 @@ export default function Orders() {
 
                   {/* Order Items */}
                   <div className="space-y-4 mb-6">
-                    {order.products.map((item, index) => (
+                    {(order.orderItems || order.products || []).map((item, index) => (
                       <div
                         key={index}
                         className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
@@ -673,20 +692,20 @@ export default function Orders() {
                               </svg>
                               Qty: {item.quantity}
                             </span>
-                            {(item.selectedSize || item.size) && (
+                            {(item.size || item.selectedSize) && (
                               <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                 </svg>
-                                Size: {item.selectedSize || item.size}
+                                Size: {item.size || item.selectedSize}
                               </span>
                             )}
-                            {(item.selectedColor || item.color) && (
+                            {(item.color || item.selectedColor) && (
                               <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                                 </svg>
-                                Color: {renderColor(item.selectedColor || item.color)}
+                                Color: {renderColor(item.color || item.selectedColor)}
                               </span>
                             )}
                             <span className="text-primary-600 font-medium">
@@ -751,7 +770,7 @@ export default function Orders() {
                           </button>
 
                           {/* Action Buttons for Delivered Orders */}
-                          {order.status === "delivered" && (
+                          {getOrderStatus(order) === "delivered" && (
                             <div className="flex gap-2">
                               {/* Return Button */}
                               {isReturnEligible(order) && (
@@ -800,7 +819,7 @@ export default function Orders() {
                             </div>
                           )}
                           {!isReturnEligible(order) &&
-                            order.status === "delivered" && (
+                            getOrderStatus(order) === "delivered" && (
                               <span className="text-xs text-gray-400">
                                 Return period expired
                               </span>
@@ -810,37 +829,19 @@ export default function Orders() {
                     ))}
                   </div>
 
-                  {/* Payment & Delivery Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Payment Method */}
-                    <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                      <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                          />
-                        </svg>
-                        Payment Method
-                      </h4>
-                      <p className="text-sm text-green-700 capitalize font-medium">
-                        {order.paymentMethod === "cod"
-                          ? "💵 Cash on Delivery"
-                          : order.paymentMethod}
-                      </p>
+                  {/* Payment Breakdown - Show for new 2-step payment system */}
+                  {order.payment && order.payment.advance && (
+                    <div className="mb-6">
+                      <PaymentBreakdown order={order} />
                     </div>
+                  )}
 
-                    {/* Delivery Address */}
-                    {order.shippingInfo && (
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                        <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                  {/* Payment & Delivery Info - Legacy support */}
+                  {!order.payment && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      {/* Payment Method */}
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
                           <svg
                             className="w-5 h-5"
                             fill="none"
@@ -851,40 +852,67 @@ export default function Orders() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                             />
                           </svg>
-                          Delivery Address
+                          Payment Method
                         </h4>
-                        <div className="text-sm text-blue-800 space-y-1.5">
-                          <p className="font-semibold flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            {order.shippingInfo.name}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            {order.shippingInfo.phone}
-                          </p>
-                          <p className="flex items-start gap-2">
-                            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            <span>{order.shippingInfo.address}</span>
-                          </p>
-                          <p className="flex items-center gap-2 text-blue-700">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                            </svg>
-                            {order.shippingInfo.area}, {order.shippingInfo.city}
-                          </p>
-                        </div>
+                        <p className="text-sm text-green-700 capitalize font-medium">
+                          {order.paymentMethod === "cod"
+                            ? "💵 Cash on Delivery"
+                            : order.paymentMethod}
+                        </p>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Delivery Address */}
+                      {order.shippingInfo && (
+                        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                          <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                            </svg>
+                            Delivery Address
+                          </h4>
+                          <div className="text-sm text-blue-800 space-y-1.5">
+                            <p className="font-semibold flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {order.shippingInfo.name}
+                            </p>
+                            <p className="flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              {order.shippingInfo.phone}
+                            </p>
+                            <p className="flex items-start gap-2">
+                              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                              </svg>
+                              <span>{order.shippingInfo.address}</span>
+                            </p>
+                            <p className="flex items-center gap-2 text-blue-700">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                              </svg>
+                              {order.shippingInfo.area}, {order.shippingInfo.city}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Special Instructions */}
                   {order.specialInstructions && (
@@ -924,32 +952,58 @@ export default function Orders() {
                           items)
                         </span>
                         <span>
-                          {formatPrice(order.subtotal || order.total || 0)}
+                          {formatPrice(order.pricing?.subtotal || order.subtotal || order.total || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span>Delivery Charge</span>
                         <span
                           className={
-                            (order.deliveryCharge || 0) === 0
+                            (order.pricing?.deliveryFee || order.deliveryCharge || 0) === 0
                               ? "text-green-600 font-medium"
                               : ""
                           }
                         >
-                          {(order.deliveryCharge || 0) === 0
+                          {(order.pricing?.deliveryFee || order.deliveryCharge || 0) === 0
                             ? "FREE"
-                            : formatPrice(order.deliveryCharge)}
+                            : formatPrice(order.pricing?.deliveryFee || order.deliveryCharge)}
                         </span>
                       </div>
                       <div className="border-t pt-3 flex justify-between text-xl font-bold">
                         <span>Total Paid</span>
                         <span className="text-primary-600">
-                          {formatPrice(order.total || 0)}
+                          {formatPrice(order.pricing?.total || order.total || 0)}
                         </span>
                       </div>
 
                       {/* Reorder Entire Order Button */}
                       <div className="border-t pt-3 space-y-2">
+                        {/* Pay Remaining Button - Show if remaining payment is pending */}
+                        {order.payment && order.payment.remaining && order.payment.remaining.status === 'Pending' && order.payment.advance.status === 'Confirmed' && (
+                          <button
+                            onClick={() => {
+                              setSelectedOrderForPayment(order);
+                              setShowPaymentModal(true);
+                            }}
+                            className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                              />
+                            </svg>
+                            Pay Remaining Amount ({formatPrice(order.payment.remaining.amount)})
+                          </button>
+                        )}
+
                         {/* Cancel Order Button (if within 30 min and pending) */}
                         {canCancelOrder(order) && (
                           <button
@@ -1600,6 +1654,31 @@ export default function Orders() {
               </div>
             </form>
           </div>
+        )}
+      </Modal>
+
+      {/* Payment Modal - Pay Remaining Amount */}
+      <Modal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedOrderForPayment(null);
+        }}
+        title="Pay Remaining Amount"
+      >
+        {selectedOrderForPayment && (
+          <PayRemainingForm
+            order={selectedOrderForPayment}
+            onPaymentSubmitted={(data) => {
+              setShowPaymentModal(false);
+              setSelectedOrderForPayment(null);
+              // Refresh orders to show updated payment status
+              fetchOrders();
+              success('Payment submitted successfully! Admin will verify it shortly.', {
+                title: 'Payment Submitted',
+              });
+            }}
+          />
         )}
       </Modal>
     </div>

@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
 
 // Generate unique order code
 const generateOrderCode = async () => {
@@ -22,96 +23,122 @@ const generateOrderCode = async () => {
 exports.createOrder = async (req, res) => {
   try {
     const {
+      products,
+      orderItems,
+      shippingInfo,
       customerName,
       customerPhone,
       customerEmail,
       customerAddress,
-      products,
       subtotal,
+      deliveryCharge,
       deliveryFee,
+      total,
+      totalPrice,
       paymentMethod,
+      transactionId,
+      specialInstructions,
     } = req.body;
 
+    // Use either new schema names or fallback to old schema names
+    const items = orderItems || products;
+    const finalSubtotal = subtotal || 0;
+    const finalDeliveryCharge = deliveryCharge || deliveryFee || 0;
+    const finalTotal = totalPrice || total || (finalSubtotal + finalDeliveryCharge);
+    
+    // Construct backward-compatible shipping & user logic
+    const shipping = shippingInfo || {
+      name: customerName,
+      phone: customerPhone,
+      email: customerEmail,
+      address: customerAddress,
+    };
+
     // Validation
-    if (!customerName || !customerPhone || !products || !subtotal || !deliveryFee) {
+    if (!shipping.name || !shipping.phone || !items || !finalTotal) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
+        message: 'Missing required fields (name, phone, items, or total)',
       });
     }
 
-    if (!['bKash', 'Nagad'].includes(paymentMethod)) {
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid payment method',
+        message: 'Order items array is required and cannot be empty',
       });
     }
-
-    if (!Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Products array is required and cannot be empty',
-      });
-    }
-
-    // Validate phone number (basic validation)
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(customerPhone.replace(/\D/g, ''))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid phone number',
-      });
-    }
-
-    // Calculate total
-    const total = subtotal + deliveryFee;
-    const remainingAmount = subtotal; // Remaining to be paid via COD
 
     // Generate unique order code
     const orderCode = await generateOrderCode();
 
-    // Create order
-    const order = new Order({
+    // Resolve User ID securely bridging Firebase to Mongo DB
+    let realUserId = null;
+    if (req.user?.uid) {
+      if (mongoose.Types.ObjectId.isValid(req.user.uid)) {
+        realUserId = req.user.uid;
+      } else if (req.app?.locals?.models?.User) {
+        const userDbRecord = await req.app.locals.models.User.findByFirebaseUid(req.user.uid);
+        if (userDbRecord && userDbRecord._id) {
+          realUserId = userDbRecord._id;
+        }
+      }
+    } else if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+      realUserId = req.user._id;
+    }
+
+    // Create order using unified schema properties
+    const orderData = {
       orderCode,
-      customer: {
-        name: customerName,
-        phone: customerPhone,
-        email: customerEmail || '',
-        address: customerAddress || '',
+      user: realUserId,
+      orderItems: items,
+      shippingInfo: shipping,
+      paymentInfo: {
+        method: paymentMethod || 'COD',
+        transactionId: transactionId || null,
+        status: paymentMethod === 'COD' ? 'Pending' : 'Pending',
       },
-      products,
+      totalPrice: finalTotal,
+      subtotal: finalSubtotal,
+      deliveryCharge: finalDeliveryCharge,
+      orderStatus: 'Pending',
+      specialInstructions: specialInstructions || '',
+
+      // Legacy fallback fields (To prevent crashing old UI mappings that haven't been updated)
+      customer: {
+        name: shipping.name,
+        phone: shipping.phone,
+        email: shipping.email || '',
+        address: shipping.address || '',
+      },
+      products: items,
       pricing: {
-        subtotal,
-        deliveryFee,
-        total,
-        remainingAmount,
+        subtotal: finalSubtotal,
+        deliveryFee: finalDeliveryCharge,
+        total: finalTotal,
+        remainingAmount: paymentMethod === 'COD' ? finalTotal : 0,
       },
       payment: {
-        method: paymentMethod,
-        status: 'Pending',
+        advance: { status: 'Pending', method: paymentMethod || 'COD', amount: 0 },
+        remaining: { status: 'Pending', method: 'COD', amount: finalTotal },
+        paymentStatus: 'partial',
       },
       order: {
         status: 'Pending',
-      },
-    });
+      }
+    };
 
+    const order = new Order(orderData);
     await order.save();
 
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
-      data: {
-        orderId: order._id,
-        orderCode: order.orderCode,
-        total: order.pricing.total,
-        deliveryFee: order.pricing.deliveryFee,
-        remainingAmount: order.pricing.remainingAmount,
-      },
+      data: order,
     });
   } catch (error) {
     console.error('Create order error:', error);
 
-    // Handle duplicate transaction ID
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
@@ -133,19 +160,21 @@ exports.getAllOrders = async (req, res) => {
   try {
     const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
-    // Build filter
+    // Build filter gracefully considering both structures
     const filter = {};
-    if (status) filter['order.status'] = status;
-    if (paymentStatus) filter['payment.status'] = paymentStatus;
+    if (status) {
+      filter.$or = [{ orderStatus: status }, { 'order.status': status }];
+    }
+    if (paymentStatus) {
+      filter.$or = [{ 'paymentInfo.status': paymentStatus }, { 'payment.status': paymentStatus }];
+    }
 
     const skip = (page - 1) * limit;
 
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
-      .populate('admin.confirmedBy', 'name email')
-      .populate('admin.rejectedBy', 'name email');
+      .limit(parseInt(limit));
 
     const total = await Order.countDocuments(filter);
 
@@ -174,38 +203,56 @@ exports.getUserOrders = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const userEmail = req.user?.email;
+    
+    // Resolve User ID securely bridging Firebase to Mongo DB
+    let realUserId = null;
+    if (req.user?.uid) {
+      if (mongoose.Types.ObjectId.isValid(req.user.uid)) {
+        realUserId = req.user.uid;
+      } else if (req.app?.locals?.models?.User) {
+        const userDbRecord = await req.app.locals.models.User.findByFirebaseUid(req.user.uid);
+        if (userDbRecord && userDbRecord._id) {
+          realUserId = userDbRecord._id;
+        }
+      }
+    } else if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+      realUserId = req.user._id;
+    }
 
     console.log('📋 getUserOrders called with:', {
       userEmail,
-      userId: req.user?.uid,
-      allUserData: req.user
+      firebaseUid: req.user?.uid,
+      resolvedUserId: realUserId,
     });
 
-    if (!userEmail) {
-      console.warn('⚠️ No email found in user token');
-      // Return empty array instead of error - user might not have email in token
+    if (!userEmail && !realUserId) {
+      console.warn('⚠️ No email or ID found in user token');
       return res.status(200).json({
         success: true,
         data: [],
-        pagination: {
-          total: 0,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: 0,
-        },
+        pagination: { total: 0, page: parseInt(page), limit: parseInt(limit), pages: 0 },
       });
     }
 
     const skip = (page - 1) * limit;
+    
+    // Look for user ID OR email matching shippingInfo.email OR customer.email
+    const filter = {
+      $or: [
+        realUserId ? { user: realUserId } : null,
+        userEmail ? { 'shippingInfo.email': userEmail } : null,
+        userEmail ? { 'customer.email': userEmail } : null,
+      ].filter(Boolean)
+    };
 
-    const orders = await Order.find({ 'customer.email': userEmail })
+    const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await Order.countDocuments({ 'customer.email': userEmail });
+    const total = await Order.countDocuments(filter);
 
-    console.log(`✅ Found ${total} orders for user ${userEmail}`);
+    console.log(`✅ Found ${total} orders for user`);
 
     res.status(200).json({
       success: true,
@@ -258,6 +305,281 @@ exports.getOrderById = async (req, res) => {
 };
 
 // Confirm payment (Admin)
+// Confirm advance payment (Admin)
+exports.confirmAdvancePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { transactionId, adminId } = req.body;
+
+    if (!transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID is required',
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.payment.advance.status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot confirm advance payment. Current status: ${order.payment.advance.status}`,
+      });
+    }
+
+    // Check for duplicate transaction ID
+    const existingTransaction = await Order.findOne({
+      'payment.advance.transactionId': transactionId,
+      _id: { $ne: id },
+    });
+
+    if (existingTransaction) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID already used',
+      });
+    }
+
+    // Update order
+    order.payment.advance.transactionId = transactionId;
+    order.payment.advance.status = 'Confirmed';
+    order.payment.advance.confirmedAt = new Date();
+    order.order.status = 'Processing';
+    if (adminId) {
+      order.admin.confirmedBy = adminId;
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Advance payment confirmed successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        advancePaymentStatus: order.payment.advance.status,
+        paymentStatus: order.payment.paymentStatus,
+        orderStatus: order.order.status,
+      },
+    });
+  } catch (error) {
+    console.error('Confirm advance payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm advance payment',
+      error: error.message,
+    });
+  }
+};
+
+// Pay remaining amount (User)
+exports.payRemaining = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { method, transactionId } = req.body;
+
+    if (!method || !transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment method and transaction ID are required',
+      });
+    }
+
+    if (!['COD', 'bKash', 'Nagad'].includes(method)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment method',
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Check if advance payment is confirmed
+    if (order.payment.advance.status !== 'Confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Advance payment must be confirmed before paying remaining amount',
+      });
+    }
+
+    // Check if remaining is already paid
+    if (order.payment.remaining.status === 'Paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Remaining amount already paid',
+      });
+    }
+
+    // For COD, mark as pending. For online methods, check for duplicate transaction ID
+    if (method !== 'COD') {
+      const existingTransaction = await Order.findOne({
+        'payment.remaining.transactionId': transactionId,
+        _id: { $ne: id },
+      });
+
+      if (existingTransaction) {
+        return res.status(400).json({
+          success: false,
+          message: 'Transaction ID already used',
+        });
+      }
+    }
+
+    // Update order
+    order.payment.remaining.method = method;
+    if (method !== 'COD') {
+      order.payment.remaining.transactionId = transactionId;
+      order.payment.remaining.status = 'Pending';
+    } else {
+      order.payment.remaining.status = 'Pending';
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Remaining payment submitted for ${method}`,
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        remainingPaymentStatus: order.payment.remaining.status,
+        paymentStatus: order.payment.paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error('Pay remaining error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit remaining payment',
+      error: error.message,
+    });
+  }
+};
+
+// Confirm remaining payment (Admin)
+exports.confirmRemainingPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.payment.remaining.status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot confirm remaining payment. Current status: ${order.payment.remaining.status}`,
+      });
+    }
+
+    // Update order
+    order.payment.remaining.status = 'Paid';
+    order.payment.remaining.paidAt = new Date();
+
+    // Update overall payment status
+    if (order.payment.advance.status === 'Confirmed' && order.payment.remaining.status === 'Paid') {
+      order.payment.paymentStatus = 'full';
+    }
+
+    if (adminId) {
+      order.admin.confirmedBy = adminId;
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Remaining payment confirmed successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        remainingPaymentStatus: order.payment.remaining.status,
+        paymentStatus: order.payment.paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error('Confirm remaining payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm remaining payment',
+      error: error.message,
+    });
+  }
+};
+
+// Reject advance payment (Admin)
+exports.rejectAdvancePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, adminId } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.payment.advance.status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reject advance payment. Current status: ${order.payment.advance.status}`,
+      });
+    }
+
+    // Update order
+    order.payment.advance.status = 'Rejected';
+    order.payment.advance.rejectionReason = reason || 'No reason provided';
+    order.order.status = 'Cancelled';
+    if (adminId) {
+      order.admin.rejectedBy = adminId;
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Advance payment rejected successfully',
+      data: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        advancePaymentStatus: order.payment.advance.status,
+        orderStatus: order.order.status,
+      },
+    });
+  } catch (error) {
+    console.error('Reject advance payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject advance payment',
+      error: error.message,
+    });
+  }
+};
+
+// Confirm payment (Admin) - DEPRECATED - Use confirmAdvancePayment instead
 exports.confirmPayment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -279,16 +601,16 @@ exports.confirmPayment = async (req, res) => {
       });
     }
 
-    if (order.payment.status !== 'Pending') {
+    if (order.payment.advance.status !== 'Pending') {
       return res.status(400).json({
         success: false,
-        message: `Cannot confirm payment. Current status: ${order.payment.status}`,
+        message: `Cannot confirm payment. Current status: ${order.payment.advance.status}`,
       });
     }
 
     // Check for duplicate transaction ID
     const existingTransaction = await Order.findOne({
-      'payment.transactionId': transactionId,
+      'payment.advance.transactionId': transactionId,
       _id: { $ne: id },
     });
 
@@ -300,9 +622,9 @@ exports.confirmPayment = async (req, res) => {
     }
 
     // Update order
-    order.payment.transactionId = transactionId;
-    order.payment.status = 'Confirmed';
-    order.payment.confirmedAt = new Date();
+    order.payment.advance.transactionId = transactionId;
+    order.payment.advance.status = 'Confirmed';
+    order.payment.advance.confirmedAt = new Date();
     order.order.status = 'Processing';
     if (adminId) {
       order.admin.confirmedBy = adminId;
@@ -316,7 +638,7 @@ exports.confirmPayment = async (req, res) => {
       data: {
         orderId: order._id,
         orderCode: order.orderCode,
-        paymentStatus: order.payment.status,
+        paymentStatus: order.payment.paymentStatus,
         orderStatus: order.order.status,
       },
     });
@@ -331,6 +653,7 @@ exports.confirmPayment = async (req, res) => {
 };
 
 // Reject payment (Admin)
+// Reject payment (Admin) - DEPRECATED - Use rejectAdvancePayment instead
 exports.rejectPayment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -345,16 +668,16 @@ exports.rejectPayment = async (req, res) => {
       });
     }
 
-    if (order.payment.status !== 'Pending') {
+    if (order.payment.advance.status !== 'Pending') {
       return res.status(400).json({
         success: false,
-        message: `Cannot reject payment. Current status: ${order.payment.status}`,
+        message: `Cannot reject payment. Current status: ${order.payment.advance.status}`,
       });
     }
 
     // Update order
-    order.payment.status = 'Rejected';
-    order.payment.rejectionReason = reason || 'No reason provided';
+    order.payment.advance.status = 'Rejected';
+    order.payment.advance.rejectionReason = reason || 'No reason provided';
     order.order.status = 'Cancelled';
     if (adminId) {
       order.admin.rejectedBy = adminId;
@@ -368,7 +691,7 @@ exports.rejectPayment = async (req, res) => {
       data: {
         orderId: order._id,
         orderCode: order.orderCode,
-        paymentStatus: order.payment.status,
+        paymentStatus: order.payment.paymentStatus,
         orderStatus: order.order.status,
       },
     });
@@ -397,14 +720,7 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findByIdAndUpdate(
-      id,
-      {
-        'order.status': status,
-        'order.notes': notes || order.order.notes,
-      },
-      { new: true }
-    );
+    const order = await Order.findById(id);
 
     if (!order) {
       return res.status(404).json({
@@ -412,6 +728,19 @@ exports.updateOrderStatus = async (req, res) => {
         message: 'Order not found',
       });
     }
+
+    // Update both paths to ensure backward and UI compatibility
+    order.orderStatus = status;
+    order.specialInstructions = notes || order.specialInstructions;
+    
+    if (order.order) {
+      order.order.status = status;
+      order.order.notes = notes || order.order.notes;
+    } else {
+      order.order = { status, notes };
+    }
+
+    await order.save();
 
     res.status(200).json({
       success: true,
