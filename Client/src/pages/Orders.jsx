@@ -526,32 +526,22 @@ export default function Orders() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border p-12 text-center">
-            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-              <svg
-                className="w-12 h-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
+          <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
               {filter === "all" ? "No orders yet" : `No ${filter} orders`}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
               {filter === "all"
-                ? "Start shopping to see your orders here"
-                : "Try selecting a different filter"}
+                ? "You haven't placed any orders yet. Start shopping to see your orders here."
+                : `No ${filter} orders found. Try selecting a different filter.`}
             </p>
-            <Link to="/" className="btn-primary inline-block">
-              Start Shopping
+            <Link to="/" className="inline-block px-8 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+              Start Shopping Now
             </Link>
           </div>
         ) : (
@@ -559,47 +549,43 @@ export default function Orders() {
             {filteredOrders.map((order) => (
               <div
                 key={order._id}
-                className="bg-white rounded-2xl shadow-sm border hover:shadow-md transition-all overflow-hidden"
+                className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-shadow overflow-hidden"
               >
                 {/* Order Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
+                <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500">Order ID:</span>
-                        <span className="font-mono font-bold text-gray-900 bg-white px-3 py-1 rounded-lg">
-                          #{order._id.slice(-8).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500">Date:</span>
-                        <span className="font-semibold text-gray-900">
-                          {new Date(order.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-gray-600">Order ID</p>
+                          <p className="text-lg font-bold text-gray-900 font-mono">#{order._id.slice(-8).toUpperCase()}</p>
+                        </div>
+                        <div className="h-12 w-px bg-gray-200"></div>
+                        <div>
+                          <p className="text-sm text-gray-600">Order Date</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {new Date(order.createdAt).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "short",
                               day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusConfig[getOrderStatus(order)]?.color}`}>
+                          {statusConfig[getOrderStatus(order)]?.icon} {getOrderStatus(order).charAt(0).toUpperCase() + getOrderStatus(order).slice(1)}
                         </span>
+                        <span className="text-xs text-gray-600">{statusConfig[getOrderStatus(order)]?.description}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${statusConfig[getOrderStatus(order)]?.color}`}
-                      >
-                        <span className="text-lg">
-                          {statusConfig[getOrderStatus(order)]?.icon}
-                        </span>
-                        {getOrderStatus(order).charAt(0).toUpperCase() +
-                          getOrderStatus(order).slice(1)}
-                      </span>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-3xl font-bold text-primary-600">{formatPrice(order.pricing?.total || order.totalPrice)}</p>
                     </div>
                   </div>
                 </div>
+
                 {/* Order Content */}
                 <div className="p-6">
                   {/* Status Description */}
