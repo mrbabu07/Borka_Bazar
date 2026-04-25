@@ -15,7 +15,6 @@ import PayRemainingForm from "../components/PayRemainingForm";
 import { useNotifications } from "../context/NotificationContext";
 import { useToast } from "../context/ToastContext";
 import useCart from "../hooks/useCart";
-import BackButton from "../components/BackButton";
 import OrderTracking from "../components/OrderTracking";
 
 export default function Orders() {
@@ -28,7 +27,6 @@ export default function Orders() {
   const { success, error } = useToast();
   const { addToCart } = useCart();
   const { formatPrice } = useCurrency();
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -41,25 +39,17 @@ export default function Orders() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [reorderingItems, setReorderingItems] = useState({});
-
-  // Review modal states
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewFormData, setReviewFormData] = useState({
     rating: 5,
     comment: "",
   });
   const [submittingReview, setSubmittingReview] = useState(false);
-
-  // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
 
   useEffect(() => {
     fetchOrders();
-    if (location.state?.orderSuccess) {
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 5000);
-    }
   }, []);
 
   const fetchOrders = async () => {
@@ -73,49 +63,14 @@ export default function Orders() {
     }
   };
 
-  // Helper function to safely get order status from both legacy and new order structures
   const getOrderStatus = (order) => {
     const status = order.orderStatus || order.status || order.order?.status || 'pending';
     return status.toLowerCase();
   };
 
-  // Helper function to safely get payment status
   const getPaymentStatus = (order) => {
     const status = order.paymentInfo?.status || order.paymentStatus || order.payment?.status || 'pending';
     return status.toLowerCase();
-  };
-
-  const statusConfig = {
-    pending: {
-      color:
-        "bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border-yellow-200",
-      icon: "⏳",
-      description: "Order received and being processed",
-    },
-    processing: {
-      color:
-        "bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border-blue-200",
-      icon: "🔄",
-      description: "Order is being prepared",
-    },
-    shipped: {
-      color:
-        "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-200",
-      icon: "📦",
-      description: "Order has been shipped",
-    },
-    delivered: {
-      color:
-        "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200",
-      icon: "✅",
-      description: "Order delivered successfully",
-    },
-    cancelled: {
-      color:
-        "bg-gradient-to-r from-red-100 to-pink-100 text-red-800 border-red-200",
-      icon: "❌",
-      description: "Order has been cancelled",
-    },
   };
 
   const filteredOrders =
@@ -141,10 +96,6 @@ export default function Orders() {
 
     try {
       const productId = selectedProduct.productId || selectedProduct._id;
-      console.log("Submitting review for product:", productId);
-      console.log("Selected product:", selectedProduct);
-
-      // Validate productId
       if (!productId || productId.length !== 24) {
         throw new Error("Invalid product ID. Please try again.");
       }
@@ -157,28 +108,20 @@ export default function Orders() {
 
       setShowReviewModal(false);
       setReviewFormData({ rating: 5, comment: "" });
-      success("Review submitted successfully! Thank you for your feedback.", {
+      success("Review submitted successfully!", {
         title: "Review Submitted",
       });
     } catch (err) {
       console.error("Review submission error:", err);
-
-      // Handle specific error cases from our purchase verification
       let errorMessage = "Failed to submit review";
-
       if (err.response?.status === 403) {
-        errorMessage =
-          err.response?.data?.error ||
-          "You must purchase this product before you can review it";
+        errorMessage = err.response?.data?.error || "You must purchase this product before you can review it";
       } else if (err.response?.status === 409) {
         errorMessage = "You have already reviewed this product";
       } else if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       }
-
-      error(errorMessage, {
-        title: "Review Failed",
-      });
+      error(errorMessage, { title: "Review Failed" });
     } finally {
       setSubmittingReview(false);
     }
@@ -196,13 +139,10 @@ export default function Orders() {
     setUploadingImages(true);
 
     try {
-      // Upload images to ImgBB if any are selected
       let imageUrls = [];
       if (selectedFiles.length > 0) {
-        console.log("Uploading images...");
         const uploadPromises = selectedFiles.map((file) => uploadToImgBB(file));
         imageUrls = await Promise.all(uploadPromises);
-        console.log("Images uploaded:", imageUrls);
       }
 
       await createReturnRequest({
@@ -224,23 +164,17 @@ export default function Orders() {
       });
       setSelectedFiles([]);
 
-      // Add notification for return request
       addNotification({
         type: "return",
         title: "Return Request Submitted",
-        message:
-          "Your return request has been submitted and is under review by our team.",
+        message: "Your return request has been submitted and is under review by our team.",
         link: "/returns",
       });
 
-      success(
-        "Return request submitted successfully! You can track it in the Returns section.",
-        {
-          title: "Return Request Submitted",
-        },
-      );
+      success("Return request submitted successfully!", {
+        title: "Return Request Submitted",
+      });
 
-      // Navigate to returns page
       navigate("/returns");
     } catch (err) {
       error(err.response?.data?.error || "Failed to submit return request", {
@@ -277,37 +211,25 @@ export default function Orders() {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Check if order is eligible for returns (delivered within 7 days)
   const isReturnEligible = (order) => {
     if (getOrderStatus(order) !== "delivered") return false;
     const deliveryDate = new Date(order.updatedAt || order.createdAt);
-    const daysSinceDelivery =
-      (new Date() - deliveryDate) / (1000 * 60 * 60 * 24);
+    const daysSinceDelivery = (new Date() - deliveryDate) / (1000 * 60 * 60 * 24);
     return daysSinceDelivery <= 7;
   };
 
-  // Utility function to safely render color
-  const renderColor = (color) => {
-    if (!color) return null;
-    if (typeof color === "string") return color;
-    if (typeof color === "object" && color.name) return color.name;
-    return "Unknown Color";
-  };
-
-  // Quick Reorder functionality
   const handleQuickReorder = async (item, orderId) => {
     const itemKey = `${orderId}-${item.productId || item._id}`;
     setReorderingItems((prev) => ({ ...prev, [itemKey]: true }));
 
     try {
-      // Add item to cart with same specifications
       await addToCart(
         {
           _id: item.productId || item._id,
           title: item.title,
           price: item.price,
           image: item.image,
-          stock: 999, // Assume in stock for reorder
+          stock: 999,
         },
         item.quantity,
         item.image,
@@ -327,7 +249,6 @@ export default function Orders() {
     }
   };
 
-  // Reorder entire order - go to checkout
   const handleReorderEntireOrder = async (order) => {
     setReorderingItems((prev) => ({ ...prev, [order._id]: true }));
 
@@ -342,7 +263,7 @@ export default function Orders() {
               title: item.title,
               price: item.price,
               image: item.image,
-              stock: 999, // Assume in stock for reorder
+              stock: 999,
             },
             item.quantity,
             item.image,
@@ -359,16 +280,11 @@ export default function Orders() {
         success(`All ${successCount} items added to cart!`, {
           title: "Order Reordered Successfully",
         });
-        // Navigate to checkout
         navigate("/checkout");
       } else if (successCount > 0) {
-        success(
-          `${successCount} of ${items.length} items added to cart`,
-          {
-            title: "Partial Reorder Successful",
-          },
-        );
-        // Navigate to checkout
+        success(`${successCount} of ${items.length} items added to cart`, {
+          title: "Partial Reorder Successful",
+        });
         navigate("/checkout");
       } else {
         error("Failed to add any items to cart", {
@@ -384,7 +300,6 @@ export default function Orders() {
     }
   };
 
-  // Cancel order (within 30 minutes)
   const handleCancelOrder = async (orderId) => {
     if (!confirm("Are you sure you want to cancel this order?")) {
       return;
@@ -395,7 +310,6 @@ export default function Orders() {
       success("Order cancelled successfully", {
         title: "Order Cancelled",
       });
-      // Refresh orders
       fetchOrders();
     } catch (err) {
       error(err.response?.data?.error || "Failed to cancel order", {
@@ -404,692 +318,251 @@ export default function Orders() {
     }
   };
 
-  // Check if order can be cancelled (within 30 minutes and pending)
   const canCancelOrder = (order) => {
     if (getOrderStatus(order) !== "pending") return false;
-
     const createdAt = new Date(order.createdAt);
     const canCancelUntil = order.canCancelUntil
       ? new Date(order.canCancelUntil)
       : new Date(createdAt.getTime() + 30 * 60 * 1000);
     const now = new Date();
-
     return now < canCancelUntil;
   };
 
   if (loading) return <Loading />;
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header - Daraz Style */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <h1 className="text-xl font-semibold text-gray-900">My Purchases</h1>
+      {/* Header */}
+      <div className="border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <h1 className="text-lg font-semibold text-gray-900">My Purchases</h1>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {/* Filter Tabs - Daraz Style */}
-        <div className="mb-4 border-b border-gray-200 overflow-x-auto">
-          <div className="flex gap-0">
-            {[
-              "all",
-              "pending",
-              "processing",
-              "shipped",
-              "delivered",
-              "cancelled",
-            ].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-all ${
-                  filter === status
-                    ? "border-primary-600 text-primary-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        {/* Filter Tabs */}
+        <div className="flex gap-6 border-b border-gray-200 mb-6 overflow-x-auto">
+          {["all", "pending", "processing", "shipped", "delivered", "cancelled"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`pb-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                filter === status
+                  ? "border-primary-600 text-primary-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {filter === "all" ? "No purchases yet" : `No ${filter} purchases`}
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {filter === "all"
-                ? "You haven't made any purchases yet."
-                : `No ${filter} purchases found.`}
-            </p>
-            <Link to="/" className="inline-block px-6 py-2 bg-primary-600 text-white rounded font-medium hover:bg-primary-700 transition-colors">
-              Start Shopping
+          <div className="text-center py-16">
+            <p className="text-gray-600 mb-4">No purchases found</p>
+            <Link to="/" className="text-primary-600 font-medium hover:text-primary-700">
+              Continue Shopping
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredOrders.map((order) => (
-              <div
-                key={order._id}
-                className="bg-white border border-gray-200 hover:border-gray-300 transition-all overflow-hidden"
-              >
-                {/* Order Header - Minimal */}
-                <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex-1 flex items-center gap-3">
-                    <div>
-                      <p className="text-xs text-gray-600">Order #{order._id.slice(-8).toUpperCase()}</p>
-                      <p className="text-sm font-medium text-gray-900">
+              <div key={order._id} className="border border-gray-200 hover:border-gray-300 transition-colors">
+                {/* Order Row */}
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-sm text-gray-600">Order #{order._id.slice(-8).toUpperCase()}</span>
+                      <span className="text-xs text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         })}
-                      </p>
+                      </span>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium ${statusConfig[getOrderStatus(order)]?.color}`}>
-                      {getOrderStatus(order).charAt(0).toUpperCase() + getOrderStatus(order).slice(1)}
-                    </span>
+                    <p className="text-sm text-gray-900 font-medium truncate">
+                      {(order.orderItems || order.products || [])[0]?.title || "Order"}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {(order.orderItems || order.products || []).length} item{(order.orderItems || order.products || []).length !== 1 ? "s" : ""}
+                    </p>
                   </div>
-                  <div className="text-right">
+
+                  <div className="text-right flex-shrink-0">
                     <p className="text-sm font-semibold text-gray-900">{formatPrice(order.pricing?.total || order.totalPrice)}</p>
+                    <p className="text-xs text-gray-600 mt-1">{getOrderStatus(order).charAt(0).toUpperCase() + getOrderStatus(order).slice(1)}</p>
                   </div>
-                </div>
 
-                {/* Order Items - Compact */}
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="space-y-2">
-                    {(order.orderItems || order.products || []).slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <svg
-                              className="w-5 h-5 text-gray-400 m-auto"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 truncate">{item.title}</p>
-                          <p className="text-xs text-gray-600">x{item.quantity}</p>
-                        </div>
-                        <p className="text-sm font-medium text-gray-900 flex-shrink-0">
-                          {formatPrice((item.price || 0) * (item.quantity || 0))}
-                        </p>
-                      </div>
-                    ))}
-                    {(order.orderItems || order.products || []).length > 2 && (
-                      <p className="text-xs text-gray-600 px-2">
-                        +{(order.orderItems || order.products || []).length - 2} more
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Order Footer - Actions */}
-                <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <Link
                     to={`/order/${order._id}`}
-                    className="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
+                    className="text-primary-600 text-sm font-medium hover:text-primary-700 flex-shrink-0"
                   >
-                    View Details
+                    View
                   </Link>
-                  <div className="flex flex-wrap gap-2">
-                    {/* Reorder Button */}
-                    <button
-                      onClick={() => handleReorderEntireOrder(order)}
-                      disabled={reorderingItems[order._id]}
-                      className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {reorderingItems[order._id] ? "Adding..." : "Reorder"}
-                    </button>
-
-                    {/* Return Button */}
-                    {isReturnEligible(order) && (
-                      <button
-                        onClick={() => {
-                          const firstItem = (order.orderItems || order.products || [])[0];
-                          if (firstItem) handleReturnRequest(order, firstItem);
-                        }}
-                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        Return
-                      </button>
-                    )}
-
-                    {/* Review Button */}
-                    {getOrderStatus(order) === "delivered" && (
-                      <button
-                        onClick={() => {
-                          const firstItem = (order.orderItems || order.products || [])[0];
-                          if (firstItem) handleReviewRequest(order, firstItem);
-                        }}
-                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        Review
-                      </button>
-                    )}
-
-                    {/* Cancel Button */}
-                    {canCancelOrder(order) && (
-                      <button
-                        onClick={() => handleCancelOrder(order._id)}
-                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    )}
-
-                    {/* Pay Remaining Button */}
-                    {order.payment && order.payment.remaining && order.payment.remaining.status === 'Pending' && order.payment.advance.status === 'Confirmed' && (
-                      <button
-                        onClick={() => {
-                          setSelectedOrderForPayment(order);
-                          setShowPaymentModal(true);
-                        }}
-                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        Pay Remaining
-                      </button>
-                    )}
-                  </div>
                 </div>
 
-                {/* Payment Breakdown - Show for new 2-step payment system */}
+                {/* Action Buttons */}
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleReorderEntireOrder(order)}
+                    disabled={reorderingItems[order._id]}
+                    className="text-xs font-medium text-gray-700 hover:text-gray-900 disabled:opacity-50"
+                  >
+                    {reorderingItems[order._id] ? "Adding..." : "Reorder"}
+                  </button>
+
+                  {isReturnEligible(order) && (
+                    <button
+                      onClick={() => {
+                        const firstItem = (order.orderItems || order.products || [])[0];
+                        if (firstItem) handleReturnRequest(order, firstItem);
+                      }}
+                      className="text-xs font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      Return
+                    </button>
+                  )}
+
+                  {getOrderStatus(order) === "delivered" && (
+                    <button
+                      onClick={() => {
+                        const firstItem = (order.orderItems || order.products || [])[0];
+                        if (firstItem) handleReviewRequest(order, firstItem);
+                      }}
+                      className="text-xs font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      Review
+                    </button>
+                  )}
+
+                  {canCancelOrder(order) && (
+                    <button
+                      onClick={() => handleCancelOrder(order._id)}
+                      className="text-xs font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      Cancel
+                    </button>
+                  )}
+
+                  {order.payment && order.payment.remaining && order.payment.remaining.status === 'Pending' && order.payment.advance.status === 'Confirmed' && (
+                    <button
+                      onClick={() => {
+                        setSelectedOrderForPayment(order);
+                        setShowPaymentModal(true);
+                      }}
+                      className="text-xs font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      Pay Remaining
+                    </button>
+                  )}
+                </div>
+
+                {/* Payment Breakdown */}
                 {order.payment && order.payment.advance && (
-                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+                  <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
                     <PaymentBreakdown order={order} />
                   </div>
                 )}
-
-                {/* Payment & Delivery Info - Legacy support */}
-                {!order.payment && order.shippingInfo && (
-                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Payment Method */}
-                      <div>
-                        <p className="text-xs text-gray-600 font-medium">Payment</p>
-                        <p className="text-sm text-gray-900">
-                          {order.paymentMethod === "cod"
-                            ? "Cash on Delivery"
-                            : order.paymentMethod}
-                        </p>
-                      </div>
-
-                      {/* Delivery Address */}
-                      <div>
-                        <p className="text-xs text-gray-600 font-medium">Delivery To</p>
-                        <p className="text-sm text-gray-900">{order.shippingInfo.name}</p>
-                        <p className="text-xs text-gray-600">{order.shippingInfo.area}, {order.shippingInfo.city}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Special Instructions */}
-                {order.specialInstructions && (
-                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm">
-                    <p className="text-xs text-gray-600 font-medium mb-1">Special Instructions</p>
-                    <p className="text-sm text-gray-900">{order.specialInstructions}</p>
-                  </div>
-                )}
-
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Return Request Modal */}
-      <Modal
-        isOpen={showReturnModal}
-        onClose={closeReturnModal}
-        title="Request Return"
-      >
+      {/* Return Modal */}
+      <Modal isOpen={showReturnModal} onClose={closeReturnModal} title="Request Return">
         {selectedProduct && (
           <div className="space-y-4">
-            {/* Product Info */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">
-                Product Details
-              </h4>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                  {selectedProduct.image ? (
-                    <img
-                      src={selectedProduct.image}
-                      alt={selectedProduct.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {selectedProduct.title}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Qty: {selectedProduct.quantity} •{" "}
-                    {formatPrice(selectedProduct.price)}
-                  </p>
-                  {selectedProduct.selectedSize && (
-                    <p className="text-sm text-gray-600">
-                      Size: {selectedProduct.selectedSize}
-                    </p>
-                  )}
-                  {selectedProduct.selectedColor && (
-                    <p className="text-sm text-gray-600">
-                      Color: {renderColor(selectedProduct.selectedColor)}
-                    </p>
-                  )}
-                </div>
-              </div>
+            <div className="bg-gray-50 rounded p-3">
+              <p className="text-sm font-medium text-gray-900 mb-2">{selectedProduct.title}</p>
+              <p className="text-xs text-gray-600">Qty: {selectedProduct.quantity} • {formatPrice(selectedProduct.price)}</p>
             </div>
 
-            {/* Return Form */}
             <form onSubmit={submitReturnRequest} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Return Reason *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Return Reason *</label>
                 <select
                   value={returnFormData.reason}
-                  onChange={(e) =>
-                    setReturnFormData({
-                      ...returnFormData,
-                      reason: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setReturnFormData({ ...returnFormData, reason: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">Select a reason</option>
                   <option value="Defective Product">Defective Product</option>
-                  <option value="Wrong Item Received">
-                    Wrong Item Received
-                  </option>
+                  <option value="Wrong Item Received">Wrong Item Received</option>
                   <option value="Size/Fit Issues">Size/Fit Issues</option>
                   <option value="Not as Described">Not as Described</option>
-                  <option value="Damaged in Shipping">
-                    Damaged in Shipping
-                  </option>
+                  <option value="Damaged in Shipping">Damaged in Shipping</option>
                   <option value="Changed Mind">Changed Mind</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (Optional)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   value={returnFormData.description}
-                  onChange={(e) =>
-                    setReturnFormData({
-                      ...returnFormData,
-                      description: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setReturnFormData({ ...returnFormData, description: e.target.value })}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="Please provide additional details about your return request..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
+                  placeholder="Provide details..."
                 />
               </div>
 
-              {/* Refund Method Section */}
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                  Refund Information
-                </h3>
-
-                <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Refund Information</h3>
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Refund Method *
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label
-                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                          returnFormData.refundMethod === "bkash"
-                            ? "border-primary-500 bg-primary-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="refundMethod"
-                          value="bkash"
-                          checked={returnFormData.refundMethod === "bkash"}
-                          onChange={(e) =>
-                            setReturnFormData({
-                              ...returnFormData,
-                              refundMethod: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-4 h-4 text-primary-500"
-                        />
-                        <div className="ml-3">
-                          <span className="text-sm font-semibold text-gray-900">
-                            bKash
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            Mobile Banking
-                          </p>
-                        </div>
-                      </label>
-
-                      <label
-                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                          returnFormData.refundMethod === "nagad"
-                            ? "border-primary-500 bg-primary-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="refundMethod"
-                          value="nagad"
-                          checked={returnFormData.refundMethod === "nagad"}
-                          onChange={(e) =>
-                            setReturnFormData({
-                              ...returnFormData,
-                              refundMethod: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-4 h-4 text-primary-500"
-                        />
-                        <div className="ml-3">
-                          <span className="text-sm font-semibold text-gray-900">
-                            Nagad
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            Mobile Banking
-                          </p>
-                        </div>
-                      </label>
-
-                      <label
-                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                          returnFormData.refundMethod === "rocket"
-                            ? "border-primary-500 bg-primary-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="refundMethod"
-                          value="rocket"
-                          checked={returnFormData.refundMethod === "rocket"}
-                          onChange={(e) =>
-                            setReturnFormData({
-                              ...returnFormData,
-                              refundMethod: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-4 h-4 text-primary-500"
-                        />
-                        <div className="ml-3">
-                          <span className="text-sm font-semibold text-gray-900">
-                            Rocket
-                          </span>
-                          <p className="text-xs text-gray-500">DBBL Mobile</p>
-                        </div>
-                      </label>
-
-                      <label
-                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                          returnFormData.refundMethod === "upay"
-                            ? "border-primary-500 bg-primary-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="refundMethod"
-                          value="upay"
-                          checked={returnFormData.refundMethod === "upay"}
-                          onChange={(e) =>
-                            setReturnFormData({
-                              ...returnFormData,
-                              refundMethod: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-4 h-4 text-primary-500"
-                        />
-                        <div className="ml-3">
-                          <span className="text-sm font-semibold text-gray-900">
-                            Upay
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            Mobile Banking
-                          </p>
-                        </div>
-                      </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Refund Method *</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["bkash", "nagad", "rocket", "upay"].map((method) => (
+                        <label key={method} className={`flex items-center p-2 border rounded cursor-pointer text-sm ${
+                          returnFormData.refundMethod === method ? "border-primary-500 bg-primary-50" : "border-gray-200"
+                        }`}>
+                          <input
+                            type="radio"
+                            name="refundMethod"
+                            value={method}
+                            checked={returnFormData.refundMethod === method}
+                            onChange={(e) => setReturnFormData({ ...returnFormData, refundMethod: e.target.value })}
+                            required
+                            className="w-4 h-4"
+                          />
+                          <span className="ml-2 capitalize">{method}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Account Number *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Number *</label>
                     <input
                       type="tel"
                       value={returnFormData.refundAccountNumber}
-                      onChange={(e) =>
-                        setReturnFormData({
-                          ...returnFormData,
-                          refundAccountNumber: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setReturnFormData({ ...returnFormData, refundAccountNumber: e.target.value })}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                       placeholder="01521721946"
                       pattern="[0-9]{11}"
-                      title="Please enter a valid 11-digit mobile number"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Enter your{" "}
-                      {returnFormData.refundMethod
-                        ? returnFormData.refundMethod.charAt(0).toUpperCase() +
-                          returnFormData.refundMethod.slice(1)
-                        : "mobile banking"}{" "}
-                      account number (11 digits)
-                    </p>
-                  </div>
-
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <svg
-                        className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-amber-800">
-                          Important
-                        </p>
-                        <p className="text-xs text-amber-700 mt-1">
-                          Please ensure the account number is correct. Refunds
-                          will be processed to this account once your return is
-                          approved.
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Image Upload Section */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Images (Optional)
-                </label>
-                <div className="space-y-3">
-                  {/* File Input */}
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg
-                          className="w-8 h-8 mb-4 text-gray-500"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 20 16"
-                        >
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                          />
-                        </svg>
-                        <p className="mb-2 text-sm text-gray-500">
-                          <span className="font-semibold">Click to upload</span>{" "}
-                          or drag and drop
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG or JPEG (MAX. 5 images)
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        multiple
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                      />
-                    </label>
-                  </div>
-
-                  {/* Selected Images Preview */}
-                  {selectedFiles.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="relative group">
-                          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                            <img
-                              src={URL.createObjectURL(file)}
-                              alt={`Preview ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg truncate">
-                            {file.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedFiles.length > 0 && (
-                    <p className="text-sm text-gray-600">
-                      {selectedFiles.length} image
-                      {selectedFiles.length > 1 ? "s" : ""} selected
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-700">
-                  <strong>Return Policy:</strong> Items can be returned within 7
-                  days of delivery. Products must be in original condition with
-                  tags attached.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
                   disabled={uploadingImages}
-                  className="flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-primary-600 text-white py-2 px-4 rounded text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {uploadingImages ? (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Uploading Images...
-                    </>
-                  ) : (
-                    "Submit Return Request"
-                  )}
+                  {uploadingImages ? "Uploading..." : "Submit"}
                 </button>
                 <button
                   type="button"
                   onClick={closeReturnModal}
-                  disabled={uploadingImages}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded text-sm font-medium hover:bg-gray-300"
                 >
                   Cancel
                 </button>
@@ -1100,76 +573,27 @@ export default function Orders() {
       </Modal>
 
       {/* Review Modal */}
-      <Modal
-        isOpen={showReviewModal}
-        onClose={closeReviewModal}
-        title="Write a Review"
-      >
+      <Modal isOpen={showReviewModal} onClose={closeReviewModal} title="Write a Review">
         {selectedProduct && (
           <div className="space-y-4">
-            {/* Product Info */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">
-                Product Details
-              </h4>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                  {selectedProduct.image ? (
-                    <img
-                      src={selectedProduct.image}
-                      alt={selectedProduct.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {selectedProduct.title}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatPrice(selectedProduct.price)}
-                  </p>
-                </div>
-              </div>
+            <div className="bg-gray-50 rounded p-3">
+              <p className="text-sm font-medium text-gray-900">{selectedProduct.title}</p>
+              <p className="text-xs text-gray-600 mt-1">{formatPrice(selectedProduct.price)}</p>
             </div>
 
-            {/* Review Form */}
             <form onSubmit={submitReview} className="space-y-4">
-              {/* Rating */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rating *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rating *</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
-                      onClick={() =>
-                        setReviewFormData({ ...reviewFormData, rating: star })
-                      }
-                      className="focus:outline-none transition-transform hover:scale-110"
+                      onClick={() => setReviewFormData({ ...reviewFormData, rating: star })}
+                      className="focus:outline-none"
                     >
                       <svg
-                        className={`w-10 h-10 ${
-                          star <= reviewFormData.rating
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
+                        className={`w-8 h-8 ${star <= reviewFormData.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -1184,52 +608,32 @@ export default function Orders() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  {reviewFormData.rating} star
-                  {reviewFormData.rating !== 1 ? "s" : ""}
-                </p>
               </div>
 
-              {/* Comment */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Review *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Review *</label>
                 <textarea
                   value={reviewFormData.comment}
-                  onChange={(e) =>
-                    setReviewFormData({
-                      ...reviewFormData,
-                      comment: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setReviewFormData({ ...reviewFormData, comment: e.target.value })}
                   rows="4"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
-                  placeholder="Share your experience with this product..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
+                  placeholder="Share your experience..."
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-700">
-                  💡 Your review will help other customers make informed
-                  decisions. Please be honest and constructive.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
                   disabled={submittingReview}
-                  className="flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-primary-600 text-white py-2 px-4 rounded text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {submittingReview ? "Submitting..." : "Submit Review"}
+                  {submittingReview ? "Submitting..." : "Submit"}
                 </button>
                 <button
                   type="button"
                   onClick={closeReviewModal}
-                  disabled={submittingReview}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded text-sm font-medium hover:bg-gray-300"
                 >
                   Cancel
                 </button>
@@ -1239,7 +643,7 @@ export default function Orders() {
         )}
       </Modal>
 
-      {/* Payment Modal - Pay Remaining Amount */}
+      {/* Payment Modal */}
       <Modal
         isOpen={showPaymentModal}
         onClose={() => {
@@ -1254,9 +658,8 @@ export default function Orders() {
             onPaymentSubmitted={(data) => {
               setShowPaymentModal(false);
               setSelectedOrderForPayment(null);
-              // Refresh orders to show updated payment status
               fetchOrders();
-              success('Payment submitted successfully! Admin will verify it shortly.', {
+              success('Payment submitted successfully!', {
                 title: 'Payment Submitted',
               });
             }}
