@@ -419,34 +419,18 @@ export default function Orders() {
 
   if (loading) return <Loading />;
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header - Modern, Clean Design */}
-      <div className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-              <p className="text-gray-600 mt-1">Track and manage all your orders in one place</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                to="/returns"
-                className="px-4 py-2 text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors font-medium"
-              >
-                Returns
-              </Link>
-              <Link to="/" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                Continue Shopping
-              </Link>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white">
+      {/* Header - Daraz Style */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <h1 className="text-xl font-semibold text-gray-900">My Purchases</h1>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter Tabs - Horizontal Scrollable */}
-        <div className="mb-8 overflow-x-auto">
-          <div className="flex gap-2 pb-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Filter Tabs - Daraz Style */}
+        <div className="mb-4 border-b border-gray-200 overflow-x-auto">
+          <div className="flex gap-0">
             {[
               "all",
               "pending",
@@ -458,18 +442,13 @@ export default function Orders() {
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-all ${
                   filter === status
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
+                    ? "border-primary-600 text-primary-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
-                {status !== "all" && (
-                  <span className="ml-2 text-xs opacity-75">
-                    ({orders.filter((o) => getOrderStatus(o) === status).length})
-                  </span>
-                )}
               </button>
             ))}
           </div>
@@ -477,71 +456,57 @@ export default function Orders() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {filter === "all" ? "No orders yet" : `No ${filter} orders`}
+          <div className="text-center py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {filter === "all" ? "No purchases yet" : `No ${filter} purchases`}
             </h3>
             <p className="text-gray-600 mb-6">
               {filter === "all"
-                ? "You haven't placed any orders yet. Start shopping to see your orders here."
-                : `No ${filter} orders found. Try selecting a different filter.`}
+                ? "You haven't made any purchases yet."
+                : `No ${filter} purchases found.`}
             </p>
-            <Link to="/" className="inline-block px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+            <Link to="/" className="inline-block px-6 py-2 bg-primary-600 text-white rounded font-medium hover:bg-primary-700 transition-colors">
               Start Shopping
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredOrders.map((order) => (
               <div
                 key={order._id}
-                className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow overflow-hidden"
+                className="bg-white border border-gray-200 hover:border-gray-300 transition-all overflow-hidden"
               >
-                {/* Order Header - Compact */}
-                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Order ID</p>
-                          <p className="text-sm font-bold text-gray-900 font-mono">#{order._id.slice(-8).toUpperCase()}</p>
-                        </div>
-                        <div className="text-gray-300">•</div>
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Date</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {new Date(order.createdAt).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusConfig[getOrderStatus(order)]?.color}`}>
-                          {statusConfig[getOrderStatus(order)]?.icon} {getOrderStatus(order).charAt(0).toUpperCase() + getOrderStatus(order).slice(1)}
-                        </span>
-                      </div>
+                {/* Order Header - Minimal */}
+                <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex-1 flex items-center gap-3">
+                    <div>
+                      <p className="text-xs text-gray-600">Order #{order._id.slice(-8).toUpperCase()}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(order.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-600 uppercase tracking-wide">Total</p>
-                      <p className="text-lg font-bold text-gray-900">{formatPrice(order.pricing?.total || order.totalPrice)}</p>
-                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium ${statusConfig[getOrderStatus(order)]?.color}`}>
+                      {getOrderStatus(order).charAt(0).toUpperCase() + getOrderStatus(order).slice(1)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{formatPrice(order.pricing?.total || order.totalPrice)}</p>
                   </div>
                 </div>
 
-                {/* Order Items - Show first 2 items only */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <div className="space-y-3">
+                {/* Order Items - Compact */}
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="space-y-2">
                     {(order.orderItems || order.products || []).slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
                           {item.image ? (
                             <img
                               src={item.image}
@@ -550,7 +515,7 @@ export default function Orders() {
                             />
                           ) : (
                             <svg
-                              className="w-6 h-6 text-gray-400 m-auto"
+                              className="w-5 h-5 text-gray-400 m-auto"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -565,36 +530,36 @@ export default function Orders() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
-                          <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                          <p className="text-sm text-gray-900 truncate">{item.title}</p>
+                          <p className="text-xs text-gray-600">x{item.quantity}</p>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900 flex-shrink-0">
+                        <p className="text-sm font-medium text-gray-900 flex-shrink-0">
                           {formatPrice((item.price || 0) * (item.quantity || 0))}
                         </p>
                       </div>
                     ))}
                     {(order.orderItems || order.products || []).length > 2 && (
-                      <p className="text-xs text-gray-600 pt-2">
-                        +{(order.orderItems || order.products || []).length - 2} more item{(order.orderItems || order.products || []).length - 2 !== 1 ? 's' : ''}
+                      <p className="text-xs text-gray-600 px-2">
+                        +{(order.orderItems || order.products || []).length - 2} more
                       </p>
                     )}
                   </div>
                 </div>
 
                 {/* Order Footer - Actions */}
-                <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <Link
                     to={`/order/${order._id}`}
                     className="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
                   >
-                    View Details →
+                    View Details
                   </Link>
                   <div className="flex flex-wrap gap-2">
                     {/* Reorder Button */}
                     <button
                       onClick={() => handleReorderEntireOrder(order)}
                       disabled={reorderingItems[order._id]}
-                      className="px-3 py-1 text-xs font-medium text-primary-600 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {reorderingItems[order._id] ? "Adding..." : "Reorder"}
                     </button>
@@ -606,7 +571,7 @@ export default function Orders() {
                           const firstItem = (order.orderItems || order.products || [])[0];
                           if (firstItem) handleReturnRequest(order, firstItem);
                         }}
-                        className="px-3 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
                       >
                         Return
                       </button>
@@ -619,7 +584,7 @@ export default function Orders() {
                           const firstItem = (order.orderItems || order.products || [])[0];
                           if (firstItem) handleReviewRequest(order, firstItem);
                         }}
-                        className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
                       >
                         Review
                       </button>
@@ -629,7 +594,7 @@ export default function Orders() {
                     {canCancelOrder(order) && (
                       <button
                         onClick={() => handleCancelOrder(order._id)}
-                        className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
                       >
                         Cancel
                       </button>
@@ -642,7 +607,7 @@ export default function Orders() {
                           setSelectedOrderForPayment(order);
                           setShowPaymentModal(true);
                         }}
-                        className="px-3 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors"
                       >
                         Pay Remaining
                       </button>
@@ -651,114 +616,43 @@ export default function Orders() {
                 </div>
 
                 {/* Payment Breakdown - Show for new 2-step payment system */}
-                  {order.payment && order.payment.advance && (
-                    <div className="mb-6">
-                      <PaymentBreakdown order={order} />
-                    </div>
-                  )}
+                {order.payment && order.payment.advance && (
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+                    <PaymentBreakdown order={order} />
+                  </div>
+                )}
 
-                  {/* Payment & Delivery Info - Legacy support */}
-                  {!order.payment && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Payment & Delivery Info - Legacy support */}
+                {!order.payment && order.shippingInfo && (
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Payment Method */}
-                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                        <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                            />
-                          </svg>
-                          Payment Method
-                        </h4>
-                        <p className="text-sm text-green-700 capitalize font-medium">
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Payment</p>
+                        <p className="text-sm text-gray-900">
                           {order.paymentMethod === "cod"
-                            ? "💵 Cash on Delivery"
+                            ? "Cash on Delivery"
                             : order.paymentMethod}
                         </p>
                       </div>
 
                       {/* Delivery Address */}
-                      {order.shippingInfo && (
-                        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                          <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                              />
-                            </svg>
-                            Delivery Address
-                          </h4>
-                          <div className="text-sm text-blue-800 space-y-1.5">
-                            <p className="font-semibold flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                              {order.shippingInfo.name}
-                            </p>
-                            <p className="flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                              </svg>
-                              {order.shippingInfo.phone}
-                            </p>
-                            <p className="flex items-start gap-2">
-                              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                              </svg>
-                              <span>{order.shippingInfo.address}</span>
-                            </p>
-                            <p className="flex items-center gap-2 text-blue-700">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                              </svg>
-                              {order.shippingInfo.area}, {order.shippingInfo.city}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Delivery To</p>
+                        <p className="text-sm text-gray-900">{order.shippingInfo.name}</p>
+                        <p className="text-xs text-gray-600">{order.shippingInfo.area}, {order.shippingInfo.city}</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Special Instructions */}
-                  {order.specialInstructions && (
-                    <div className="mb-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                      <h4 className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z"
-                          />
-                        </svg>
-                        Special Instructions
-                      </h4>
-                      <p className="text-sm text-purple-700">
-                        {order.specialInstructions}
-                      </p>
-                    </div>
-                  )}
+                {/* Special Instructions */}
+                {order.specialInstructions && (
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm">
+                    <p className="text-xs text-gray-600 font-medium mb-1">Special Instructions</p>
+                    <p className="text-sm text-gray-900">{order.specialInstructions}</p>
+                  </div>
+                )}
 
               </div>
             ))}
