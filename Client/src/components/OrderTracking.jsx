@@ -235,14 +235,14 @@ export default function OrderTracking({ order, orderId, currentStatus, orderDate
           )}
 
           {/* Delivery Address */}
-          {(order?.shippingAddress || order?.shippingInfo) && (
+          {order && (order?.shippingAddress || order?.shippingInfo) && (
             <div className="mt-6 p-4 border border-gray-200 rounded-lg">
               <h4 className="font-medium text-black mb-2 text-sm">Delivery Address</h4>
               <p className="text-sm text-gray-700">
-                {(order?.shippingAddress?.name || order?.shippingInfo?.name)}<br />
-                {(order?.shippingAddress?.address || order?.shippingInfo?.address)}<br />
-                {(order?.shippingAddress?.city || order?.shippingInfo?.city)}, {(order?.shippingAddress?.postalCode || order?.shippingInfo?.zipCode)}<br />
-                {(order?.shippingAddress?.phone || order?.shippingInfo?.phone)}
+                {(order?.shippingAddress?.name || order?.shippingInfo?.name || 'N/A')}<br />
+                {(order?.shippingAddress?.address || order?.shippingInfo?.address || 'N/A')}<br />
+                {(order?.shippingAddress?.city || order?.shippingInfo?.city || 'N/A')}, {(order?.shippingAddress?.postalCode || order?.shippingInfo?.zipCode || 'N/A')}<br />
+                {(order?.shippingAddress?.phone || order?.shippingInfo?.phone || 'N/A')}
               </p>
             </div>
           )}

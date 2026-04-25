@@ -598,6 +598,7 @@ export default function Orders() {
                   {/* Order Tracking */}
                   <div className="mb-6">
                     <OrderTracking
+                      order={order}
                       orderId={order._id}
                       currentStatus={getOrderStatus(order)}
                       orderDate={order.createdAt}

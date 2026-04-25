@@ -17,7 +17,20 @@ export default function OrderConfirmation() {
   useEffect(() => {
     // If we have state data, use it
     if (state?.orderCode) {
-      setOrder(state);
+      // Support both new 2-step payment structure and legacy orders
+      const total = state.pricing?.total || state.totalPrice || state.total || 0;
+      const deliveryFee = state.pricing?.deliveryFee || state.deliveryCharge || 0;
+      const subtotal = state.pricing?.subtotal || state.subtotal || 0;
+      const remainingAmount = state.pricing?.remainingAmount || subtotal || 0;
+      
+      setOrder({
+        orderCode: state.orderCode,
+        orderId: state._id || state.orderId,
+        total: total,
+        deliveryFee: deliveryFee,
+        remainingAmount: remainingAmount,
+        paymentMethod: state.payment?.advance?.method || state.paymentInfo?.method || state.paymentMethod || 'COD',
+      });
       setLoading(false);
       return;
     }
@@ -38,13 +51,19 @@ export default function OrderConfirmation() {
       const response = await getOrderById(orderId);
       if (response.data?.data) {
         const orderData = response.data.data;
+        // Support both new 2-step payment structure and legacy orders
+        const total = orderData.pricing?.total || orderData.totalPrice || orderData.total || 0;
+        const deliveryFee = orderData.pricing?.deliveryFee || orderData.deliveryCharge || 0;
+        const subtotal = orderData.pricing?.subtotal || orderData.subtotal || 0;
+        const remainingAmount = orderData.pricing?.remainingAmount || subtotal || 0;
+        
         setOrder({
           orderCode: orderData.orderCode,
           orderId: orderData._id,
-          total: orderData.pricing?.total || orderData.total,
-          deliveryFee: orderData.pricing?.deliveryFee || orderData.deliveryCharge,
-          remainingAmount: orderData.pricing?.remainingAmount || (orderData.pricing?.subtotal || orderData.subtotal),
-          paymentMethod: orderData.payment?.advance?.method || orderData.paymentMethod,
+          total: total,
+          deliveryFee: deliveryFee,
+          remainingAmount: remainingAmount,
+          paymentMethod: orderData.payment?.advance?.method || orderData.paymentInfo?.method || orderData.paymentMethod || 'COD',
         });
       }
     } catch (error) {
