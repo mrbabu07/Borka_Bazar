@@ -33,17 +33,15 @@ export default function Cart() {
           }
         );
         const data = await response.json();
-        console.log('🚚 Cart - Fetched delivery settings:', data);
         if (data.success) {
           setDeliverySettings(data.data);
-          console.log('✅ Cart - Delivery settings applied:', data.data);
         }
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 50,
-          standardDeliveryCharge: 100 / 110,
+          freeDeliveryThreshold: 2000, // ৳2,000 BDT
+          standardDeliveryCharge: 100, // ৳100 BDT
           freeDeliveryEnabled: true,
         });
       }
@@ -51,21 +49,10 @@ export default function Cart() {
     fetchDeliverySettings();
   }, []);
 
-  // Use delivery settings or defaults
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
-  const deliveryCharge = deliverySettings?.standardDeliveryCharge || 100 / 110;
+  // Use delivery settings or BDT defaults
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+  const deliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
-
-  // Debug logging for delivery charge calculation
-  console.log('🛒 Cart - Delivery Charge Info:', {
-    cartTotal,
-    freeDeliveryThreshold,
-    deliveryCharge,
-    deliveryChargeInBDT: Math.round(deliveryCharge * 110),
-    freeDeliveryEnabled,
-    willBeFree: freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold,
-    finalTotal: cartTotal + (freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold ? 0 : deliveryCharge)
-  });
 
   const handleCheckout = () => {
     if (!user) {

@@ -44,17 +44,15 @@ export default function CheckoutPremium() {
           }
         );
         const data = await response.json();
-        console.log('🚚 Fetched delivery settings (Premium):', data);
         if (data.success) {
           setDeliverySettings(data.data);
-          console.log('✅ Delivery settings applied (Premium):', data.data);
         }
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 50,
-          standardDeliveryCharge: 100 / 110,
+          freeDeliveryThreshold: 2000,
+          standardDeliveryCharge: 100,
           freeDeliveryEnabled: true,
         });
       }
@@ -62,9 +60,9 @@ export default function CheckoutPremium() {
     fetchDeliverySettings();
   }, []);
 
-  // Calculate delivery charge
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
-  const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge || 100 / 110;
+  // Use delivery settings or BDT defaults
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+  const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge ?? 100;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
   
   const deliveryCharge =
@@ -345,7 +343,13 @@ export default function CheckoutPremium() {
                 </h2>
                 <div className="space-y-3">
                   {/* Partial Payment Option */}
-                  <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition" style={{borderColor: paymentMethod === 'partial' ? '#1e7098' : '#e5e7eb'}}>
+                  <label
+                    className={`flex items-center gap-3 cursor-pointer p-4 border-2 rounded-lg transition-colors ${
+                      paymentMethod === "partial"
+                        ? "border-black"
+                        : "border-gray-200 hover:border-black"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="payment"
@@ -363,7 +367,13 @@ export default function CheckoutPremium() {
                   </label>
 
                   {/* Cash on Delivery Option */}
-                  <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition" style={{borderColor: paymentMethod === 'cod' ? '#1e7098' : '#e5e7eb'}}>
+                  <label
+                    className={`flex items-center gap-3 cursor-pointer p-4 border-2 rounded-lg transition-colors ${
+                      paymentMethod === "cod"
+                        ? "border-black"
+                        : "border-gray-200 hover:border-black"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="payment"

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { getAllOrders, updateOrderStatus } from "../../services/api";
 import { useCurrency } from "../../hooks/useCurrency";
 import Loading from "../../components/Loading";
@@ -28,14 +27,6 @@ export default function AdminOrders() {
   const fetchOrders = async () => {
     try {
       const response = await getAllOrders();
-      console.log("📋 Fetched orders:", response.data.data);
-      
-      // Debug: Log first order's products to see structure
-      if (response.data.data && response.data.data.length > 0) {
-        console.log("🔍 First order products:", response.data.data[0].products);
-        console.log("🔍 First product details:", response.data.data[0].products[0]);
-      }
-      
       setOrders(response.data.data);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -646,46 +637,50 @@ export default function AdminOrders() {
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <Toaster position="top-right" />
       
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-40">
+      <div className="bg-white/90 dark:bg-gray-950/90 border-b border-gray-100 dark:border-gray-800 sticky top-20 z-30 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
-          <p className="text-gray-600 text-sm mt-1">Manage and track all customer orders</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Orders Management
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+            Manage and track all customer orders
+          </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <p className="text-sm text-gray-500">Total Orders</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Total Orders</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <p className="text-sm text-gray-500">Pending</p>
-            <p className="text-2xl font-bold text-yellow-600">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
+            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
               {stats.pending}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <p className="text-sm text-gray-500">Processing</p>
-            <p className="text-2xl font-bold text-blue-600">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Processing</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {stats.processing}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <p className="text-sm text-gray-500">Delivered</p>
-            <p className="text-2xl font-bold text-green-600">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Delivered</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
               {stats.delivered}
             </p>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="bg-white rounded-xl shadow-sm p-2 mb-6 flex flex-wrap gap-2">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-2 mb-6 flex flex-wrap gap-2 border border-gray-100 dark:border-gray-800">
           {[
             "all",
             "pending",
@@ -699,8 +694,8 @@ export default function AdminOrders() {
               onClick={() => setFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 filter === status
-                  ? "bg-primary-500 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-black dark:bg-white text-white dark:text-black"
+                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -710,7 +705,7 @@ export default function AdminOrders() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-12 text-center border border-gray-100 dark:border-gray-800">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
                 className="w-8 h-8 text-gray-400"
@@ -726,10 +721,10 @@ export default function AdminOrders() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No orders found
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {filter === "all"
                 ? "No orders have been placed yet"
                 : `No ${filter} orders`}
@@ -740,11 +735,11 @@ export default function AdminOrders() {
             {filteredOrders.map((order) => (
               <div
                 key={order._id}
-                className="bg-white rounded-xl shadow-sm overflow-hidden"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800"
               >
                 {/* Order Header */}
                 <div
-                  className="p-6 cursor-pointer hover:bg-gray-50 transition"
+                  className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition"
                   onClick={() =>
                     setExpandedOrder(
                       expandedOrder === order._id ? null : order._id,
@@ -758,7 +753,7 @@ export default function AdminOrders() {
                       </div>
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-gray-900 dark:text-white">
                             Order #{order._id.slice(-8).toUpperCase()}
                           </p>
                           {order.paymentMethod && (
@@ -767,7 +762,7 @@ export default function AdminOrders() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                           <span>
                             {new Date(order.createdAt).toLocaleDateString(
                               "en-US",
@@ -798,7 +793,7 @@ export default function AdminOrders() {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             {order.products?.length || 0} items
                           </span>
                           {order.products?.some(
@@ -809,10 +804,10 @@ export default function AdminOrders() {
                             </span>
                           )}
                         </div>
-                        <p className="font-bold text-lg text-primary-500">
+                        <p className="font-bold text-lg text-gray-900 dark:text-white">
                           {formatPrice(order.total)}
                           {order.deliveryCharge > 0 && (
-                            <span className="text-xs text-gray-500 ml-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
                               (+{formatPrice(order.deliveryCharge)} delivery)
                             </span>
                           )}
@@ -854,7 +849,7 @@ export default function AdminOrders() {
                         onClick={(e) => e.stopPropagation()}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
                           statusConfig[order.status]?.color
-                        } cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500`}
+                        } cursor-pointer focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20`}
                       >
                         <option value="pending">Pending</option>
                         <option value="processing">Processing</option>
@@ -883,13 +878,13 @@ export default function AdminOrders() {
 
                 {/* Expanded Order Details */}
                 {expandedOrder === order._id && (
-                  <div className="border-t bg-gray-50 p-6">
+                  <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* Order Items with Details */}
                       <div className="lg:col-span-2">
-                        <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                           <svg
-                            className="w-5 h-5 text-primary-500"
+                            className="w-5 h-5 text-gold-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -907,7 +902,7 @@ export default function AdminOrders() {
                           {order.products?.map((item, index) => (
                             <div
                               key={index}
-                              className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                              className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm"
                             >
                               <div className="flex items-start gap-4">
                                 {/* Product Image */}
@@ -939,23 +934,23 @@ export default function AdminOrders() {
 
                                 {/* Product Details */}
                                 <div className="flex-1">
-                                  <h5 className="font-medium text-gray-900 mb-2">
+                                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">
                                     {item.title}
                                   </h5>
                                   <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                      <span className="text-gray-500">
+                                      <span className="text-gray-500 dark:text-gray-400">
                                         Quantity:
                                       </span>
-                                      <span className="ml-2 font-medium text-gray-900">
+                                      <span className="ml-2 font-medium text-gray-900 dark:text-white">
                                         {item.quantity}
                                       </span>
                                     </div>
                                     <div>
-                                      <span className="text-gray-500">
+                                      <span className="text-gray-500 dark:text-gray-400">
                                         Unit Price:
                                       </span>
-                                      <span className="ml-2 font-medium text-gray-900">
+                                      <span className="ml-2 font-medium text-gray-900 dark:text-white">
                                         {formatPrice(item.price)}
                                       </span>
                                     </div>
@@ -963,10 +958,10 @@ export default function AdminOrders() {
                                     {/* Size - check multiple possible fields */}
                                     {(item.selectedSize || item.size || item.variant?.size) && (
                                       <div>
-                                        <span className="text-gray-500">
+                                        <span className="text-gray-500 dark:text-gray-400">
                                           Size:
                                         </span>
-                                        <span className="ml-2 font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-md text-xs">
+                                        <span className="ml-2 font-medium text-black dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-xs">
                                           {item.selectedSize || item.size || item.variant?.size}
                                         </span>
                                       </div>
@@ -975,15 +970,15 @@ export default function AdminOrders() {
                                     {/* Color - check multiple possible fields */}
                                     {(item.selectedColor || item.color || item.variant?.color) && (
                                       <div>
-                                        <span className="text-gray-500">
+                                        <span className="text-gray-500 dark:text-gray-400">
                                           Color:
                                         </span>
-                                        <div className="ml-2 inline-flex items-center gap-2 font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded-md text-xs">
+                                        <div className="ml-2 inline-flex items-center gap-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md text-xs">
                                           {typeof (item.selectedColor || item.color || item.variant?.color) ===
                                             "object" &&
                                             (item.selectedColor || item.color || item.variant?.color).value && (
                                               <div
-                                                className="w-3 h-3 rounded-full border border-gray-300"
+                                                className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600"
                                                 style={{
                                                   backgroundColor:
                                                     (item.selectedColor || item.color || item.variant?.color).value,
@@ -997,19 +992,19 @@ export default function AdminOrders() {
                                     
                                     {/* Product ID for debugging */}
                                     <div className="col-span-2">
-                                      <span className="text-gray-500 text-xs">
+                                      <span className="text-gray-500 dark:text-gray-400 text-xs">
                                         Product ID:
                                       </span>
-                                      <span className="ml-2 font-mono text-xs text-gray-600">
+                                      <span className="ml-2 font-mono text-xs text-gray-600 dark:text-gray-300">
                                         {item.productId || item._id}
                                       </span>
                                     </div>
                                     
                                     <div className="col-span-2">
-                                      <span className="text-gray-500">
+                                      <span className="text-gray-500 dark:text-gray-400">
                                         Subtotal:
                                       </span>
-                                      <span className="ml-2 font-semibold text-gray-900">
+                                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">
                                         {formatPrice(
                                           (item.price || 0) *
                                             (item.quantity || 0),
@@ -1023,30 +1018,30 @@ export default function AdminOrders() {
                           ))}
 
                           {/* Order Total Breakdown */}
-                          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                            <h5 className="font-medium text-gray-900 mb-3">
+                          <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-3">
                               Order Summary
                             </h5>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-gray-500">Subtotal:</span>
-                                <span className="text-gray-900">
+                                <span className="text-gray-500 dark:text-gray-400">Subtotal:</span>
+                                <span className="text-gray-900 dark:text-white">
                                   {formatPrice(order.subtotal || order.total)}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500">
+                                <span className="text-gray-500 dark:text-gray-400">
                                   Delivery Charge:
                                 </span>
-                                <span className="text-gray-900">
+                                <span className="text-gray-900 dark:text-white">
                                   {order.deliveryCharge
                                     ? formatPrice(order.deliveryCharge)
                                     : "FREE"}
                                 </span>
                               </div>
                               <div className="border-t pt-2 flex justify-between font-semibold">
-                                <span className="text-gray-900">Total:</span>
-                                <span className="text-primary-600">
+                                <span className="text-gray-900 dark:text-white">Total:</span>
+                                <span className="text-black dark:text-white">
                                   {formatPrice(order.total)}
                                 </span>
                               </div>

@@ -1,11 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap");
 
+/* Import mobile optimizations (must be before Tailwind directives) */
+@import "./mobile-optimizations.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import mobile optimizations */
-@import "./mobile-optimizations.css";
 
 /* Social Proof Animations */
 @keyframes pulse-subtle {

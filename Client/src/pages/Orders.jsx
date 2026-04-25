@@ -334,38 +334,29 @@ export default function Orders() {
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen bg-[#EAEDED]">
-      {/* Amazon-like header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
-                Your Orders
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                View, track, reorder, return items, and manage payments.
-              </p>
-            </div>
-            <Link to="/" className="hidden sm:inline-flex">
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
-              >
-                Continue shopping
-              </button>
-            </Link>
-          </div>
+    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+      {/* Premium page header (project style) */}
+      <div className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <p className="text-gold-500 text-sm tracking-[0.3em] uppercase mb-3">
+            Account
+          </p>
+          <h1 className="font-display text-3xl md:text-4xl text-black dark:text-white mb-3">
+            My Orders
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 max-w-2xl">
+            Track your purchases, reorder items, request returns, and manage payments.
+          </p>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Keep PageHeader for spacing consistency (hidden visually) */}
         <PageHeader title="" subtitle="" showBack={false} className="hidden" />
 
         {/* Filter Tabs */}
         <div className="mb-6">
-          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-x-auto">
             <div className="flex gap-0 min-w-max">
               {["all", "pending", "processing", "shipped", "delivered", "cancelled"].map(
                 (status) => {
@@ -376,8 +367,8 @@ export default function Orders() {
                       onClick={() => setFilter(status)}
                       className={`px-4 sm:px-5 py-3 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                         active
-                          ? "text-[#007185] border-[#007185]"
-                          : "text-gray-700 border-transparent hover:bg-gray-50"
+                          ? "text-black dark:text-white border-gold-500"
+                          : "text-gray-600 dark:text-gray-300 border-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                       type="button"
                     >
@@ -392,7 +383,7 @@ export default function Orders() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-10 text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
               <svg
                 className="w-7 h-7 text-gray-400"
@@ -413,7 +404,7 @@ export default function Orders() {
               When you place an order, it will appear here with tracking and payment details.
             </p>
             <Link to="/" className="inline-block">
-              <button className="px-6 py-3 rounded-lg bg-[#FFD814] border border-[#FCD200] text-gray-900 font-semibold hover:bg-[#F7CA00] transition-colors">
+              <button className="px-10 py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors">
                 Continue shopping
               </button>
             </Link>
@@ -442,55 +433,35 @@ export default function Orders() {
               return (
                 <div
                   key={order._id}
-                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-soft transition-shadow"
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden hover:shadow-soft transition-shadow"
                 >
-                  {/* Amazon-like order summary bar */}
-                  <div className="bg-[#F3F3F3] border-b border-gray-200 px-4 sm:px-6 py-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
-                      <div className="sm:col-span-3">
-                        <p className="text-[11px] font-bold text-gray-600 uppercase">
-                          Order placed
+                  {/* Premium summary bar */}
+                  <div className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs tracking-widest uppercase text-gray-500 dark:text-gray-400">
+                          Order #{orderShortId}
                         </p>
-                        <p className="text-sm text-gray-900">{createdAt || "—"}</p>
-                      </div>
-                      <div className="sm:col-span-3">
-                        <p className="text-[11px] font-bold text-gray-600 uppercase">
-                          Total
-                        </p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {formatPrice(order.pricing?.total || order.totalPrice)}
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                          Placed on <span className="font-medium">{createdAt || "—"}</span>
                         </p>
                       </div>
-                      <div className="sm:col-span-6">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-bold text-gray-600 uppercase">
-                              Order #
-                            </p>
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {orderShortId}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                            <StatusBadge status={status} />
-                            {paymentStatus && paymentStatus !== "pending" && (
-                              <Badge
-                                variant={paymentStatus === "paid" ? "success" : "info"}
-                                size="sm"
-                              >
-                                {paymentStatus === "paid"
-                                  ? "Paid"
-                                  : `Payment: ${paymentStatus}`}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={status} />
+                        {paymentStatus && paymentStatus !== "pending" && (
+                          <Badge variant={paymentStatus === "paid" ? "success" : "info"} size="sm">
+                            {paymentStatus === "paid" ? "Paid" : `Payment: ${paymentStatus}`}
+                          </Badge>
+                        )}
+                        <Badge variant="light" size="sm">
+                          Total: <span className="ml-1 font-semibold">{formatPrice(order.pricing?.total || order.totalPrice)}</span>
+                        </Badge>
                       </div>
                     </div>
                   </div>
 
                   {/* Order item preview */}
-                  <div className="p-4 sm:p-5">
+                  <div className="p-5 sm:p-6">
                     <div className="flex gap-4">
                       <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden">
                         <img
@@ -501,16 +472,16 @@ export default function Orders() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 line-clamp-2">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
                           {firstItem?.title || "Order"}
                         </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <span>
                             {items.length} item{items.length !== 1 ? "s" : ""}
                           </span>
                           <span className="text-gray-300">•</span>
-                          <span className="font-semibold text-gray-900">
-                            Total {formatPrice(order.pricing?.total || order.totalPrice)}
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {formatPrice(order.pricing?.total || order.totalPrice)}
                           </span>
                         </div>
 
@@ -525,10 +496,10 @@ export default function Orders() {
                                   type="button"
                                   onClick={() => handleQuickReorder(item, order._id)}
                                   disabled={reorderingItems[itemKey]}
-                                  className="px-4 py-2 rounded-lg bg-[#FFD814] border border-[#FCD200] text-xs font-semibold text-gray-900 hover:bg-[#F7CA00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                  className="px-6 py-2 bg-black text-white text-xs tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                   title={`Buy again: ${item.title}`}
                                 >
-                                  {reorderingItems[itemKey] ? "Adding..." : "Buy it again"}
+                                  {reorderingItems[itemKey] ? "Adding..." : "Buy again"}
                                 </button>
                               );
                             })}
@@ -546,21 +517,21 @@ export default function Orders() {
                   {/* Tracking (if any) */}
                   {order.tracking && (
                     <div className="px-4 sm:px-5 pb-4 -mt-2">
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
                         <OrderTracking order={order} />
                       </div>
                     </div>
                   )}
 
-                  {/* Actions (Amazon-like) */}
-                  <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-wrap items-center justify-between gap-3">
+                  {/* Actions */}
+                  <div className="px-5 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link to={`/order/${order._id}`} className="inline-flex">
                         <button
                           type="button"
-                          className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                          className="px-8 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-black dark:text-white text-xs tracking-widest uppercase font-medium hover:border-gold-500 transition-colors"
                         >
-                          View order details
+                          View details
                         </button>
                       </Link>
 
@@ -568,9 +539,9 @@ export default function Orders() {
                         type="button"
                         onClick={() => handleReorderEntireOrder(order)}
                         disabled={reorderingItems[order._id]}
-                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        className="px-8 py-3 bg-black text-white text-xs tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {reorderingItems[order._id] ? "Adding..." : "Buy all again"}
+                        {reorderingItems[order._id] ? "Adding..." : "Reorder"}
                       </button>
                     </div>
 
@@ -581,9 +552,9 @@ export default function Orders() {
                         onClick={() => {
                           if (firstItem) handleReturnRequest(order, firstItem);
                         }}
-                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                        className="px-8 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-black dark:text-white text-xs tracking-widest uppercase font-medium hover:border-gold-500 transition-colors"
                       >
-                        Return items
+                        Return
                       </button>
                     )}
 
@@ -593,9 +564,9 @@ export default function Orders() {
                         onClick={() => {
                           if (firstItem) handleReviewRequest(order, firstItem);
                         }}
-                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                        className="px-8 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-black dark:text-white text-xs tracking-widest uppercase font-medium hover:border-gold-500 transition-colors"
                       >
-                        Write a product review
+                        Review
                       </button>
                     )}
 
@@ -603,7 +574,7 @@ export default function Orders() {
                       <button
                         type="button"
                         onClick={() => handleCancelOrder(order._id)}
-                        className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                        className="px-8 py-3 bg-red-600 text-white text-xs tracking-widest uppercase font-medium hover:bg-red-700 transition-colors"
                       >
                         Cancel order
                       </button>
@@ -619,7 +590,7 @@ export default function Orders() {
                             setSelectedOrderForPayment(order);
                             setShowPaymentModal(true);
                           }}
-                          className="px-4 py-2 rounded-lg bg-[#007185] text-white text-sm font-semibold hover:bg-[#005f6b] transition-colors"
+                          className="px-8 py-3 bg-black text-white text-xs tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors"
                         >
                           Pay remaining
                         </button>
@@ -629,7 +600,7 @@ export default function Orders() {
 
                   {/* Payment Breakdown */}
                   {order.payment && order.payment.advance && (
-                    <div className="px-4 sm:px-5 py-4 border-t border-gray-200 bg-white">
+                    <div className="px-4 sm:px-5 py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
                       <PaymentBreakdown order={order} />
                     </div>
                   )}

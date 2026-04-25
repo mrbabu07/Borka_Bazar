@@ -23,15 +23,14 @@ export default function CartPremium() {
           }
         );
         const data = await response.json();
-        console.log('🚚 CartPremium - Fetched delivery settings:', data);
         if (data.success) {
           setDeliverySettings(data.data);
         }
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
         setDeliverySettings({
-          freeDeliveryThreshold: 50,
-          standardDeliveryCharge: 100 / 110,
+          freeDeliveryThreshold: 2000,
+          standardDeliveryCharge: 100,
           freeDeliveryEnabled: true,
         });
       }
@@ -39,18 +38,18 @@ export default function CartPremium() {
     fetchDeliverySettings();
   }, []);
 
-  // Calculate delivery charge
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold || 50;
-  const deliveryCharge = deliverySettings?.standardDeliveryCharge || 100 / 110;
+  // Use delivery settings or BDT defaults (values stored as BDT in DB)
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+  const deliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
-  
-  // Convert USD values to BDT for display
-  const freeDeliveryThresholdBDT = Math.round(freeDeliveryThreshold * 110);
-  const deliveryChargeBDT = Math.round(deliveryCharge * 110);
-  
+
+  // Aliases used in JSX (same values, no conversion needed)
+  const freeDeliveryThresholdBDT = freeDeliveryThreshold;
+  const deliveryChargeBDT = deliveryCharge;
+
   const calculatedDeliveryCharge =
-    freeDeliveryEnabled && cartTotal >= freeDeliveryThresholdBDT ? 0 : deliveryChargeBDT;
-  
+    freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold ? 0 : deliveryCharge;
+
   const finalTotal = cartTotal + calculatedDeliveryCharge;
 
   const handleQuantityChange = (item, newQuantity) => {
