@@ -90,6 +90,9 @@ Server/invoices/*.pdf
 *~
 
 # Documentation files (development notes)
+*.md
+!README.md
+!Server/scripts/README.md
 BURKA_STORE_REDESIGN_GUIDE.md
 PREMIUM_REDESIGN_COMPLETE.md
 PROFESSIONAL_ECOMMERCE_FEATURES.md
