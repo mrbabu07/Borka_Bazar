@@ -84,6 +84,27 @@ export default function Orders() {
     return formatPrice(fee);
   };
 
+  const getCODRemainingAmount = (order) => {
+    // Calculate remaining amount to be paid on delivery
+    // Total = Product Price + Delivery Fee
+    // Paid = Delivery Fee (paid upfront)
+    // Remaining = Product Price (to be paid on delivery)
+    const total = order.pricing?.total || order.totalPrice || 0;
+    const deliveryFee = order.pricing?.deliveryFee || order.deliveryCharge || order.deliveryFee || order.shipping?.fee || order.shippingFee || 0;
+    const remaining = total - deliveryFee;
+    return remaining > 0 ? remaining : 0;
+  };
+
+  const isPaymentPending = (order) => {
+    // Check if order is waiting for delivery fee payment
+    return order.paymentStatus === 'pending' || order.payment?.status === 'pending' || order.paymentInfo?.status === 'pending';
+  };
+
+  const isCODOrder = (order) => {
+    // Check if this is a Cash on Delivery order
+    return order.paymentMethod === 'cod' || order.payment?.method === 'cod' || order.paymentInfo?.method === 'cod';
+  };
+
   const filteredOrders =
     filter === "all"
       ? orders
@@ -495,6 +516,14 @@ export default function Orders() {
                           {getDeliveryFee(order)}
                         </span>
                       </div>
+                      {isCODOrder(order) && getCODRemainingAmount(order) > 0 && (
+                        <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-300 dark:border-gray-700">
+                          <span className="text-orange-600 dark:text-orange-400 font-semibold">Pay on Delivery:</span>
+                          <span className="font-bold text-orange-600 dark:text-orange-400">
+                            {formatPrice(getCODRemainingAmount(order))}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -764,6 +793,26 @@ export default function Orders() {
                   </div>
                 </div>
 
+                {/* Payment Status Alert */}
+                {isPaymentPending(detailOrder) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-yellow-800 mb-1">⏳ Awaiting Delivery Fee Payment</p>
+                    <p className="text-xs text-yellow-700">
+                      Please complete the delivery fee payment to confirm your order. Admin will verify and confirm your order after payment.
+                    </p>
+                  </div>
+                )}
+
+                {/* COD Alert */}
+                {isCODOrder(detailOrder) && !isPaymentPending(detailOrder) && getCODRemainingAmount(detailOrder) > 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-orange-800 mb-1">💰 Cash on Delivery</p>
+                    <p className="text-xs text-orange-700">
+                      You will pay <strong>{formatPrice(getCODRemainingAmount(detailOrder))}</strong> when you receive the product.
+                    </p>
+                  </div>
+                )}
+
                 {/* Items */}
                 <div>
                   <p className="text-xs text-gray-600 uppercase tracking-wide mb-3 font-semibold">Order Items ({items.length})</p>
@@ -811,6 +860,14 @@ export default function Orders() {
                         {formatPrice(detailOrder.pricing?.total || detailOrder.totalPrice)}
                       </span>
                     </div>
+                    {isCODOrder(detailOrder) && getCODRemainingAmount(detailOrder) > 0 && (
+                      <div className="flex justify-between text-sm pt-3 border-t border-orange-300 bg-orange-50 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
+                        <span className="font-bold text-orange-700">💰 Pay on Delivery</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          {formatPrice(getCODRemainingAmount(detailOrder))}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
