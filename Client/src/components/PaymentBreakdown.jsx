@@ -3,6 +3,26 @@ import { useCurrency } from '../hooks/useCurrency';
 export default function PaymentBreakdown({ order }) {
   const { formatPrice } = useCurrency();
 
+  // Get payment info from new or legacy structure
+  const getAdvancePaymentInfo = () => {
+    return order.advancePayment || order.payment?.advance || null;
+  };
+
+  const getRemainingPaymentInfo = () => {
+    return order.payment?.remaining || null;
+  };
+
+  const getPaymentStatus = () => {
+    const advance = getAdvancePaymentInfo();
+    const remaining = getRemainingPaymentInfo();
+    
+    // Check if both are confirmed/paid
+    if (advance?.status === 'Confirmed' && remaining?.status === 'Paid') {
+      return 'full';
+    }
+    return 'partial';
+  };
+
   const getStatusBadge = (status, type = 'advance') => {
     const baseClasses = 'px-3 py-1 rounded-full text-xs font-semibold';
 
@@ -51,6 +71,15 @@ export default function PaymentBreakdown({ order }) {
     }
   };
 
+  const advance = getAdvancePaymentInfo();
+  const remaining = getRemainingPaymentInfo();
+  const paymentStatus = getPaymentStatus();
+
+  // Get pricing info from new or legacy structure
+  const subtotal = order.subtotal || order.pricing?.subtotal || 0;
+  const deliveryFee = order.deliveryCharge || order.pricing?.deliveryFee || 0;
+  const total = order.totalPrice || order.pricing?.total || 0;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Breakdown</h3>
@@ -61,11 +90,11 @@ export default function PaymentBreakdown({ order }) {
           <div>
             <p className="text-sm text-blue-700 font-medium">Overall Payment Status</p>
             <p className="text-2xl font-bold text-blue-900 mt-1">
-              {order.payment.paymentStatus === 'full' ? '✅ Fully Paid' : '⏳ Partially Paid'}
+              {paymentStatus === 'full' ? '✅ Fully Paid' : '⏳ Partially Paid'}
             </p>
           </div>
           <div className="text-4xl">
-            {order.payment.paymentStatus === 'full' ? '✅' : '⏳'}
+            {paymentStatus === 'full' ? '✅' : '⏳'}
           </div>
         </div>
       </div>
@@ -74,100 +103,128 @@ export default function PaymentBreakdown({ order }) {
       <div className="mb-6 space-y-3 pb-6 border-b">
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Subtotal (Products):</span>
-          <span className="font-semibold text-gray-900">{formatPrice(order.pricing.subtotal)}</span>
+          <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Delivery Fee:</span>
-          <span className="font-semibold text-gray-900">{formatPrice(order.pricing.deliveryFee)}</span>
+          <span className="font-semibold text-gray-900">{formatPrice(deliveryFee)}</span>
         </div>
         <div className="flex justify-between items-center text-lg">
           <span className="font-semibold text-gray-900">Total Amount:</span>
-          <span className="font-bold text-primary-600">{formatPrice(order.pricing.total)}</span>
+          <span className="font-bold text-primary-600">{formatPrice(total)}</span>
         </div>
       </div>
 
       {/* Advance Payment */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-medium text-gray-700">Advance Payment (Delivery Fee)</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Method: <span className="font-semibold">{order.payment.advance.method}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gray-900">{formatPrice(order.payment.advance.amount)}</p>
-            <div className="mt-2">
-              {getStatusBadge(order.payment.advance.status, 'advance')}
+      {advance && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Advance Payment (Delivery Fee)</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Method: <span className="font-semibold">{advance.method || 'bKash'}</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900">{formatPrice(advance.amount || 0)}</p>
+              <div className="mt-2">
+                {getStatusBadge(advance.status || 'Pending', 'advance')}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Advance Payment Details */}
-        <div className="space-y-2 text-sm">
-          {order.payment.advance.transactionId && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Transaction ID:</span>
-              <span className="font-mono text-gray-900">{order.payment.advance.transactionId}</span>
-            </div>
-          )}
-          {order.payment.advance.confirmedAt && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Confirmed At:</span>
-              <span className="text-gray-900">
-                {new Date(order.payment.advance.confirmedAt).toLocaleDateString()}
-              </span>
-            </div>
-          )}
-          {order.payment.advance.rejectionReason && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Rejection Reason:</span>
-              <span className="text-red-600 font-medium">{order.payment.advance.rejectionReason}</span>
-            </div>
-          )}
+          {/* Advance Payment Details */}
+          <div className="space-y-2 text-sm">
+            {advance.transactionId && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Transaction ID:</span>
+                <span className="font-mono text-gray-900">{advance.transactionId}</span>
+              </div>
+            )}
+            {advance.confirmedAt && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Confirmed At:</span>
+                <span className="text-gray-900">
+                  {new Date(advance.confirmedAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {advance.rejectionReason && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Rejection Reason:</span>
+                <span className="text-red-600 font-medium">{advance.rejectionReason}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Remaining Payment */}
-      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-medium text-gray-700">Remaining Payment (Products)</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Method: <span className="font-semibold">{order.payment.remaining.method}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gray-900">{formatPrice(order.payment.remaining.amount)}</p>
-            <div className="mt-2">
-              {getStatusBadge(order.payment.remaining.status, 'remaining')}
+      {remaining ? (
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Remaining Payment (Products)</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Method: <span className="font-semibold">{remaining.method || 'COD'}</span>
+              </p>
             </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900">{formatPrice(remaining.amount || 0)}</p>
+              <div className="mt-2">
+                {getStatusBadge(remaining.status || 'Pending', 'remaining')}
+              </div>
+            </div>
+          </div>
+
+          {/* Remaining Payment Details */}
+          <div className="space-y-2 text-sm">
+            {remaining.transactionId && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Transaction ID:</span>
+                <span className="font-mono text-gray-900">{remaining.transactionId}</span>
+              </div>
+            )}
+            {remaining.paidAt && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Paid At:</span>
+                <span className="text-gray-900">
+                  {new Date(remaining.paidAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {remaining.method === 'COD' && remaining.status === 'Pending' && (
+              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-blue-800 text-xs">
+                💳 You will pay this amount when your order arrives
+              </div>
+            )}
           </div>
         </div>
+      ) : (
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Remaining Payment (Products)</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Method: <span className="font-semibold">COD</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900">{formatPrice(subtotal)}</p>
+              <div className="mt-2">
+                {getStatusBadge('Pending', 'remaining')}
+              </div>
+            </div>
+          </div>
 
-        {/* Remaining Payment Details */}
-        <div className="space-y-2 text-sm">
-          {order.payment.remaining.transactionId && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Transaction ID:</span>
-              <span className="font-mono text-gray-900">{order.payment.remaining.transactionId}</span>
-            </div>
-          )}
-          {order.payment.remaining.paidAt && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Paid At:</span>
-              <span className="text-gray-900">
-                {new Date(order.payment.remaining.paidAt).toLocaleDateString()}
-              </span>
-            </div>
-          )}
-          {order.payment.remaining.method === 'COD' && order.payment.remaining.status === 'Pending' && (
+          {/* Remaining Payment Details */}
+          <div className="space-y-2 text-sm">
             <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-blue-800 text-xs">
               💳 You will pay this amount when your order arrives
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Payment Status Legend */}
       <div className="mt-6 pt-4 border-t">
