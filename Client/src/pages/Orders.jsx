@@ -68,6 +68,23 @@ export default function Orders() {
     }
   };
 
+  const handleOpenDetailModal = async (order) => {
+    try {
+      // Fetch fresh order data from server to get latest payment status
+      const response = await getUserOrders();
+      const freshOrder = response.data.data.find(o => o._id === order._id);
+      if (freshOrder) {
+        setDetailOrder(freshOrder);
+      } else {
+        setDetailOrder(order);
+      }
+    } catch (error) {
+      console.error("Failed to refresh order:", error);
+      setDetailOrder(order);
+    }
+    setShowDetailModal(true);
+  };
+
   const getOrderStatus = (order) => {
     const status = order.orderStatus || order.status || order.order?.status || 'pending';
     return status.toLowerCase();
@@ -473,8 +490,7 @@ export default function Orders() {
                 <div
                   key={order._id}
                   onClick={() => {
-                    setDetailOrder(order);
-                    setShowDetailModal(true);
+                    handleOpenDetailModal(order);
                   }}
                   className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
                 >
@@ -793,6 +809,20 @@ export default function Orders() {
             const items = detailOrder.orderItems || detailOrder.products || [];
             return (
               <div className="space-y-4">
+                {/* Refresh Button */}
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => handleOpenDetailModal(detailOrder)}
+                    className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition flex items-center gap-1"
+                    title="Refresh order details"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                  </button>
+                </div>
+
                 {/* Status & Date */}
                 <div className="flex justify-between items-start pb-4 border-b border-gray-200">
                   <div>
