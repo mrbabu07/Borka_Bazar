@@ -16,7 +16,7 @@ export default function GuestCheckout() {
     address: "",
     city: "",
     postalCode: "",
-    paymentMethod: "cod",
+    paymentMethod: "COD",
   });
 
   const handleInputChange = (e) => {
@@ -217,8 +217,8 @@ export default function GuestCheckout() {
               <input
                 type="radio"
                 name="paymentMethod"
-                value="cod"
-                checked={guestInfo.paymentMethod === "cod"}
+                value="COD"
+                checked={guestInfo.paymentMethod === "COD"}
                 onChange={handleInputChange}
                 className="mr-3"
               />

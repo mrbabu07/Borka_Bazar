@@ -37,7 +37,7 @@ export default function Checkout() {
     city: "",
     area: "",
     zipCode: "",
-    paymentMethod: "cod",
+    paymentMethod: "COD",
     specialInstructions: "",
     transactionId: "",
   });
@@ -289,7 +289,7 @@ export default function Checkout() {
         },
         paymentMethod: formData.paymentMethod,
         transactionId:
-          formData.paymentMethod !== "cod" ? formData.transactionId : null,
+          formData.paymentMethod !== "COD" ? formData.transactionId : null,
         specialInstructions: formData.specialInstructions,
         couponCode: appliedCoupon?.code || null,
         redeemedPoints: appliedPoints?.points || null,
@@ -834,7 +834,7 @@ export default function Checkout() {
                 <div className="space-y-3">
                   <label
                     className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all hover:bg-gray-50 ${
-                      formData.paymentMethod === "cod"
+                      formData.paymentMethod === "COD"
                         ? "border-primary-500 bg-primary-50 shadow-sm"
                         : "border-gray-200"
                     }`}
@@ -842,8 +842,8 @@ export default function Checkout() {
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === "cod"}
+                      value="COD"
+                      checked={formData.paymentMethod === "COD"}
                       onChange={handleChange}
                       className="w-5 h-5 text-primary-500 border-gray-300 focus:ring-primary-500"
                     />
@@ -860,7 +860,7 @@ export default function Checkout() {
                         </div>
                       </div>
                     </div>
-                    {formData.paymentMethod === "cod" && (
+                    {formData.paymentMethod === "COD" && (
                       <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
                         <svg
                           className="w-4 h-4 text-white"

@@ -26,7 +26,7 @@ export default function CheckoutPremium() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod', 'bkash', 'nagad'
+  const [paymentMethod, setPaymentMethod] = useState("COD"); // 'COD', 'bkash', 'nagad'
 
   // Fetch delivery settings
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function CheckoutPremium() {
           area: "",
           zipCode: formData.postalCode || "",
         },
-        paymentMethod: "cod",
+        paymentMethod: "COD",
         transactionId: null,
         specialInstructions: formData.notes || "",
         couponCode: couponApplied ? couponCode : null,
@@ -369,7 +369,7 @@ export default function CheckoutPremium() {
                   {/* Cash on Delivery Option */}
                   <label
                     className={`flex items-center gap-3 cursor-pointer p-4 border-2 rounded-lg transition-colors ${
-                      paymentMethod === "cod"
+                      paymentMethod === "COD"
                         ? "border-black"
                         : "border-gray-200 hover:border-black"
                     }`}
@@ -377,8 +377,8 @@ export default function CheckoutPremium() {
                     <input
                       type="radio"
                       name="payment"
-                      value="cod"
-                      checked={paymentMethod === 'cod'}
+                      value="COD"
+                      checked={paymentMethod === 'COD'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-5 h-5"
                     />

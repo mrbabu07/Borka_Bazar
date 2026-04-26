@@ -102,7 +102,7 @@ export default function Orders() {
 
   const isCODOrder = (order) => {
     // Check if this is a Cash on Delivery order
-    return order.paymentMethod === 'cod' || order.payment?.method === 'cod' || order.paymentInfo?.method === 'cod';
+    return order.paymentMethod === 'COD' || order.payment?.method === 'COD' || order.paymentInfo?.method === 'COD';
   };
 
   const getAdvancePaymentInfo = (order) => {

@@ -143,15 +143,15 @@ export default function RealtimeStats() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                   {item.label}
                 </p>
-                <p
-                  className={`text-lg font-bold ${item.color} dark:text-white`}
-                >
-                  {loading ? (
-                    <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-6 w-16 rounded"></div>
-                  ) : (
-                    item.value
-                  )}
-                </p>
+                {loading ? (
+                  <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-6 w-16 rounded mt-1"></div>
+                ) : (
+                  <p
+                    className={`text-lg font-bold ${item.color} dark:text-white`}
+                  >
+                    {item.value}
+                  </p>
+                )}
               </div>
             </div>
           </div>
