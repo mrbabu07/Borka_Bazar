@@ -85,7 +85,7 @@ export default function AdminOrders() {
       const response = await fetch(
         `/api/orders/${selectedOrderForPayment._id}/confirm-advance-payment`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
