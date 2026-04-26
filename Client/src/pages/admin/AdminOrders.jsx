@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { getAllOrders, updateOrderStatus } from "../../services/api";
 import { useCurrency } from "../../hooks/useCurrency";
+import { AuthContext } from "../../context/AuthContext";
 import Loading from "../../components/Loading";
 import toast, { Toaster } from "react-hot-toast";
 import { generateProfessionalInvoice } from "../../utils/printTemplate";
 
 export default function AdminOrders() {
+  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -78,28 +80,49 @@ export default function AdminOrders() {
       return;
     }
 
+    if (!user) {
+      toast.error("You must be logged in to confirm payments");
+      return;
+    }
+
     setConfirmingPayment(true);
     const loadingToast = toast.loading("Confirming advance payment...");
 
     try {
+      // Get Firebase ID token
+      const token = await user.getIdToken();
+
       const response = await fetch(
         `/api/orders/${selectedOrderForPayment._id}/confirm-advance-payment`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             transactionId: transactionId.trim(),
-            adminId: localStorage.getItem("adminId"),
+            adminId: user.uid,
           }),
         }
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to confirm payment");
+        // Handle 401 Unauthorized
+        if (response.status === 401) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+        
+        // Try to parse JSON error response
+        let errorMessage = "Failed to confirm payment";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON (e.g., HTML error page)
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
