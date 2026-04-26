@@ -41,10 +41,25 @@ export default function AdminOrders() {
 
   const fetchOrders = async () => {
     try {
+      console.log('📋 Fetching all orders...');
       const response = await getAllOrders();
+      console.log('✅ Orders fetched:', response.data.data);
       setOrders(response.data.data);
     } catch (error) {
-      console.error("Failed to fetch orders:", error);
+      console.error("❌ Failed to fetch orders:", error);
+      console.error("Error response:", error.response?.data);
+      
+      // Show error to user
+      let errorMessage = "Failed to fetch orders";
+      if (error.response?.status === 403) {
+        errorMessage = "Admin access required. Please contact administrator to set your role to 'admin'.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
