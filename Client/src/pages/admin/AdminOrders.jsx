@@ -10,6 +10,10 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+  const [transactionId, setTransactionId] = useState("");
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const { formatPrice } = useCurrency();
 
   // Utility function to safely render color
@@ -18,6 +22,15 @@ export default function AdminOrders() {
     if (typeof color === "string") return color;
     if (typeof color === "object" && color.name) return color.name;
     return "Unknown Color";
+  };
+
+  const getAdvancePaymentInfo = (order) => {
+    return order.advancePayment || order.payment?.advance || null;
+  };
+
+  const isAdvancePaymentPending = (order) => {
+    const advancePayment = getAdvancePaymentInfo(order);
+    return advancePayment?.status === "Pending";
   };
 
   useEffect(() => {
@@ -56,6 +69,75 @@ export default function AdminOrders() {
       toast.error("Failed to update order status", {
         id: loadingToast,
       });
+    }
+  };
+
+  const handleConfirmAdvancePayment = async () => {
+    if (!transactionId.trim()) {
+      toast.error("Please enter a transaction ID");
+      return;
+    }
+
+    setConfirmingPayment(true);
+    const loadingToast = toast.loading("Confirming advance payment...");
+
+    try {
+      const response = await fetch(
+        `/api/orders/${selectedOrderForPayment._id}/confirm-advance-payment`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            transactionId: transactionId.trim(),
+            adminId: localStorage.getItem("adminId"),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to confirm payment");
+      }
+
+      const data = await response.json();
+
+      // Update the order in the list
+      setOrders(
+        orders.map((order) =>
+          order._id === selectedOrderForPayment._id
+            ? {
+                ...order,
+                advancePayment: {
+                  ...order.advancePayment,
+                  status: "Confirmed",
+                  transactionId: transactionId.trim(),
+                  confirmedAt: new Date(),
+                },
+                orderStatus: "Processing",
+                status: "processing",
+              }
+            : order
+        )
+      );
+
+      toast.success("Advance payment confirmed successfully!", {
+        id: loadingToast,
+      });
+
+      // Close modal and reset
+      setShowPaymentModal(false);
+      setSelectedOrderForPayment(null);
+      setTransactionId("");
+    } catch (error) {
+      console.error("Payment confirmation error:", error);
+      toast.error(error.message || "Failed to confirm payment", {
+        id: loadingToast,
+      });
+    } finally {
+      setConfirmingPayment(false);
     }
   };
 
@@ -1416,6 +1498,35 @@ export default function AdminOrders() {
                             Quick Actions
                           </h5>
                           <div className="space-y-2">
+                            {/* Advance Payment Confirmation */}
+                            {isAdvancePaymentPending(order) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedOrderForPayment(order);
+                                  setShowPaymentModal(true);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-sm font-medium border border-yellow-200"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                Confirm Advance Payment (৳{formatPrice(getAdvancePaymentInfo(order)?.amount || 0)})
+                              </button>
+                            )}
+
                             {/* Print Order Button */}
                             <button
                               type="button"
@@ -1492,6 +1603,87 @@ export default function AdminOrders() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Payment Confirmation Modal */}
+        {showPaymentModal && selectedOrderForPayment && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-6 py-4 border-b border-yellow-200">
+                <h3 className="text-lg font-bold text-gray-900">
+                  💳 Confirm Advance Payment
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Order #{selectedOrderForPayment._id.slice(-8).toUpperCase()}
+                </p>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                {/* Payment Info */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Payment Method</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {getAdvancePaymentInfo(selectedOrderForPayment)?.method || "bKash"}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-3 mb-1">Amount</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    ৳{formatPrice(getAdvancePaymentInfo(selectedOrderForPayment)?.amount || 0)}
+                  </p>
+                </div>
+
+                {/* Transaction ID Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Transaction ID *
+                  </label>
+                  <input
+                    type="text"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="Enter transaction ID (e.g., TXN123456789)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none"
+                    disabled={confirmingPayment}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This ID will be recorded for audit trail
+                  </p>
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">
+                    <strong>ℹ️ After confirmation:</strong> Order status will change to "Processing" and customer will be notified.
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedOrderForPayment(null);
+                    setTransactionId("");
+                  }}
+                  disabled={confirmingPayment}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAdvancePayment}
+                  disabled={confirmingPayment || !transactionId.trim()}
+                  className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {confirmingPayment ? "Confirming..." : "Confirm Payment"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
