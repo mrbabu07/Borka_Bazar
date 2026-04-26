@@ -378,10 +378,13 @@ exports.confirmAdvancePayment = async (req, res) => {
     if (order.order) {
       order.order.status = 'Processing';
     }
-    if (order.admin) {
-      order.admin.confirmedBy = adminId;
-      order.admin.confirmedAt = new Date();
+    
+    // Initialize admin object if it doesn't exist
+    if (!order.admin) {
+      order.admin = {};
     }
+    order.admin.confirmedBy = adminId;
+    order.admin.confirmedAt = new Date();
 
     await order.save();
 
@@ -397,6 +400,12 @@ exports.confirmAdvancePayment = async (req, res) => {
     });
   } catch (error) {
     console.error('Confirm advance payment error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      orderId: req.params.id,
+      transactionId: req.body.transactionId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to confirm advance payment',
