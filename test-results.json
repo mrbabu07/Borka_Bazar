@@ -1,0 +1,112 @@
+{
+  "passed": 7,
+  "failed": 8,
+  "errors": [
+    {
+      "test": "Verify order in list",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Fetch orders (admin)",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Confirm advance payment",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Order status",
+      "error": "Expected Processing, got Pending"
+    },
+    {
+      "test": "Customer views order",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Update to Shipped",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Update to Delivered",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "test": "Customer views final status",
+      "error": "Request failed with status code 401"
+    }
+  ],
+  "logs": [
+    "[2026-04-26T08:52:09.331Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.337Z] 👉 STARTING END-TO-END TEST SUITE",
+    "[2026-04-26T08:52:09.337Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.338Z] 👉 ",
+    "[2026-04-26T08:52:09.338Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.339Z] 👉 PHASE 1: CUSTOMER CHECKOUT",
+    "[2026-04-26T08:52:09.339Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.339Z] 👉 Step 1.1: Skipping user registration (Firebase handles authentication)...",
+    "[2026-04-26T08:52:09.339Z] ✅ PASS: Customer authentication setup",
+    "[2026-04-26T08:52:09.340Z] 👉 Step 1.2: Fetching products...",
+    "[2026-04-26T08:52:09.545Z] ✅ PASS: Products fetched successfully",
+    "[2026-04-26T08:52:09.545Z] 👉 Step 1.3: Creating order...",
+    "[2026-04-26T08:52:09.717Z] ✅ PASS: Order created with advance payment initialized",
+    "[2026-04-26T08:52:09.717Z] ✅ PASS: Order status set to Pending",
+    "[2026-04-26T08:52:09.717Z] ✅ PASS: Order total calculated correctly",
+    "[2026-04-26T08:52:09.717Z] 👉 Step 1.4: Verifying order in customer list...",
+    "[2026-04-26T08:52:09.725Z] ❌ FAIL: Verify order in list - Request failed with status code 401",
+    "[2026-04-26T08:52:09.726Z] ✅ PHASE 1 COMPLETE",
+    "[2026-04-26T08:52:09.727Z] 👉 ",
+    "[2026-04-26T08:52:09.727Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.727Z] 👉 PHASE 2: ADMIN CONFIRMATION",
+    "[2026-04-26T08:52:09.727Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.728Z] 👉 Step 2.1: Skipping admin registration (Firebase handles authentication)...",
+    "[2026-04-26T08:52:09.728Z] ✅ PASS: Admin authentication setup",
+    "[2026-04-26T08:52:09.728Z] 👉 Step 2.2: Fetching all orders (admin)...",
+    "[2026-04-26T08:52:09.733Z] ❌ FAIL: Fetch orders (admin) - Request failed with status code 401",
+    "[2026-04-26T08:52:09.733Z] 👉 Step 2.3: Confirming advance payment...",
+    "[2026-04-26T08:52:09.738Z] ❌ FAIL: Confirm advance payment - Request failed with status code 401",
+    "[2026-04-26T08:52:09.738Z] 👉 Step 2.4: Verifying order status updated...",
+    "[2026-04-26T08:52:09.804Z] ❌ FAIL: Order status - Expected Processing, got Pending",
+    "[2026-04-26T08:52:09.805Z] ✅ PASS: Transaction ID recorded correctly",
+    "[2026-04-26T08:52:09.805Z] ✅ PHASE 2 COMPLETE",
+    "[2026-04-26T08:52:09.806Z] 👉 ",
+    "[2026-04-26T08:52:09.806Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.806Z] 👉 PHASE 3: CUSTOMER CONFIRMATION VIEW",
+    "[2026-04-26T08:52:09.807Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.807Z] 👉 Step 3.1: Customer viewing updated order...",
+    "[2026-04-26T08:52:09.811Z] ❌ FAIL: Customer views order - Request failed with status code 401",
+    "[2026-04-26T08:52:09.811Z] ✅ PHASE 3 COMPLETE",
+    "[2026-04-26T08:52:09.812Z] 👉 ",
+    "[2026-04-26T08:52:09.812Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.812Z] 👉 PHASE 4: ORDER PROCESSING",
+    "[2026-04-26T08:52:09.813Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.813Z] 👉 Step 4.1: Admin updating order status to Shipped...",
+    "[2026-04-26T08:52:09.818Z] ❌ FAIL: Update to Shipped - Request failed with status code 401",
+    "[2026-04-26T08:52:09.819Z] 👉 Step 4.2: Admin updating order status to Delivered...",
+    "[2026-04-26T08:52:09.825Z] ❌ FAIL: Update to Delivered - Request failed with status code 401",
+    "[2026-04-26T08:52:09.846Z] 👉 Step 4.3: Customer viewing final order status...",
+    "[2026-04-26T08:52:09.870Z] ❌ FAIL: Customer views final status - Request failed with status code 401",
+    "[2026-04-26T08:52:09.870Z] ✅ PHASE 4 COMPLETE",
+    "[2026-04-26T08:52:09.871Z] 👉 ",
+    "[2026-04-26T08:52:09.871Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.871Z] 👉 TEST RESULTS SUMMARY",
+    "[2026-04-26T08:52:09.871Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.872Z] 📝 Total Tests: 15",
+    "[2026-04-26T08:52:09.872Z] ✅ Passed: 7",
+    "[2026-04-26T08:52:09.872Z] ❌ Failed: 8",
+    "[2026-04-26T08:52:09.872Z] 👉 ",
+    "[2026-04-26T08:52:09.872Z] ❌ ERRORS:",
+    "[2026-04-26T08:52:09.873Z] ❌ 1. Verify order in list: Request failed with status code 401",
+    "[2026-04-26T08:52:09.873Z] ❌ 2. Fetch orders (admin): Request failed with status code 401",
+    "[2026-04-26T08:52:09.874Z] ❌ 3. Confirm advance payment: Request failed with status code 401",
+    "[2026-04-26T08:52:09.874Z] ❌ 4. Order status: Expected Processing, got Pending",
+    "[2026-04-26T08:52:09.874Z] ❌ 5. Customer views order: Request failed with status code 401",
+    "[2026-04-26T08:52:09.874Z] ❌ 6. Update to Shipped: Request failed with status code 401",
+    "[2026-04-26T08:52:09.875Z] ❌ 7. Update to Delivered: Request failed with status code 401",
+    "[2026-04-26T08:52:09.876Z] ❌ 8. Customer views final status: Request failed with status code 401",
+    "[2026-04-26T08:52:09.877Z] 👉 ",
+    "[2026-04-26T08:52:09.877Z] 👉 ================================================================================",
+    "[2026-04-26T08:52:09.878Z] ❌ ❌ SOME TESTS FAILED",
+    "[2026-04-26T08:52:09.878Z] ❌ Please review errors above",
+    "[2026-04-26T08:52:09.878Z] 👉 ================================================================================"
+  ]
+}
