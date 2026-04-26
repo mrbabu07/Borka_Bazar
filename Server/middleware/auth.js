@@ -70,8 +70,21 @@ const verifyToken = async (req, res, next) => {
 const verifyAdmin = async (req, res, next) => {
   try {
     const User = req.app.locals.models.User;
-    const user = await User.findByFirebaseUid(req.user.uid);
+    let user = await User.findByFirebaseUid(req.user.uid);
 
+    // If user doesn't exist in database, create them
+    if (!user) {
+      console.log(`Creating new user in database for Firebase UID: ${req.user.uid}`);
+      user = await User.create({
+        firebaseUid: req.user.uid,
+        email: req.user.email,
+        firstName: req.user.name?.split(' ')[0] || '',
+        lastName: req.user.name?.split(' ').slice(1).join(' ') || '',
+        role: 'customer', // Default role
+      });
+    }
+
+    // Check if user has admin role
     if (!user || user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -79,6 +92,7 @@ const verifyAdmin = async (req, res, next) => {
     req.dbUser = user;
     next();
   } catch (error) {
+    console.error("Authorization error:", error);
     return res.status(500).json({ error: "Authorization failed" });
   }
 };
