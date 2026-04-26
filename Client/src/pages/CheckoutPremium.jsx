@@ -177,8 +177,29 @@ export default function CheckoutPremium() {
       if (response.data.success) {
         clearCart();
         toast.success("Order placed successfully!");
-        const orderId = response.data?.data?._id || response.data?._id || "NEW";
-        navigate(`/orders`);
+        const orderData_response = response.data?.data || response.data;
+        const orderId = orderData_response?._id || "NEW";
+        
+        // Redirect to order confirmation with full order data
+        navigate("/order-confirmation", {
+          state: {
+            orderCode: orderData_response?.orderCode,
+            _id: orderData_response?._id,
+            orderId: orderData_response?._id,
+            totalPrice: orderData_response?.totalPrice || finalTotal,
+            deliveryCharge: orderData_response?.deliveryCharge || deliveryCharge,
+            subtotal: orderData_response?.subtotal || cartTotal,
+            paymentInfo: orderData_response?.paymentInfo,
+            advancePayment: orderData_response?.advancePayment,
+            pricing: {
+              total: orderData_response?.totalPrice || finalTotal,
+              deliveryFee: orderData_response?.deliveryCharge || deliveryCharge,
+              subtotal: orderData_response?.subtotal || cartTotal,
+              remainingAmount: (orderData_response?.subtotal || cartTotal),
+            },
+            paymentMethod: "COD",
+          },
+        });
       }
     } catch (error) {
       console.error("Order creation failed:", error);

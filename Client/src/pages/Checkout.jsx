@@ -306,8 +306,9 @@ export default function Checkout() {
 
       const response = await createOrder(orderData);
 
-      // Get order ID safely
-      const orderId = response.data?.data?._id || response.data?._id || "NEW";
+      // Get order data from response
+      const orderData_response = response.data?.data || response.data;
+      const orderId = orderData_response?._id || "NEW";
       const orderIdShort =
         orderId !== "NEW" ? orderId.slice(-8).toUpperCase() : "NEW";
 
@@ -320,7 +321,27 @@ export default function Checkout() {
       });
 
       clearCart();
-      navigate("/orders", { state: { orderSuccess: true } });
+      
+      // Redirect to order confirmation with full order data
+      navigate("/order-confirmation", {
+        state: {
+          orderCode: orderData_response?.orderCode,
+          _id: orderData_response?._id,
+          orderId: orderData_response?._id,
+          totalPrice: orderData_response?.totalPrice || finalTotal,
+          deliveryCharge: orderData_response?.deliveryCharge || deliveryCharge,
+          subtotal: orderData_response?.subtotal || subtotal,
+          paymentInfo: orderData_response?.paymentInfo,
+          advancePayment: orderData_response?.advancePayment,
+          pricing: {
+            total: orderData_response?.totalPrice || finalTotal,
+            deliveryFee: orderData_response?.deliveryCharge || deliveryCharge,
+            subtotal: orderData_response?.subtotal || subtotal,
+            remainingAmount: (orderData_response?.subtotal || subtotal),
+          },
+          paymentMethod: formData.paymentMethod,
+        },
+      });
     } catch (error) {
       console.error("Order failed:", error);
       console.error("Error details:", error.response?.data);

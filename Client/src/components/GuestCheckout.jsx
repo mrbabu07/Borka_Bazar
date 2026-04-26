@@ -57,9 +57,24 @@ export default function GuestCheckout() {
 
       if (response.data.success) {
         clearCart();
+        const orderData_response = response.data?.data || response.data;
         navigate("/order-confirmation", {
           state: {
-            orderId: response.data.data._id,
+            orderCode: orderData_response?.orderCode,
+            _id: orderData_response?._id,
+            orderId: orderData_response?._id,
+            totalPrice: orderData_response?.totalPrice || total,
+            deliveryCharge: orderData_response?.deliveryCharge || 0,
+            subtotal: orderData_response?.subtotal || total,
+            paymentInfo: orderData_response?.paymentInfo,
+            advancePayment: orderData_response?.advancePayment,
+            pricing: {
+              total: orderData_response?.totalPrice || total,
+              deliveryFee: orderData_response?.deliveryCharge || 0,
+              subtotal: orderData_response?.subtotal || total,
+              remainingAmount: (orderData_response?.subtotal || total),
+            },
+            paymentMethod: guestInfo.paymentMethod,
             isGuest: true,
             email: guestInfo.email,
           },

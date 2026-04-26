@@ -247,9 +247,9 @@ export default function AdminOrders() {
       minute: "2-digit",
     });
 
-    const subtotal = order.subtotal || order.total || 0;
-    const deliveryCharge = order.deliveryCharge || 0;
-    const total = order.total || 0;
+    const subtotal = order.subtotal || order.pricing?.subtotal || order.total || 0;
+    const deliveryCharge = order.deliveryCharge || order.pricing?.deliveryFee || 0;
+    const total = order.totalPrice || order.total || order.pricing?.total || 0;
 
     return `
       <!DOCTYPE html>
@@ -910,10 +910,10 @@ export default function AdminOrders() {
                           )}
                         </div>
                         <p className="font-bold text-lg text-gray-900 dark:text-white">
-                          {formatPrice(order.total)}
-                          {order.deliveryCharge > 0 && (
+                          {formatPrice(order.totalPrice || order.total || order.pricing?.total || 0)}
+                          {(order.deliveryCharge || order.pricing?.deliveryFee) > 0 && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                              (+{formatPrice(order.deliveryCharge)} delivery)
+                              (+{formatPrice(order.deliveryCharge || order.pricing?.deliveryFee)} delivery)
                             </span>
                           )}
                         </p>
@@ -1131,7 +1131,7 @@ export default function AdminOrders() {
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">Subtotal:</span>
                                 <span className="text-gray-900 dark:text-white">
-                                  {formatPrice(order.subtotal || order.total)}
+                                  {formatPrice(order.subtotal || order.pricing?.subtotal || order.total || 0)}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -1139,15 +1139,15 @@ export default function AdminOrders() {
                                   Delivery Charge:
                                 </span>
                                 <span className="text-gray-900 dark:text-white">
-                                  {order.deliveryCharge
-                                    ? formatPrice(order.deliveryCharge)
+                                  {(order.deliveryCharge || order.pricing?.deliveryFee)
+                                    ? formatPrice(order.deliveryCharge || order.pricing?.deliveryFee)
                                     : "FREE"}
                                 </span>
                               </div>
                               <div className="border-t pt-2 flex justify-between font-semibold">
                                 <span className="text-gray-900 dark:text-white">Total:</span>
                                 <span className="text-black dark:text-white">
-                                  {formatPrice(order.total)}
+                                  {formatPrice(order.totalPrice || order.total || order.pricing?.total || 0)}
                                 </span>
                               </div>
                             </div>
