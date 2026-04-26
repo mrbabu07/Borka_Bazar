@@ -163,6 +163,7 @@ exports.createOrder = async (req, res) => {
 // Get all orders (Admin)
 exports.getAllOrders = async (req, res) => {
   try {
+    console.log('📋 getAllOrders called');
     const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
     // Build filter gracefully considering both structures
@@ -176,12 +177,15 @@ exports.getAllOrders = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
+    console.log('🔍 Fetching orders with filter:', filter);
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Order.countDocuments(filter);
+
+    console.log(`✅ Found ${total} orders, returning ${orders.length} on page ${page}`);
 
     res.status(200).json({
       success: true,

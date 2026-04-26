@@ -70,6 +70,8 @@ const verifyToken = async (req, res, next) => {
 const verifyAdmin = async (req, res, next) => {
   try {
     const User = req.app.locals.models.User;
+    console.log(`🔐 Verifying admin access for Firebase UID: ${req.user.uid}`);
+    
     let user = await User.findByFirebaseUid(req.user.uid);
 
     // If user doesn't exist in database, create them
@@ -82,18 +84,27 @@ const verifyAdmin = async (req, res, next) => {
         lastName: req.user.name?.split(' ').slice(1).join(' ') || '',
         role: 'customer', // Default role
       });
+      console.log(`✅ User created with role: ${user.role}`);
     }
+
+    console.log(`👤 User found: ${user.email}, Role: ${user.role}`);
 
     // Check if user has admin role
     if (!user || user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
+      console.log(`❌ Admin access denied. User role is: ${user?.role || 'undefined'}`);
+      return res.status(403).json({ 
+        error: "Admin access required",
+        userRole: user?.role,
+        message: `Your role is '${user?.role}'. Please contact administrator to set your role to 'admin'.`
+      });
     }
 
+    console.log(`✅ Admin access granted for ${user.email}`);
     req.dbUser = user;
     next();
   } catch (error) {
     console.error("Authorization error:", error);
-    return res.status(500).json({ error: "Authorization failed" });
+    return res.status(500).json({ error: "Authorization failed", details: error.message });
   }
 };
 
