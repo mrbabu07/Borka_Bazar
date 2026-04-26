@@ -320,6 +320,8 @@ exports.confirmAdvancePayment = async (req, res) => {
     const { id } = req.params;
     const { transactionId, adminId } = req.body;
 
+    console.log('🔐 confirmAdvancePayment called:', { orderId: id, transactionId, adminId });
+
     if (!transactionId) {
       return res.status(400).json({
         success: false,
@@ -361,12 +363,16 @@ exports.confirmAdvancePayment = async (req, res) => {
       });
     }
 
+    // Get the actual MongoDB user ID from the request (set by verifyAdmin middleware)
+    const actualAdminId = req.dbUser?._id || adminId;
+    console.log('👤 Admin ID:', { provided: adminId, actual: actualAdminId });
+
     // Update order with new structure
     if (order.advancePayment) {
       order.advancePayment.transactionId = transactionId;
       order.advancePayment.status = 'Confirmed';
       order.advancePayment.confirmedAt = new Date();
-      order.advancePayment.confirmedBy = adminId;
+      order.advancePayment.confirmedBy = actualAdminId;
     }
     
     // Also update legacy structure for backward compatibility
@@ -374,7 +380,7 @@ exports.confirmAdvancePayment = async (req, res) => {
       order.payment.advance.transactionId = transactionId;
       order.payment.advance.status = 'Confirmed';
       order.payment.advance.confirmedAt = new Date();
-      order.payment.advance.confirmedBy = adminId;
+      order.payment.advance.confirmedBy = actualAdminId;
     }
     
     // Update order status
@@ -387,10 +393,12 @@ exports.confirmAdvancePayment = async (req, res) => {
     if (!order.admin) {
       order.admin = {};
     }
-    order.admin.confirmedBy = adminId;
+    order.admin.confirmedBy = actualAdminId;
     order.admin.confirmedAt = new Date();
 
     await order.save();
+
+    console.log('✅ Advance payment confirmed successfully');
 
     res.status(200).json({
       success: true,
@@ -403,7 +411,7 @@ exports.confirmAdvancePayment = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Confirm advance payment error:', error);
+    console.error('❌ Confirm advance payment error:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
