@@ -5,16 +5,16 @@ const deliverySettingsSchema = new mongoose.Schema(
     freeDeliveryThreshold: {
       type: Number,
       required: true,
-      default: 50, // $50 USD = ৳5,500 BDT (easier to reach)
+      default: 2000, // ৳2,000 BDT
     },
     standardDeliveryCharge: {
       type: Number,
       required: true,
-      default: 100 / 110, // ~0.909 USD = ৳100 BDT
+      default: 100, // ৳100 BDT
     },
     expressDeliveryCharge: {
       type: Number,
-      default: 200 / 110, // ~1.818 USD = ৳200 BDT
+      default: 200, // ৳200 BDT
     },
     expressDeliveryEnabled: {
       type: Boolean,
@@ -50,12 +50,37 @@ const deliverySettingsSchema = new mongoose.Schema(
   },
 );
 
-// Ensure only one settings document exists
+// Ensure only one settings document exists, and auto-migrate legacy USD values
 deliverySettingsSchema.statics.getSettings = async function () {
   let settings = await this.findOne();
   if (!settings) {
     settings = await this.create({});
+    return settings;
   }
+
+  // Auto-migrate: if values look like USD (< 10), convert to BDT
+  let needsSave = false;
+  if (settings.standardDeliveryCharge > 0 && settings.standardDeliveryCharge < 10) {
+    settings.standardDeliveryCharge = Math.round(settings.standardDeliveryCharge * 110);
+    needsSave = true;
+  }
+  if (settings.expressDeliveryCharge > 0 && settings.expressDeliveryCharge < 10) {
+    settings.expressDeliveryCharge = Math.round(settings.expressDeliveryCharge * 110);
+    needsSave = true;
+  }
+  if (settings.freeDeliveryThreshold > 0 && settings.freeDeliveryThreshold < 100) {
+    settings.freeDeliveryThreshold = Math.round(settings.freeDeliveryThreshold * 110);
+    needsSave = true;
+  }
+  if (needsSave) {
+    console.log('🔄 Auto-migrated DeliverySettings from USD to BDT:', {
+      standardDeliveryCharge: settings.standardDeliveryCharge,
+      expressDeliveryCharge: settings.expressDeliveryCharge,
+      freeDeliveryThreshold: settings.freeDeliveryThreshold,
+    });
+    await settings.save();
+  }
+
   return settings;
 };
 

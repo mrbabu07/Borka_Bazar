@@ -85,10 +85,6 @@ export default function AdminDeliverySettings() {
     return <Loading />;
   }
 
-  // Convert USD to BDT for display
-  const usdToBdt = (usd) => usd * 110;
-  const bdtToUsd = (bdt) => bdt / 110;
-
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
@@ -134,28 +130,25 @@ export default function AdminDeliverySettings() {
                   Free Delivery Threshold (BDT)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                     ৳
                   </span>
                   <input
                     type="number"
-                    value={Math.round(
-                      usdToBdt(settings?.freeDeliveryThreshold || 0),
-                    )}
+                    min="0"
+                    value={settings?.freeDeliveryThreshold || 0}
                     onChange={(e) =>
                       handleChange(
                         "freeDeliveryThreshold",
-                        bdtToUsd(parseFloat(e.target.value) || 0),
+                        parseFloat(e.target.value) || 0,
                       )
                     }
                     className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    placeholder="11000"
+                    placeholder="2000"
                   />
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Current: {formatPrice(settings?.freeDeliveryThreshold || 0)} (
-                  {Math.round(usdToBdt(settings?.freeDeliveryThreshold || 0))}{" "}
-                  BDT)
+                  Orders above ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()} will get free delivery
                 </p>
               </div>
 
@@ -182,7 +175,7 @@ export default function AdminDeliverySettings() {
                     </p>
                     <p className="text-xs text-green-700 dark:text-green-300 mt-1">
                       Customers will see "FREE delivery on orders over{" "}
-                      {formatPrice(settings?.freeDeliveryThreshold || 0)}" and a
+                      ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()}" and a
                       progress bar showing how much more they need to add.
                     </p>
                   </div>
@@ -204,18 +197,17 @@ export default function AdminDeliverySettings() {
                 Delivery Charge (BDT)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                   ৳
                 </span>
                 <input
                   type="number"
-                  value={Math.round(
-                    usdToBdt(settings?.standardDeliveryCharge || 0),
-                  )}
+                  min="0"
+                  value={settings?.standardDeliveryCharge || 0}
                   onChange={(e) =>
                     handleChange(
                       "standardDeliveryCharge",
-                      bdtToUsd(parseFloat(e.target.value) || 0),
+                      parseFloat(e.target.value) || 0,
                     )
                   }
                   className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
@@ -223,9 +215,7 @@ export default function AdminDeliverySettings() {
                 />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Current: {formatPrice(settings?.standardDeliveryCharge || 0)} (
-                {Math.round(usdToBdt(settings?.standardDeliveryCharge || 0))}{" "}
-                BDT)
+                Customers will be charged ৳{(settings?.standardDeliveryCharge || 0).toLocaleString()} for standard delivery
               </p>
             </div>
           </div>
@@ -261,18 +251,17 @@ export default function AdminDeliverySettings() {
                 Express Delivery Charge (BDT)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                   ৳
                 </span>
                 <input
                   type="number"
-                  value={Math.round(
-                    usdToBdt(settings?.expressDeliveryCharge || 0),
-                  )}
+                  min="0"
+                  value={settings?.expressDeliveryCharge || 0}
                   onChange={(e) =>
                     handleChange(
                       "expressDeliveryCharge",
-                      bdtToUsd(parseFloat(e.target.value) || 0),
+                      parseFloat(e.target.value) || 0,
                     )
                   }
                   className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
@@ -280,9 +269,7 @@ export default function AdminDeliverySettings() {
                 />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Current: {formatPrice(settings?.expressDeliveryCharge || 0)} (
-                {Math.round(usdToBdt(settings?.expressDeliveryCharge || 0))}{" "}
-                BDT)
+                Customers will be charged ৳{(settings?.expressDeliveryCharge || 0).toLocaleString()} for express delivery
               </p>
             </div>
           )}
@@ -407,16 +394,15 @@ export default function AdminDeliverySettings() {
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Delivery Charge
+                  Standard Delivery Charge
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {formatPrice(settings?.standardDeliveryCharge || 0)}
+                  ৳{(settings?.standardDeliveryCharge || 0).toLocaleString()}
                 </span>
               </div>
               {settings?.freeDeliveryEnabled && (
                 <div className="text-xs text-green-600 dark:text-green-400">
-                  ✨ FREE on orders over{" "}
-                  {formatPrice(settings?.freeDeliveryThreshold || 0)}
+                  ✨ FREE on orders over ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()}
                 </div>
               )}
             </div>
@@ -424,9 +410,7 @@ export default function AdminDeliverySettings() {
               <p className="text-xs text-amber-800 dark:text-amber-200">
                 🚚 Almost there for FREE delivery!
                 <br />
-                Add {formatPrice(
-                  (settings?.freeDeliveryThreshold || 0) - 80,
-                )}{" "}
+                Add ৳{Math.max(0, (settings?.freeDeliveryThreshold || 0) - 800).toLocaleString()}{" "}
                 more to get free delivery
               </p>
             </div>

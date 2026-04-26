@@ -105,6 +105,16 @@ export default function Orders() {
     return order.paymentMethod === 'cod' || order.payment?.method === 'cod' || order.paymentInfo?.method === 'cod';
   };
 
+  const getAdvancePaymentInfo = (order) => {
+    // Get advance payment details from new or legacy structure
+    return order.advancePayment || order.payment?.advance || null;
+  };
+
+  const isAdvancePaymentPending = (order) => {
+    const advancePayment = getAdvancePaymentInfo(order);
+    return advancePayment?.status === 'Pending';
+  };
+
   const filteredOrders =
     filter === "all"
       ? orders
@@ -524,6 +534,14 @@ export default function Orders() {
                           </span>
                         </div>
                       )}
+                      {isAdvancePaymentPending(order) && (
+                        <div className="flex justify-between items-center text-xs pt-2 border-t border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 -mx-4 -mb-3 px-4 py-2 rounded-b">
+                          <span className="text-yellow-700 dark:text-yellow-300 font-semibold">⏳ Advance Payment:</span>
+                          <span className="font-bold text-yellow-700 dark:text-yellow-300">
+                            {formatPrice(getAdvancePaymentInfo(order)?.amount || 0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -800,6 +818,44 @@ export default function Orders() {
                     <p className="text-xs text-yellow-700">
                       Please complete the delivery fee payment to confirm your order. Admin will verify and confirm your order after payment.
                     </p>
+                  </div>
+                )}
+
+                {/* Advance Payment Info */}
+                {getAdvancePaymentInfo(detailOrder) && (
+                  <div className={`border rounded-lg p-4 ${isAdvancePaymentPending(detailOrder) ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className={`text-sm font-bold ${isAdvancePaymentPending(detailOrder) ? 'text-yellow-800' : 'text-green-800'}`}>
+                          💳 Advance Payment (Delivery Fee)
+                        </p>
+                        <p className={`text-xs mt-1 ${isAdvancePaymentPending(detailOrder) ? 'text-yellow-700' : 'text-green-700'}`}>
+                          Method: <span className="font-semibold">{getAdvancePaymentInfo(detailOrder)?.method || 'bKash'}</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${isAdvancePaymentPending(detailOrder) ? 'text-yellow-800' : 'text-green-800'}`}>
+                          {formatPrice(getAdvancePaymentInfo(detailOrder)?.amount || 0)}
+                        </p>
+                        <span className={`inline-block text-xs font-semibold px-2 py-1 rounded mt-1 ${
+                          isAdvancePaymentPending(detailOrder) 
+                            ? 'bg-yellow-200 text-yellow-800' 
+                            : 'bg-green-200 text-green-800'
+                        }`}>
+                          {getAdvancePaymentInfo(detailOrder)?.status || 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                    {getAdvancePaymentInfo(detailOrder)?.transactionId && (
+                      <p className={`text-xs ${isAdvancePaymentPending(detailOrder) ? 'text-yellow-700' : 'text-green-700'}`}>
+                        Transaction ID: <span className="font-mono font-semibold">{getAdvancePaymentInfo(detailOrder).transactionId}</span>
+                      </p>
+                    )}
+                    {getAdvancePaymentInfo(detailOrder)?.confirmedAt && (
+                      <p className={`text-xs mt-2 ${isAdvancePaymentPending(detailOrder) ? 'text-yellow-700' : 'text-green-700'}`}>
+                        ✓ Confirmed on {new Date(getAdvancePaymentInfo(detailOrder).confirmedAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
                 )}
 

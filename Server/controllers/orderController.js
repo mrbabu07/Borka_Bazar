@@ -98,6 +98,11 @@ exports.createOrder = async (req, res) => {
         transactionId: transactionId || null,
         status: paymentMethod === 'COD' ? 'Pending' : 'Pending',
       },
+      advancePayment: {
+        method: paymentMethod === 'COD' ? 'bKash' : paymentMethod,
+        amount: finalDeliveryCharge,
+        status: 'Pending',
+      },
       totalPrice: finalTotal,
       subtotal: finalSubtotal,
       deliveryCharge: finalDeliveryCharge,
@@ -327,16 +332,21 @@ exports.confirmAdvancePayment = async (req, res) => {
       });
     }
 
-    if (order.payment.advance.status !== 'Pending') {
+    // Check both old and new structures
+    const advanceStatus = order.advancePayment?.status || order.payment?.advance?.status;
+    if (advanceStatus !== 'Pending') {
       return res.status(400).json({
         success: false,
-        message: `Cannot confirm advance payment. Current status: ${order.payment.advance.status}`,
+        message: `Cannot confirm advance payment. Current status: ${advanceStatus}`,
       });
     }
 
     // Check for duplicate transaction ID
     const existingTransaction = await Order.findOne({
-      'payment.advance.transactionId': transactionId,
+      $or: [
+        { 'advancePayment.transactionId': transactionId },
+        { 'payment.advance.transactionId': transactionId }
+      ],
       _id: { $ne: id },
     });
 
@@ -347,13 +357,30 @@ exports.confirmAdvancePayment = async (req, res) => {
       });
     }
 
-    // Update order
-    order.payment.advance.transactionId = transactionId;
-    order.payment.advance.status = 'Confirmed';
-    order.payment.advance.confirmedAt = new Date();
-    order.order.status = 'Processing';
-    if (adminId) {
+    // Update order with new structure
+    if (order.advancePayment) {
+      order.advancePayment.transactionId = transactionId;
+      order.advancePayment.status = 'Confirmed';
+      order.advancePayment.confirmedAt = new Date();
+      order.advancePayment.confirmedBy = adminId;
+    }
+    
+    // Also update legacy structure for backward compatibility
+    if (order.payment?.advance) {
+      order.payment.advance.transactionId = transactionId;
+      order.payment.advance.status = 'Confirmed';
+      order.payment.advance.confirmedAt = new Date();
+      order.payment.advance.confirmedBy = adminId;
+    }
+    
+    // Update order status
+    order.orderStatus = 'Processing';
+    if (order.order) {
+      order.order.status = 'Processing';
+    }
+    if (order.admin) {
       order.admin.confirmedBy = adminId;
+      order.admin.confirmedAt = new Date();
     }
 
     await order.save();
@@ -364,9 +391,8 @@ exports.confirmAdvancePayment = async (req, res) => {
       data: {
         orderId: order._id,
         orderCode: order.orderCode,
-        advancePaymentStatus: order.payment.advance.status,
-        paymentStatus: order.payment.paymentStatus,
-        orderStatus: order.order.status,
+        advancePaymentStatus: order.advancePayment?.status || order.payment?.advance?.status,
+        orderStatus: order.orderStatus || order.order?.status,
       },
     });
   } catch (error) {

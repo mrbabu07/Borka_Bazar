@@ -1,4 +1,4 @@
-# Borka Bazar - Partial Payment System Documentation
+# Borka Bazar - 2-Step Payment Tracking System Documentation
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -16,26 +16,22 @@
 
 ## Overview
 
-The Borka Bazar Partial Payment System is a modern e-commerce payment solution that allows customers to:
-- Pay delivery fees upfront via bKash or Nagad
-- Pay the remaining product cost via Cash on Delivery (COD)
-- Track their orders in real-time
-- Receive payment verification within 24 hours
+The Borka Bazar 2-Step Payment Tracking System is an advanced e-commerce payment solution that tracks both advance payment (delivery fee) and remaining payment (product cost) separately. This system provides complete payment visibility and control.
 
 ### Key Features
-- ✅ Two-step payment process (Delivery Fee + COD)
-- ✅ Manual payment verification (no automated gateway)
-- ✅ Support for bKash and Nagad
-- ✅ Unique order code generation
-- ✅ Transaction ID validation
-- ✅ Admin dashboard for payment management
-- ✅ User order tracking
-- ✅ Professional invoice generation
+- ✅ **Advance Payment Tracking**: Delivery fee payment via bKash/Nagad
+- ✅ **Remaining Payment Tracking**: Product cost payment via COD or online
+- ✅ **Dual Payment Status**: Track advance and remaining payments separately
+- ✅ **Overall Payment Status**: Shows if order is "partial" or "full" paid
+- ✅ **Manual Verification**: Admin manually verifies each payment
+- ✅ **Payment Breakdown**: Clear display of payment components
+- ✅ **Transaction ID Validation**: Unique transaction IDs per payment
+- ✅ **Real-time Status Updates**: Instant payment status changes
 
 ### Payment Methods
-- **bKash**: Mobile money service in Bangladesh
-- **Nagad**: Mobile money service in Bangladesh
-- **Cash on Delivery**: Pay remaining amount when order arrives
+- **Advance Payment**: bKash or Nagad (Delivery Fee: ৳200)
+- **Remaining Payment**: Cash on Delivery (COD) or bKash/Nagad (Product Cost)
+- **Payment Number**: 01978305319 (for all online payments)
 
 ---
 
@@ -48,82 +44,83 @@ The Borka Bazar Partial Payment System is a modern e-commerce payment solution t
 - **Authentication**: Firebase Authentication
 - **Payment Processing**: Manual verification (no third-party gateway)
 
-### Project Structure
+### Payment Structure
+
 ```
-Borka_Bazar/
-├── Server/
-│   ├── models/
-│   │   └── Order.js                 # Order schema
-│   ├── controllers/
-│   │   └── orderController.js       # Order business logic
-│   ├── routes/
-│   │   └── orderRoutes.js           # Order API endpoints
-│   ├── middleware/
-│   │   └── auth.js                  # Firebase authentication
-│   └── index.js                     # Server entry point
+Order Total = Subtotal + Delivery Fee
+
+Example:
+├── Subtotal (Products): ৳1,000
+├── Delivery Fee: ৳200
+└── Total: ৳1,200
+
+Payment Breakdown:
+├── Advance Payment (Delivery Fee): ৳200
+│   ├── Method: bKash/Nagad
+│   ├── Status: Pending → Confirmed → Rejected
+│   └── Transaction ID: TXN123456789
 │
-└── Client/
-    └── src/
-        ├── pages/
-        │   ├── CheckoutPartialPayment.jsx    # Simple payment page
-        │   ├── CheckoutModern.jsx            # 4-step checkout
-        │   ├── Orders.jsx                    # User orders page
-        │   └── OrderConfirmation.jsx         # Order confirmation
-        ├── components/
-        │   └── checkout/
-        │       ├── CheckoutProgress.jsx
-        │       └── steps/
-        │           ├── AddressStep.jsx
-        │           ├── ReviewStep.jsx
-        │           ├── PaymentStep.jsx
-        │           └── ConfirmationStep.jsx
-        ├── services/
-        │   └── api.js                        # API calls
-        └── utils/
-            └── printTemplate.js              # Invoice template
+└── Remaining Payment (Products): ৳1,000
+    ├── Method: COD/bKash/Nagad
+    ├── Status: Pending → Paid
+    └── Transaction ID: TXN987654321 (if online)
+
+Overall Payment Status:
+├── Partial: Advance Confirmed + Remaining Pending
+└── Full: Advance Confirmed + Remaining Paid
 ```
 
 ---
 
 ## Payment Flow
 
-### User Payment Journey
+### Complete User Journey
 
 ```
 1. User adds products to cart
    ↓
 2. User proceeds to checkout
    ↓
-3. User selects payment method (bKash/Nagad)
+3. User selects payment method (bKash/Nagad) for delivery fee
    ↓
 4. System generates unique Order Code (ORD-XXXXXX)
    ↓
-5. User sends delivery fee via bKash/Nagad
+5. Order created with:
+   - Advance Payment: Pending
+   - Remaining Payment: Pending
+   - Payment Status: Partial
    ↓
-6. User enters Transaction ID
+6. User sends delivery fee (৳200) via bKash/Nagad
    ↓
-7. Order is created with "Pending" payment status
+7. User enters Transaction ID
    ↓
-8. User receives order confirmation
+8. Admin verifies advance payment within 24 hours
    ↓
-9. Admin verifies payment within 24 hours
+9. Advance Payment Status: Confirmed
+   - Order Status: Processing
+   - Payment Status: Still Partial
    ↓
-10. Payment status changes to "Confirmed" or "Rejected"
+10. Order is prepared and shipped
    ↓
-11. Order proceeds to "Processing" → "Shipped" → "Delivered"
+11. User receives order and pays remaining amount (COD)
    ↓
-12. User pays remaining amount on delivery (COD)
+12. User submits remaining payment (if online method)
+   ↓
+13. Admin verifies remaining payment
+   ↓
+14. Remaining Payment Status: Paid
+    - Payment Status: Full
+    - Order Status: Delivered
 ```
 
-### Payment Breakdown Example
-```
-Product Cost:        ৳1,000
-Delivery Fee:        ৳200
-─────────────────────────
-Total:               ৳1,200
+### Payment Status Logic
 
-Pay Now (bKash):     ৳200 (Delivery Fee)
-Pay on Delivery:     ৳1,000 (Product Cost)
+```javascript
+if (advance.status === "Confirmed" && remaining.status === "Paid") {
+  paymentStatus = "full"
+} else {
+  paymentStatus = "partial"
+}
 ```
 
 ---
@@ -137,8 +134,8 @@ Pay on Delivery:     ৳1,000 (Product Cost)
   orderCode: String,              // Unique: ORD-123456
   customer: {
     name: String,                 // Customer name
-    phone: String,                // Customer phone
-    email: String,                // Customer email (for order lookup)
+    phone: String,                // Customer phone (11 digits)
+    email: String,                // Customer email
     address: String               // Delivery address
   },
   products: [{
@@ -157,18 +154,34 @@ Pay on Delivery:     ৳1,000 (Product Cost)
     remainingAmount: Number       // Amount to pay on delivery
   },
   payment: {
-    method: String,               // 'bKash' or 'Nagad'
-    transactionId: String,        // Unique transaction ID
-    status: String,               // 'Pending', 'Confirmed', 'Rejected'
-    confirmedAt: Date,            // When payment was confirmed
-    rejectionReason: String       // Reason if rejected
+    // ADVANCE PAYMENT (Delivery Fee)
+    advance: {
+      method: String,             // 'bKash' or 'Nagad'
+      transactionId: String,      // Unique transaction ID
+      status: String,             // 'Pending', 'Confirmed', 'Rejected'
+      amount: Number,             // Delivery fee (৳200)
+      confirmedAt: Date,          // When confirmed
+      rejectionReason: String     // Reason if rejected
+    },
+    
+    // REMAINING PAYMENT (Product Cost)
+    remaining: {
+      method: String,             // 'COD', 'bKash', or 'Nagad'
+      transactionId: String,      // Unique transaction ID (if online)
+      status: String,             // 'Pending' or 'Paid'
+      amount: Number,             // Product cost (subtotal)
+      paidAt: Date                // When paid
+    },
+    
+    // OVERALL PAYMENT STATUS
+    paymentStatus: String         // 'partial' or 'full'
   },
   order: {
     status: String,               // 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'
     notes: String                 // Admin notes
   },
   admin: {
-    confirmedBy: ObjectId,        // Admin who confirmed payment
+    confirmedBy: ObjectId,        // Admin who confirmed advance payment
     rejectedBy: ObjectId          // Admin who rejected payment
   },
   createdAt: Date,                // Order creation time
@@ -213,15 +226,112 @@ Response:
     orderCode: "ORD-123456",
     total: 1200,
     deliveryFee: 200,
-    remainingAmount: 1000
+    remainingAmount: 1000,
+    paymentStatus: "partial"
   }
 }
 ```
 
-#### 2. Get User Orders
+#### 2. Confirm Advance Payment (Admin)
 ```javascript
-GET /api/orders/my-orders
-Headers: Authorization: Bearer {firebaseToken}
+PATCH /api/orders/{orderId}/confirm-advance-payment
+Headers: Authorization: Bearer {adminToken}
+
+Request Body:
+{
+  transactionId: "TXN123456789",
+  adminId: "admin_user_id"
+}
+
+Response:
+{
+  success: true,
+  message: "Advance payment confirmed successfully",
+  data: {
+    orderId: "507f1f77bcf86cd799439012",
+    orderCode: "ORD-123456",
+    advancePaymentStatus: "Confirmed",
+    paymentStatus: "partial",
+    orderStatus: "Processing"
+  }
+}
+```
+
+#### 3. Reject Advance Payment (Admin)
+```javascript
+PATCH /api/orders/{orderId}/reject-advance-payment
+Headers: Authorization: Bearer {adminToken}
+
+Request Body:
+{
+  reason: "Transaction ID not found",
+  adminId: "admin_user_id"
+}
+
+Response:
+{
+  success: true,
+  message: "Advance payment rejected successfully",
+  data: {
+    orderId: "507f1f77bcf86cd799439012",
+    orderCode: "ORD-123456",
+    advancePaymentStatus: "Rejected",
+    orderStatus: "Cancelled"
+  }
+}
+```
+
+#### 4. Pay Remaining Amount (User)
+```javascript
+PATCH /api/orders/{orderId}/pay-remaining
+Headers: Authorization: Bearer {userToken}
+
+Request Body:
+{
+  method: "bKash",              // 'COD', 'bKash', or 'Nagad'
+  transactionId: "TXN987654321" // Required for online methods
+}
+
+Response:
+{
+  success: true,
+  message: "Remaining payment submitted for bKash",
+  data: {
+    orderId: "507f1f77bcf86cd799439012",
+    orderCode: "ORD-123456",
+    remainingPaymentStatus: "Pending",
+    paymentStatus: "partial"
+  }
+}
+```
+
+#### 5. Confirm Remaining Payment (Admin)
+```javascript
+PATCH /api/orders/{orderId}/confirm-remaining
+Headers: Authorization: Bearer {adminToken}
+
+Request Body:
+{
+  adminId: "admin_user_id"
+}
+
+Response:
+{
+  success: true,
+  message: "Remaining payment confirmed successfully",
+  data: {
+    orderId: "507f1f77bcf86cd799439012",
+    orderCode: "ORD-123456",
+    remainingPaymentStatus: "Paid",
+    paymentStatus: "full"
+  }
+}
+```
+
+#### 6. Get User Orders
+```javascript
+GET /api/orders/my-orders?page=1&limit=10
+Headers: Authorization: Bearer {userToken}
 
 Response:
 {
@@ -233,7 +343,11 @@ Response:
       customer: {...},
       products: [...],
       pricing: {...},
-      payment: {...},
+      payment: {
+        advance: {...},
+        remaining: {...},
+        paymentStatus: "partial"
+      },
       order: {...},
       createdAt: "2024-01-15T10:30:00Z"
     }
@@ -247,210 +361,85 @@ Response:
 }
 ```
 
-#### 3. Get All Orders (Admin)
-```javascript
-GET /api/orders?status=Pending&paymentStatus=Pending&page=1&limit=10
-Headers: Authorization: Bearer {adminToken}
-
-Query Parameters:
-- status: Order status filter (Pending, Processing, Shipped, Delivered, Cancelled)
-- paymentStatus: Payment status filter (Pending, Confirmed, Rejected)
-- page: Page number (default: 1)
-- limit: Items per page (default: 10)
-
-Response: Same as user orders
-```
-
-#### 4. Confirm Payment (Admin)
-```javascript
-PATCH /api/orders/{orderId}/confirm-payment
-Headers: Authorization: Bearer {adminToken}
-
-Request Body:
-{
-  transactionId: "TXN123456789",
-  adminId: "admin_user_id"
-}
-
-Response:
-{
-  success: true,
-  message: "Payment confirmed successfully",
-  data: {
-    orderId: "507f1f77bcf86cd799439012",
-    orderCode: "ORD-123456",
-    paymentStatus: "Confirmed",
-    orderStatus: "Processing"
-  }
-}
-```
-
-#### 5. Reject Payment (Admin)
-```javascript
-PATCH /api/orders/{orderId}/reject-payment
-Headers: Authorization: Bearer {adminToken}
-
-Request Body:
-{
-  reason: "Transaction ID not found",
-  adminId: "admin_user_id"
-}
-
-Response:
-{
-  success: true,
-  message: "Payment rejected successfully",
-  data: {
-    orderId: "507f1f77bcf86cd799439012",
-    orderCode: "ORD-123456",
-    paymentStatus: "Rejected",
-    orderStatus: "Cancelled"
-  }
-}
-```
-
-#### 6. Update Order Status (Admin)
-```javascript
-PATCH /api/orders/{orderId}/update-status
-Headers: Authorization: Bearer {adminToken}
-
-Request Body:
-{
-  status: "Shipped",
-  notes: "Order dispatched from warehouse"
-}
-
-Response:
-{
-  success: true,
-  message: "Order status updated successfully",
-  data: {...}
-}
-```
-
-#### 7. Get Order Statistics (Admin)
-```javascript
-GET /api/orders/stats/overview
-Headers: Authorization: Bearer {adminToken}
-
-Response:
-{
-  success: true,
-  data: {
-    totalOrders: 150,
-    pendingPayments: 25,
-    confirmedPayments: 120,
-    rejectedPayments: 5,
-    totalRevenue: 180000
-  }
-}
-```
-
 ---
 
 ## Frontend Implementation
 
-### Checkout Pages
+### Components
 
-#### 1. CheckoutPartialPayment.jsx (Simple Payment Page)
-**Location**: `Client/src/pages/CheckoutPartialPayment.jsx`
+#### 1. PaymentBreakdown Component
+**Location**: `Client/src/components/PaymentBreakdown.jsx`
 
 **Features**:
-- Order summary display
-- Payment method selector (bKash/Nagad)
-- Payment instructions with copy buttons
-- Transaction ID input
-- Direct payment submission
+- Display overall payment status (Partial/Full)
+- Show pricing breakdown (subtotal, delivery fee, total)
+- Display advance payment details with status badge
+- Display remaining payment details with status badge
+- Show transaction IDs and dates
+- Status legend
 
-**Key Components**:
+**Usage**:
 ```javascript
-// Get user data
-const { user } = useAuth();
-
-// Get cart items
-const { cart, clearCart } = useCart();
-
-// Format prices
-const { formatPrice } = useCurrency();
-
-// State management
-const [paymentData, setPaymentData] = useState({
-  method: 'bKash',
-  transactionId: ''
-});
-
-// Order creation
-const orderData = {
-  customerName: user?.displayName || 'User',
-  customerPhone: '01978305319',
-  customerEmail: user?.email || '',
-  customerAddress: 'Address will be collected from checkout',
-  products: cart.map(item => ({...})),
-  subtotal: orderSummary.subtotal,
-  deliveryFee: orderSummary.deliveryFee,
-  paymentMethod: paymentData.method,
-  transactionId: paymentData.transactionId
-};
+<PaymentBreakdown order={order} />
 ```
 
-#### 2. CheckoutModern.jsx (4-Step Checkout)
-**Location**: `Client/src/pages/CheckoutModern.jsx`
+#### 2. PayRemainingForm Component
+**Location**: `Client/src/components/PayRemainingForm.jsx`
 
 **Features**:
-- Step 1: Address collection
-- Step 2: Order review
-- Step 3: Payment method & transaction ID
-- Step 4: Confirmation
-- Progress indicator
-- Sticky order summary
+- Payment method selector (COD/bKash/Nagad)
+- Transaction ID input for online methods
+- Payment instructions with copy buttons
+- Form validation
+- Loading state
 
-**Step Components**:
-- `AddressStep.jsx`: Collect delivery address
-- `ReviewStep.jsx`: Review order details
-- `PaymentStep.jsx`: Select payment method and enter transaction ID
-- `ConfirmationStep.jsx`: Show success message
+**Usage**:
+```javascript
+<PayRemainingForm 
+  order={order}
+  onPaymentSubmitted={(data) => {
+    // Handle payment submission
+    fetchOrders();
+  }}
+/>
+```
 
-### API Service
+#### 3. Orders Page Integration
+**Location**: `Client/src/pages/Orders.jsx`
+
+**Features**:
+- Display PaymentBreakdown in order card
+- Show "Pay Remaining" button when eligible
+- Modal for PayRemainingForm
+- Refresh orders after payment submission
+
+**Key States**:
+```javascript
+const [showPaymentModal, setShowPaymentModal] = useState(false);
+const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+```
+
+### API Service Functions
 
 **Location**: `Client/src/services/api.js`
 
 ```javascript
-// Create order
-export const createPartialPaymentOrder = (data) => 
-  api.post("/orders/create", data);
+// Pay remaining amount (User)
+export const payRemainingAmount = (orderId, data) =>
+  api.patch(`/orders/${orderId}/pay-remaining`, data);
 
-// Get user orders
-export const getUserOrders = () => 
-  api.get("/orders/my-orders");
+// Confirm advance payment (Admin)
+export const confirmAdvancePayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/confirm-advance-payment`, data);
 
-// Get all orders (admin)
-export const getAllOrders = () => 
-  api.get("/orders");
+// Reject advance payment (Admin)
+export const rejectAdvancePayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/reject-advance-payment`, data);
 
-// Confirm payment (admin)
-export const confirmOrderPayment = (id, data) =>
-  api.patch(`/orders/${id}/confirm-payment`, data);
-
-// Reject payment (admin)
-export const rejectOrderPayment = (id, data) =>
-  api.patch(`/orders/${id}/reject-payment`, data);
-
-// Get order statistics (admin)
-export const getOrderStats = () => 
-  api.get("/orders/stats/overview");
+// Confirm remaining payment (Admin)
+export const confirmRemainingPayment = (orderId, data) =>
+  api.patch(`/orders/${orderId}/confirm-remaining`, data);
 ```
-
-### Invoice Template
-
-**Location**: `Client/src/utils/printTemplate.js`
-
-**Features**:
-- Professional invoice design
-- Order details
-- Product list with images
-- Payment information
-- Delivery address
-- Print-friendly layout
 
 ---
 
@@ -468,14 +457,16 @@ export const getOrderStats = () =>
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/orders/my-orders` | Get user's orders |
+| PATCH | `/api/orders/:id/pay-remaining` | Submit remaining payment |
 
 ### Admin Endpoints (Requires Admin Role)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/orders` | Get all orders (with filters) |
-| PATCH | `/api/orders/:id/confirm-payment` | Confirm payment |
-| PATCH | `/api/orders/:id/reject-payment` | Reject payment |
+| PATCH | `/api/orders/:id/confirm-advance-payment` | Confirm advance payment |
+| PATCH | `/api/orders/:id/reject-advance-payment` | Reject advance payment |
+| PATCH | `/api/orders/:id/confirm-remaining` | Confirm remaining payment |
 | PATCH | `/api/orders/:id/update-status` | Update order status |
 | GET | `/api/orders/stats/overview` | Get order statistics |
 
@@ -487,9 +478,12 @@ export const getOrderStats = () =>
 
 ```javascript
 // Fast payment status queries
-orderSchema.index({ 'payment.status': 1, createdAt: -1 });
+orderSchema.index({ 'payment.advance.status': 1, createdAt: -1 });
+orderSchema.index({ 'payment.remaining.status': 1, createdAt: -1 });
+orderSchema.index({ 'payment.paymentStatus': 1, createdAt: -1 });
 
-// Fast customer phone queries
+// Fast customer queries
+orderSchema.index({ 'customer.email': 1 });
 orderSchema.index({ 'customer.phone': 1 });
 
 // Fast order code queries
@@ -499,9 +493,11 @@ orderSchema.index({ orderCode: 1 });
 ### Data Validation
 
 **Phone Number**: 10-15 digits
-**Payment Method**: 'bKash' or 'Nagad'
+**Payment Methods**: 'bKash', 'Nagad', 'COD'
+**Advance Status**: 'Pending', 'Confirmed', 'Rejected'
+**Remaining Status**: 'Pending', 'Paid'
+**Payment Status**: 'partial', 'full'
 **Order Status**: 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'
-**Payment Status**: 'Pending', 'Confirmed', 'Rejected'
 
 ---
 
@@ -517,19 +513,20 @@ orderSchema.index({ orderCode: 1 });
 
 #### Step 2: Go to Checkout
 1. Click "Checkout" button
-2. Choose payment method: "Partial Payment" or "Cash on Delivery"
-3. Select "Partial Payment"
+2. Enter delivery address
+3. Review order details
 
 #### Step 3: Choose Payment Method
-1. Select bKash or Nagad
-2. Note the payment number: **01978305319**
-3. Note the amount to send (delivery fee)
+1. Select "Partial Payment"
+2. Choose bKash or Nagad for delivery fee
+3. Note the payment number: **01978305319**
+4. Note the delivery fee: **৳200**
 
-#### Step 4: Make Payment
+#### Step 4: Make Advance Payment
 1. Open your bKash/Nagad app
 2. Select "Send Money"
 3. Enter recipient: **01978305319**
-4. Enter amount: **৳200** (or as shown)
+4. Enter amount: **৳200**
 5. Use order code as reference
 6. Complete the transaction
 
@@ -546,18 +543,27 @@ orderSchema.index({ orderCode: 1 });
 
 #### Step 7: Receive Order
 1. Track your order status
-2. Pay remaining amount on delivery (COD)
+2. When order arrives, pay remaining amount (COD)
 3. Receive your products
+
+#### Step 8: Pay Remaining Amount (Optional - if online)
+1. Go to **Orders** page
+2. Find your order
+3. Click "Pay Remaining Amount" button
+4. Select payment method (COD/bKash/Nagad)
+5. If online, enter transaction ID
+6. Submit payment
+7. Admin will verify and confirm
 
 ### Tracking Your Order
 
 1. Go to **Orders** page
 2. View all your orders
-3. Check payment status:
-   - **Pending**: Waiting for admin verification
-   - **Confirmed**: Payment verified, order processing
-   - **Rejected**: Payment rejected, contact support
-4. Check order status:
+3. Check **Payment Breakdown**:
+   - **Advance Payment**: Status of delivery fee payment
+   - **Remaining Payment**: Status of product cost payment
+   - **Overall Status**: Partial or Full
+4. Check **Order Status**:
    - **Pending**: Order received
    - **Processing**: Being prepared
    - **Shipped**: On the way
@@ -566,8 +572,8 @@ orderSchema.index({ orderCode: 1 });
 ### Payment Information
 
 **Payment Number**: 01978305319
-**Payment Methods**: bKash, Nagad
-**Delivery Fee**: ৳200 (fixed)
+**Advance Payment**: ৳200 (Delivery Fee)
+**Remaining Payment**: Product Cost (via COD or online)
 **Verification Time**: Within 24 hours
 
 ---
@@ -578,26 +584,40 @@ orderSchema.index({ orderCode: 1 });
 
 1. Login with admin account
 2. Go to **Admin** → **Orders**
-3. View all pending orders
+3. View all orders with payment status
 
-### Verifying Payments
+### Verifying Advance Payments
 
 #### Step 1: Review Pending Orders
-1. Filter by "Payment Status: Pending"
+1. Filter by "Advance Payment Status: Pending"
 2. Check customer details
 3. Verify transaction ID format
 
-#### Step 2: Confirm Payment
-1. Click "Confirm Payment" button
+#### Step 2: Confirm Advance Payment
+1. Click "Confirm Advance Payment" button
 2. Enter the transaction ID
 3. Click "Confirm"
 4. Order status changes to "Processing"
+5. Payment status remains "Partial"
 
-#### Step 3: Reject Payment (if needed)
-1. Click "Reject Payment" button
+#### Step 3: Reject Advance Payment (if needed)
+1. Click "Reject Advance Payment" button
 2. Enter rejection reason
 3. Click "Reject"
 4. Order status changes to "Cancelled"
+
+### Verifying Remaining Payments
+
+#### Step 1: Review Pending Remaining Payments
+1. Filter by "Remaining Payment Status: Pending"
+2. Check payment method
+3. If online, verify transaction ID
+
+#### Step 2: Confirm Remaining Payment
+1. Click "Confirm Remaining Payment" button
+2. Click "Confirm"
+3. Remaining payment status changes to "Paid"
+4. Overall payment status changes to "Full"
 
 ### Managing Orders
 
@@ -616,9 +636,10 @@ orderSchema.index({ orderCode: 1 });
 1. Go to **Admin** → **Dashboard**
 2. View:
    - Total orders
-   - Pending payments
-   - Confirmed payments
-   - Rejected payments
+   - Pending advance payments
+   - Confirmed advance payments
+   - Pending remaining payments
+   - Paid remaining payments
    - Total revenue
 
 ### Best Practices
@@ -628,6 +649,7 @@ orderSchema.index({ orderCode: 1 });
 3. **Clear Communication**: Add notes for customer reference
 4. **Track Revenue**: Monitor payment statistics regularly
 5. **Handle Disputes**: Document rejection reasons clearly
+6. **Follow Up**: Contact customers for pending payments after 24 hours
 
 ---
 
@@ -656,12 +678,12 @@ VITE_FIREBASE_PROJECT_ID=your_project_id
 
 **Payment Number**: 01978305319
 **Delivery Fee**: ৳200 (fixed)
-**Payment Methods**: bKash, Nagad
+**Advance Payment Methods**: bKash, Nagad
+**Remaining Payment Methods**: COD, bKash, Nagad
 **Verification Timeout**: 24 hours
 
 To change these values, update:
-- `Client/src/pages/CheckoutPartialPayment.jsx`
-- `Client/src/pages/CheckoutModern.jsx`
+- `Client/src/components/PayRemainingForm.jsx`
 - `Server/controllers/orderController.js`
 
 ---
@@ -676,7 +698,8 @@ To change these values, update:
 | "Invalid payment method" | Wrong payment method | Select bKash or Nagad |
 | "Transaction ID already exists" | Duplicate transaction ID | Use unique transaction ID |
 | "Order not found" | Invalid order ID | Check order ID |
-| "Cannot confirm payment" | Payment already confirmed/rejected | Check payment status |
+| "Advance payment must be confirmed" | Trying to pay remaining before advance | Confirm advance payment first |
+| "Remaining amount already paid" | Trying to pay twice | Check payment status |
 
 ### Error Responses
 
@@ -712,6 +735,7 @@ To change these values, update:
 5. **Data Encryption**: Sensitive data is encrypted in transit (HTTPS)
 6. **Rate Limiting**: Implement rate limiting for API endpoints
 7. **Input Sanitization**: All user inputs are sanitized
+8. **Transaction Verification**: Manual verification prevents fraud
 
 ---
 
@@ -748,6 +772,13 @@ To change these values, update:
 2. Check if order already exists
 3. Contact support if duplicate
 
+### Cannot Pay Remaining Amount
+**Problem**: "Pay Remaining" button not showing
+**Solution**:
+1. Ensure advance payment is confirmed
+2. Check if remaining payment is already paid
+3. Refresh page to update status
+
 ---
 
 ## Support & Contact
@@ -766,6 +797,7 @@ To change these values, update:
 | 1.0.0 | 2024-01-15 | Initial release |
 | 1.1.0 | 2024-01-20 | Added order tracking |
 | 1.2.0 | 2024-01-25 | Added invoice printing |
+| 2.0.0 | 2024-04-20 | Complete 2-step payment tracking system |
 
 ---
 
@@ -775,5 +807,5 @@ This payment system is proprietary to Borka Bazar. All rights reserved.
 
 ---
 
-**Last Updated**: January 2024
-**Documentation Version**: 1.2.0
+**Last Updated**: April 20, 2024
+**Documentation Version**: 2.0.0

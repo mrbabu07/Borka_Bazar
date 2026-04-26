@@ -57,6 +57,34 @@ const orderSchema = new mongoose.Schema(
         default: 'Pending',
       },
     },
+    advancePayment: {
+      method: {
+        type: String,
+        enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer'],
+        default: 'bKash',
+      },
+      amount: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+      transactionId: {
+        type: String,
+        sparse: true,
+        trim: true,
+      },
+      status: {
+        type: String,
+        enum: ['Pending', 'Confirmed', 'Paid', 'Failed', 'Rejected'],
+        default: 'Pending',
+      },
+      paidAt: Date,
+      confirmedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      confirmedAt: Date,
+    },
     totalPrice: {
       type: Number,
       required: true,
