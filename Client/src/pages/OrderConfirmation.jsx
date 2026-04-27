@@ -18,6 +18,10 @@ export default function OrderConfirmation() {
     // If we have state data, use it
     if (state?.orderCode) {
       console.log('📦 Order confirmation state:', state);
+      console.log('📦 State pricing object:', state.pricing);
+      console.log('📦 State totalPrice:', state.totalPrice);
+      console.log('📦 State deliveryCharge:', state.deliveryCharge);
+      console.log('📦 State subtotal:', state.subtotal);
       
       // Save order ID to localStorage for fallback
       if (state._id) {
@@ -30,7 +34,12 @@ export default function OrderConfirmation() {
       const subtotal = state.pricing?.subtotal || state.subtotal || 0;
       const remainingAmount = state.pricing?.remainingAmount || subtotal || 0;
       
-      console.log('💰 Calculated amounts:', { total, deliveryFee, subtotal, remainingAmount });
+      console.log('💰 Calculated amounts from state:', { total, deliveryFee, subtotal, remainingAmount });
+      console.log('💰 Amount sources:', {
+        total_from: state.pricing?.total ? 'pricing.total' : (state.totalPrice ? 'totalPrice' : (state.total ? 'total' : 'default 0')),
+        deliveryFee_from: state.pricing?.deliveryFee ? 'pricing.deliveryFee' : (state.deliveryCharge ? 'deliveryCharge' : 'default 0'),
+        subtotal_from: state.pricing?.subtotal ? 'pricing.subtotal' : (state.subtotal ? 'subtotal' : 'default 0'),
+      });
       
       setOrder({
         orderCode: state.orderCode,
@@ -63,7 +72,14 @@ export default function OrderConfirmation() {
       const response = await getOrderById(orderId);
       if (response.data?.data) {
         const orderData = response.data.data;
-        console.log('✅ Order fetched:', orderData);
+        console.log('✅ Order fetched from server:', orderData);
+        console.log('✅ Server response fields:', {
+          totalPrice: orderData.totalPrice,
+          deliveryCharge: orderData.deliveryCharge,
+          subtotal: orderData.subtotal,
+          pricing: orderData.pricing,
+          advancePayment: orderData.advancePayment,
+        });
         
         // Support both new 2-step payment structure and legacy orders
         const total = orderData.pricing?.total || orderData.totalPrice || orderData.total || 0;
@@ -71,7 +87,7 @@ export default function OrderConfirmation() {
         const subtotal = orderData.pricing?.subtotal || orderData.subtotal || 0;
         const remainingAmount = orderData.pricing?.remainingAmount || subtotal || 0;
         
-        console.log('💰 Calculated amounts:', { total, deliveryFee, subtotal, remainingAmount });
+        console.log('💰 Calculated amounts from server:', { total, deliveryFee, subtotal, remainingAmount });
         
         setOrder({
           orderCode: orderData.orderCode,

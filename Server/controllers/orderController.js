@@ -40,11 +40,28 @@ exports.createOrder = async (req, res) => {
       specialInstructions,
     } = req.body;
 
+    console.log('📦 createOrder received:', {
+      subtotal,
+      deliveryCharge,
+      deliveryFee,
+      total,
+      totalPrice,
+      paymentMethod,
+      itemsCount: orderItems?.length || products?.length,
+    });
+
     // Use either new schema names or fallback to old schema names
     const items = orderItems || products;
-    const finalSubtotal = subtotal || 0;
-    const finalDeliveryCharge = deliveryCharge || deliveryFee || 0;
-    const finalTotal = totalPrice || total || (finalSubtotal + finalDeliveryCharge);
+    // FIX: Use nullish coalescing (??) instead of || to handle 0 values correctly
+    const finalSubtotal = subtotal ?? 0;
+    const finalDeliveryCharge = (deliveryCharge ?? deliveryFee) ?? 0;
+    const finalTotal = totalPrice ?? total ?? (finalSubtotal + finalDeliveryCharge);
+    
+    console.log('💰 Calculated values:', {
+      finalSubtotal,
+      finalDeliveryCharge,
+      finalTotal,
+    });
     
     // Construct backward-compatible shipping & user logic
     const shipping = shippingInfo || {
