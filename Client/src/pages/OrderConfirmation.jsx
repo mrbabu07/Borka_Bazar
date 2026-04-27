@@ -19,6 +19,11 @@ export default function OrderConfirmation() {
     if (state?.orderCode) {
       console.log('📦 Order confirmation state:', state);
       
+      // Save order ID to localStorage for fallback
+      if (state._id) {
+        localStorage.setItem('lastOrderId', state._id);
+      }
+      
       // Support both new 2-step payment structure and legacy orders
       const total = state.pricing?.total || state.totalPrice || state.total || 0;
       const deliveryFee = state.pricing?.deliveryFee || state.deliveryCharge || 0;
@@ -41,10 +46,12 @@ export default function OrderConfirmation() {
 
     // Try to get the last order from localStorage as fallback
     const lastOrderId = localStorage.getItem('lastOrderId');
+    console.log('📦 No state data, trying localStorage:', lastOrderId);
     if (lastOrderId) {
       fetchOrder(lastOrderId);
     } else {
       // Redirect to home if no order data
+      console.log('❌ No order data found, redirecting to home');
       setLoading(false);
       navigate('/');
     }
