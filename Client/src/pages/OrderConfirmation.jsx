@@ -17,11 +17,15 @@ export default function OrderConfirmation() {
   useEffect(() => {
     // If we have state data, use it
     if (state?.orderCode) {
+      console.log('📦 Order confirmation state:', state);
+      
       // Support both new 2-step payment structure and legacy orders
       const total = state.pricing?.total || state.totalPrice || state.total || 0;
       const deliveryFee = state.pricing?.deliveryFee || state.deliveryCharge || 0;
       const subtotal = state.pricing?.subtotal || state.subtotal || 0;
       const remainingAmount = state.pricing?.remainingAmount || subtotal || 0;
+      
+      console.log('💰 Calculated amounts:', { total, deliveryFee, subtotal, remainingAmount });
       
       setOrder({
         orderCode: state.orderCode,
@@ -48,14 +52,19 @@ export default function OrderConfirmation() {
 
   const fetchOrder = async (orderId) => {
     try {
+      console.log('📦 Fetching order from server:', orderId);
       const response = await getOrderById(orderId);
       if (response.data?.data) {
         const orderData = response.data.data;
+        console.log('✅ Order fetched:', orderData);
+        
         // Support both new 2-step payment structure and legacy orders
         const total = orderData.pricing?.total || orderData.totalPrice || orderData.total || 0;
         const deliveryFee = orderData.pricing?.deliveryFee || orderData.deliveryCharge || 0;
         const subtotal = orderData.pricing?.subtotal || orderData.subtotal || 0;
         const remainingAmount = orderData.pricing?.remainingAmount || subtotal || 0;
+        
+        console.log('💰 Calculated amounts:', { total, deliveryFee, subtotal, remainingAmount });
         
         setOrder({
           orderCode: orderData.orderCode,
@@ -67,7 +76,7 @@ export default function OrderConfirmation() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch order:', error);
+      console.error('❌ Failed to fetch order:', error);
     } finally {
       setLoading(false);
     }
