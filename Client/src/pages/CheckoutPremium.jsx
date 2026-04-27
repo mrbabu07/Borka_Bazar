@@ -195,21 +195,35 @@ export default function CheckoutPremium() {
           subtotal: orderData_response?.subtotal || cartTotal,
         });
         
+        // Ensure we have valid values (not 0 or undefined)
+        const confirmationTotalPrice = orderData_response?.totalPrice ?? finalTotal;
+        const confirmationDeliveryCharge = orderData_response?.deliveryCharge ?? deliveryCharge;
+        const confirmationSubtotal = orderData_response?.subtotal ?? cartTotal;
+        
+        console.log('🔄 Final values being passed to confirmation:', {
+          confirmationTotalPrice,
+          confirmationDeliveryCharge,
+          confirmationSubtotal,
+          finalTotal,
+          deliveryCharge,
+          cartTotal,
+        });
+        
         navigate("/order-confirmation", {
           state: {
             orderCode: orderData_response?.orderCode,
             _id: orderData_response?._id,
             orderId: orderData_response?._id,
-            totalPrice: orderData_response?.totalPrice || finalTotal,
-            deliveryCharge: orderData_response?.deliveryCharge || deliveryCharge,
-            subtotal: orderData_response?.subtotal || cartTotal,
+            totalPrice: confirmationTotalPrice,
+            deliveryCharge: confirmationDeliveryCharge,
+            subtotal: confirmationSubtotal,
             paymentInfo: orderData_response?.paymentInfo,
             advancePayment: orderData_response?.advancePayment,
             pricing: {
-              total: orderData_response?.totalPrice || finalTotal,
-              deliveryFee: orderData_response?.deliveryCharge || deliveryCharge,
-              subtotal: orderData_response?.subtotal || cartTotal,
-              remainingAmount: (orderData_response?.subtotal || cartTotal),
+              total: confirmationTotalPrice,
+              deliveryFee: confirmationDeliveryCharge,
+              subtotal: confirmationSubtotal,
+              remainingAmount: confirmationSubtotal,
             },
             paymentMethod: "COD",
           },

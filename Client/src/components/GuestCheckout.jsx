@@ -72,21 +72,33 @@ export default function GuestCheckout() {
           subtotal: orderData_response?.subtotal || total,
         });
         
+        // Ensure we have valid values (not 0 or undefined)
+        const confirmationTotalPrice = orderData_response?.totalPrice ?? total;
+        const confirmationDeliveryCharge = orderData_response?.deliveryCharge ?? 0;
+        const confirmationSubtotal = orderData_response?.subtotal ?? total;
+        
+        console.log('🔄 Final values being passed to confirmation:', {
+          confirmationTotalPrice,
+          confirmationDeliveryCharge,
+          confirmationSubtotal,
+          total,
+        });
+        
         navigate("/order-confirmation", {
           state: {
             orderCode: orderData_response?.orderCode,
             _id: orderData_response?._id,
             orderId: orderData_response?._id,
-            totalPrice: orderData_response?.totalPrice || total,
-            deliveryCharge: orderData_response?.deliveryCharge || 0,
-            subtotal: orderData_response?.subtotal || total,
+            totalPrice: confirmationTotalPrice,
+            deliveryCharge: confirmationDeliveryCharge,
+            subtotal: confirmationSubtotal,
             paymentInfo: orderData_response?.paymentInfo,
             advancePayment: orderData_response?.advancePayment,
             pricing: {
-              total: orderData_response?.totalPrice || total,
-              deliveryFee: orderData_response?.deliveryCharge || 0,
-              subtotal: orderData_response?.subtotal || total,
-              remainingAmount: (orderData_response?.subtotal || total),
+              total: confirmationTotalPrice,
+              deliveryFee: confirmationDeliveryCharge,
+              subtotal: confirmationSubtotal,
+              remainingAmount: confirmationSubtotal,
             },
             paymentMethod: guestInfo.paymentMethod,
             isGuest: true,
