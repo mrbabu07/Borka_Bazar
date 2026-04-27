@@ -178,9 +178,23 @@ export default function CheckoutPremium() {
         clearCart();
         toast.success("Order placed successfully!");
         const orderData_response = response.data?.data || response.data;
+        console.log('📦 Order created, response data:', orderData_response);
+        console.log('💰 Response fields:', {
+          totalPrice: orderData_response?.totalPrice,
+          deliveryCharge: orderData_response?.deliveryCharge,
+          subtotal: orderData_response?.subtotal,
+          pricing: orderData_response?.pricing,
+        });
+        
         const orderId = orderData_response?._id || "NEW";
         
         // Redirect to order confirmation with full order data
+        console.log('🔄 Redirecting to order confirmation with state:', {
+          totalPrice: orderData_response?.totalPrice || finalTotal,
+          deliveryCharge: orderData_response?.deliveryCharge || deliveryCharge,
+          subtotal: orderData_response?.subtotal || cartTotal,
+        });
+        
         navigate("/order-confirmation", {
           state: {
             orderCode: orderData_response?.orderCode,

@@ -58,6 +58,20 @@ export default function GuestCheckout() {
       if (response.data.success) {
         clearCart();
         const orderData_response = response.data?.data || response.data;
+        console.log('📦 Order created, response data:', orderData_response);
+        console.log('💰 Response fields:', {
+          totalPrice: orderData_response?.totalPrice,
+          deliveryCharge: orderData_response?.deliveryCharge,
+          subtotal: orderData_response?.subtotal,
+          pricing: orderData_response?.pricing,
+        });
+        
+        console.log('🔄 Redirecting to order confirmation with state:', {
+          totalPrice: orderData_response?.totalPrice || total,
+          deliveryCharge: orderData_response?.deliveryCharge || 0,
+          subtotal: orderData_response?.subtotal || total,
+        });
+        
         navigate("/order-confirmation", {
           state: {
             orderCode: orderData_response?.orderCode,

@@ -308,6 +308,14 @@ export default function Checkout() {
 
       // Get order data from response
       const orderData_response = response.data?.data || response.data;
+      console.log('📦 Order created, response data:', orderData_response);
+      console.log('💰 Response fields:', {
+        totalPrice: orderData_response?.totalPrice,
+        deliveryCharge: orderData_response?.deliveryCharge,
+        subtotal: orderData_response?.subtotal,
+        pricing: orderData_response?.pricing,
+      });
+      
       const orderId = orderData_response?._id || "NEW";
       const orderIdShort =
         orderId !== "NEW" ? orderId.slice(-8).toUpperCase() : "NEW";
@@ -323,6 +331,12 @@ export default function Checkout() {
       clearCart();
       
       // Redirect to order confirmation with full order data
+      console.log('🔄 Redirecting to order confirmation with state:', {
+        totalPrice: orderData_response?.totalPrice || finalTotal,
+        deliveryCharge: orderData_response?.deliveryCharge || deliveryCharge,
+        subtotal: orderData_response?.subtotal || subtotal,
+      });
+      
       navigate("/order-confirmation", {
         state: {
           orderCode: orderData_response?.orderCode,
