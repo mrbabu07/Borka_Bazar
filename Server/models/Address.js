@@ -3,6 +3,17 @@ const { ObjectId } = require("mongodb");
 class Address {
   constructor(db) {
     this.collection = db.collection("addresses");
+    this.createIndexes();
+  }
+
+  async createIndexes() {
+    try {
+      await this.collection.createIndex({ userId: 1, isDefault: -1 });
+      await this.collection.createIndex({ userId: 1, createdAt: -1 });
+      await this.collection.createIndex({ division: 1, district: 1, upazila: 1 });
+    } catch (error) {
+      console.error("Error creating Address indexes:", error);
+    }
   }
 
   async findByUserId(userId) {
@@ -91,7 +102,16 @@ class Address {
   }
 
   async validateAddress(addressData) {
-    const required = ["name", "phone", "address", "city", "area"];
+    const required = [
+      "name",
+      "phone",
+      "address",
+      "division",
+      "district",
+      "upazila",
+      "union",
+      "area",
+    ];
     const missing = required.filter((field) => !addressData[field]);
 
     if (missing.length > 0) {

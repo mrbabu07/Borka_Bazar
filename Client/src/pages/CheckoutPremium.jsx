@@ -2,8 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
 import useAuth from "../hooks/useAuth";
-import { createOrder, validateCoupon } from "../services/api";
+import {
+  createAddress,
+  createOrder,
+  getDefaultAddress,
+  getUserAddresses,
+  validateCoupon,
+} from "../services/api";
 import { toast } from "react-hot-toast";
+import {
+  BANGLADESH_DIVISIONS,
+  getAddressSummary,
+  normalizeAddress,
+  toAddressPayload,
+} from "../utils/bangladeshAddress";
 
 const PAYMENT_ACCOUNTS = {
   bKash: {
@@ -16,6 +28,8 @@ const PAYMENT_ACCOUNTS = {
   },
 };
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+const fieldClass =
+  "w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white";
 
 export default function CheckoutPremium() {
   const navigate = useNavigate();
@@ -27,12 +41,21 @@ export default function CheckoutPremium() {
     email: user?.email || "",
     phone: "",
     address: "",
-    city: "",
+    division: "",
+    district: "",
+    upazila: "",
+    union: "",
+    area: "",
     postalCode: "",
     notes: "",
   });
 
   const [loading, setLoading] = useState(false);
+  const [defaultAddress, setDefaultAddress] = useState(null);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
+  const [addressLoaded, setAddressLoaded] = useState(false);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [deliverySettings, setDeliverySettings] = useState(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -76,17 +99,51 @@ export default function CheckoutPremium() {
     fetchDeliverySettings();
   }, []);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadDefaultAddress() {
+      if (!user) return;
+
+      setFormData((current) => ({
+        ...current,
+        fullName: user.displayName || current.fullName,
+        email: user.email || current.email,
+      }));
+
+      try {
+        const response = await getDefaultAddress();
+        if (ignore) return;
+        if (response.data?.success && response.data?.data) {
+          setDefaultAddress(response.data.data);
+          loadAddress(response.data.data);
+        }
+      } catch (error) {
+        if (error.response?.status !== 404) {
+          console.error("Failed to load default address:", error);
+        }
+      }
+    }
+
+    loadDefaultAddress();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
+
   // Use delivery settings or BDT defaults
   const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
   const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge ?? 100;
   const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
   
+  const chargeableSubtotal = Math.max(cartTotal - couponDiscount, 0);
   const deliveryCharge =
-    freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold
+    freeDeliveryEnabled && chargeableSubtotal >= freeDeliveryThreshold
       ? 0
       : deliveryChargeAmount;
   
-  const finalTotal = cartTotal + deliveryCharge - couponDiscount;
+  const finalTotal = chargeableSubtotal + deliveryCharge;
   const dueAmount = Math.max(finalTotal - deliveryCharge, 0);
   const selectedPaymentAccount = PAYMENT_ACCOUNTS[paymentInfo.method];
 
@@ -102,6 +159,35 @@ export default function CheckoutPremium() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const loadAddress = (address) => {
+    const normalized = normalizeAddress(address);
+    setFormData((current) => ({
+      ...current,
+      fullName: normalized.name || current.fullName,
+      phone: normalized.phone || current.phone,
+      address: normalized.address,
+      division: normalized.division,
+      district: normalized.district,
+      upazila: normalized.upazila,
+      union: normalized.union,
+      area: normalized.area,
+      postalCode: normalized.zipCode,
+    }));
+    setAddressLoaded(true);
+    setShowSavedAddresses(false);
+  };
+
+  const fetchSavedAddresses = async () => {
+    try {
+      const response = await getUserAddresses();
+      setSavedAddresses(response.data?.data || []);
+      setShowSavedAddresses(true);
+    } catch (error) {
+      console.error("Failed to load saved addresses:", error);
+      toast.error("Failed to load saved addresses");
+    }
   };
 
   const handlePaymentChange = (e) => {
@@ -152,18 +238,27 @@ export default function CheckoutPremium() {
     e.preventDefault();
 
     // Validation
-    if (!formData.fullName || !formData.phone || !formData.address || !formData.city) {
+    if (
+      !formData.fullName ||
+      !formData.phone ||
+      !formData.address ||
+      !formData.division ||
+      !formData.district ||
+      !formData.upazila ||
+      !formData.union ||
+      !formData.area
+    ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     if (deliveryCharge > 0 && !paymentInfo.transactionId.trim()) {
-      toast.error("Please enter your bKash transaction ID");
+      toast.error(`Please enter your ${selectedPaymentAccount.label} transaction ID`);
       return;
     }
 
     if (deliveryCharge > 0 && !paymentInfo.senderNumber.trim()) {
-      toast.error("Please enter the bKash sender number");
+      toast.error(`Please enter the ${selectedPaymentAccount.label} sender number`);
       return;
     }
 
@@ -178,8 +273,26 @@ export default function CheckoutPremium() {
     try {
       setLoading(true);
 
-      const orderData = {
-        products: cart.map((item) => ({
+      if (saveAsDefault || (!defaultAddress && user)) {
+        await createAddress({
+          ...toAddressPayload({
+            name: formData.fullName,
+            phone: formData.phone,
+            address: formData.address,
+            division: formData.division,
+            district: formData.district,
+            upazila: formData.upazila,
+            union: formData.union,
+            area: formData.area,
+            zipCode: formData.postalCode,
+          }),
+          isDefault: true,
+        }).catch((error) => {
+          console.error("Failed to save checkout address:", error);
+        });
+      }
+
+      const orderItems = cart.map((item) => ({
           productId: item._id,
           title: item.title,
           price: item.price,
@@ -187,19 +300,35 @@ export default function CheckoutPremium() {
           selectedSize: item.selectedSize || null,
           selectedColor: item.selectedColor || null,
           image: item.selectedImage || item.image,
-        })),
+        }));
+
+      const shippingInfo = {
+        name: formData.fullName,
+        email: formData.email || user?.email || "",
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.district,
+        division: formData.division,
+        district: formData.district,
+        upazila: formData.upazila,
+        union: formData.union,
+        area: formData.area,
+        zipCode: formData.postalCode || "",
+      };
+
+      const orderData = {
+        products: orderItems,
+        orderItems,
         total: finalTotal,
+        totalPrice: finalTotal,
         subtotal: cartTotal,
+        deliveryFee: deliveryCharge,
         deliveryCharge: deliveryCharge,
-        shippingInfo: {
-          name: formData.fullName,
-          email: formData.email || user?.email || "",
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          area: "",
-          zipCode: formData.postalCode || "",
-        },
+        shippingInfo,
+        customerName: shippingInfo.name,
+        customerPhone: shippingInfo.phone,
+        customerEmail: shippingInfo.email,
+        customerAddress: shippingInfo.address,
         paymentMethod: paymentInfo.method,
         transactionId: paymentInfo.transactionId.trim(),
         senderNumber: paymentInfo.senderNumber.trim(),
@@ -223,8 +352,6 @@ export default function CheckoutPremium() {
           subtotal: orderData_response?.subtotal,
           pricing: orderData_response?.pricing,
         });
-        
-        const orderId = orderData_response?._id || "NEW";
         
         // Redirect to order confirmation with full order data
         console.log('🔄 Redirecting to order confirmation with state:', {
@@ -269,7 +396,11 @@ export default function CheckoutPremium() {
       }
     } catch (error) {
       console.error("Order creation failed:", error);
-      toast.error(error.response?.data?.message || "Failed to place order");
+      const apiMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to place order";
+      toast.error(apiMessage);
     } finally {
       setLoading(false);
     }
@@ -278,20 +409,20 @@ export default function CheckoutPremium() {
   // Show loading or empty state while redirecting
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center dark:bg-gray-950">
         <div className="text-center px-4">
-          <p className="text-gray-500">Redirecting to cart...</p>
+          <p className="text-gray-500 dark:text-gray-400">Redirecting to cart...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       {/* Page Header */}
-      <div className="bg-gray-50 border-b border-gray-100 py-12">
+      <div className="bg-gray-50 border-b border-gray-100 py-12 dark:border-gray-800 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="font-display text-3xl md:text-4xl text-black text-center">
+          <h1 className="font-display text-3xl md:text-4xl text-black text-center dark:text-white">
             Checkout
           </h1>
         </div>
@@ -304,12 +435,12 @@ export default function CheckoutPremium() {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Contact Information */}
               <div>
-                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
+                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
                   Contact Information
                 </h2>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                       Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -318,13 +449,13 @@ export default function CheckoutPremium() {
                       value={formData.fullName}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      className={fieldClass}
                       placeholder="Enter your full name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                       Email Address
                     </label>
                     <input
@@ -332,13 +463,13 @@ export default function CheckoutPremium() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      className={fieldClass}
                       placeholder="your@email.com"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                       Phone Number <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -347,7 +478,7 @@ export default function CheckoutPremium() {
                       value={formData.phone}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      className={fieldClass}
                       placeholder="+880 1XXX-XXXXXX"
                     />
                   </div>
@@ -355,14 +486,52 @@ export default function CheckoutPremium() {
               </div>
 
               {/* Shipping Address */}
-              <div className="pt-8 border-t border-gray-100">
-                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
-                  Shipping Address
-                </h2>
+              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="text-sm font-medium text-black uppercase tracking-wide dark:text-white">
+                    Shipping Address
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={fetchSavedAddresses}
+                    className="self-start rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-black transition hover:border-black sm:self-auto dark:border-gray-700 dark:text-white dark:hover:border-white"
+                  >
+                    Use Saved Address
+                  </button>
+                </div>
+                {defaultAddress && addressLoaded && (
+                  <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                    <p className="font-semibold">Default address loaded</p>
+                    <p className="mt-1">{getAddressSummary(defaultAddress)}</p>
+                  </div>
+                )}
+                {showSavedAddresses && (
+                  <div className="mb-5 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+                    {savedAddresses.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No saved addresses found.</p>
+                    ) : (
+                      savedAddresses.map((address) => (
+                        <button
+                          key={address._id}
+                          type="button"
+                          onClick={() => loadAddress(address)}
+                          className="block w-full rounded-lg border border-gray-200 bg-white p-3 text-left transition hover:border-black dark:border-gray-800 dark:bg-gray-950 dark:hover:border-white"
+                        >
+                          <span className="block text-sm font-bold text-black dark:text-white">
+                            {address.name} {address.isDefault ? "(Default)" : ""}
+                          </span>
+                          <span className="mt-1 block text-sm text-gray-600 dark:text-gray-300">
+                            {address.phone} - {getAddressSummary(address)}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
-                      Street Address <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                      House / Road / Details <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       name="address"
@@ -370,29 +539,98 @@ export default function CheckoutPremium() {
                       onChange={handleChange}
                       required
                       rows="3"
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors resize-none"
-                      placeholder="House/Flat no, Street, Area"
+                      className={`${fieldClass} resize-none`}
+                      placeholder="House/flat, road, landmark"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
-                        City <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                        Division <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="division"
+                        value={formData.division}
+                        onChange={handleChange}
+                        required
+                        className={fieldClass}
+                      >
+                        <option value="">Select division</option>
+                        {BANGLADESH_DIVISIONS.map((division) => (
+                          <option key={division} value={division}>
+                            {division}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                        District <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        name="city"
-                        value={formData.city}
+                        name="district"
+                        value={formData.district}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
-                        placeholder="Dhaka"
+                        className={fieldClass}
+                        placeholder="District"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                        Upazila <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="upazila"
+                        value={formData.upazila}
+                        onChange={handleChange}
+                        required
+                        className={fieldClass}
+                        placeholder="Upazila"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                        Union <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="union"
+                        value={formData.union}
+                        onChange={handleChange}
+                        required
+                        className={fieldClass}
+                        placeholder="Union"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                        Area Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="area"
+                        value={formData.area}
+                        onChange={handleChange}
+                        required
+                        className={fieldClass}
+                        placeholder="Village/area name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                         Postal Code
                       </label>
                       <input
@@ -400,17 +638,27 @@ export default function CheckoutPremium() {
                         name="postalCode"
                         value={formData.postalCode}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                        className={fieldClass}
                         placeholder="1200"
                       />
                     </div>
                   </div>
+
+                  <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={saveAsDefault}
+                      onChange={(event) => setSaveAsDefault(event.target.checked)}
+                      className="h-4 w-4 border-gray-300 text-black focus:ring-black dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:ring-white"
+                    />
+                    Save this address as default
+                  </label>
                 </div>
               </div>
 
               {/* Order Notes */}
-              <div className="pt-8 border-t border-gray-100">
-                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
+              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
                   Order Notes (Optional)
                 </h2>
                 <textarea
@@ -418,14 +666,14 @@ export default function CheckoutPremium() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows="4"
-                  className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors resize-none"
+                  className={`${fieldClass} resize-none`}
                   placeholder="Any special instructions for your order..."
                 />
               </div>
 
               {/* Delivery Fee Payment */}
-              <div className="pt-8 border-t border-gray-100">
-                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
+              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+                <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
                   Delivery Fee Payment
                 </h2>
                 <div className="mb-5 grid grid-cols-2 gap-3">
@@ -441,24 +689,24 @@ export default function CheckoutPremium() {
                       }
                       className={`rounded-lg border-2 p-4 text-left transition ${
                         paymentInfo.method === method
-                          ? "border-pink-500 bg-pink-50"
-                          : "border-gray-200 bg-white hover:border-pink-200"
+                          ? "border-pink-500 bg-pink-50 dark:bg-pink-950/30"
+                          : "border-gray-200 bg-white hover:border-pink-200 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-pink-700"
                       }`}
                     >
-                      <p className="text-sm font-bold text-gray-950">{account.label}</p>
-                      <p className="mt-1 font-mono text-sm text-gray-600">{account.number}</p>
+                      <p className="text-sm font-bold text-gray-950 dark:text-white">{account.label}</p>
+                      <p className="mt-1 font-mono text-sm text-gray-600 dark:text-gray-300">{account.number}</p>
                     </button>
                   ))}
                 </div>
 
-                <div className="rounded-lg border-2 border-pink-200 bg-pink-50 p-5 mb-5">
+                <div className="rounded-lg border-2 border-pink-200 bg-pink-50 p-5 mb-5 dark:border-pink-900/60 dark:bg-pink-950/30">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-semibold text-pink-800">
                         Send Money to this {selectedPaymentAccount.label} number
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <p className="rounded-lg bg-white px-3 py-2 font-mono text-xl font-bold text-pink-800 shadow-sm">
+                        <p className="rounded-lg bg-white px-3 py-2 font-mono text-xl font-bold text-pink-800 shadow-sm dark:bg-gray-950 dark:text-pink-200">
                           {selectedPaymentAccount.number}
                         </p>
                         <button
@@ -467,7 +715,7 @@ export default function CheckoutPremium() {
                             navigator.clipboard.writeText(selectedPaymentAccount.number);
                             toast.success(`${selectedPaymentAccount.label} number copied`);
                           }}
-                          className="rounded-lg border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-pink-700 transition hover:bg-pink-100"
+                          className="rounded-lg border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-pink-700 transition hover:bg-pink-100 dark:border-pink-900 dark:bg-gray-950 dark:text-pink-200 dark:hover:bg-pink-950"
                         >
                           Copy
                         </button>
@@ -484,7 +732,7 @@ export default function CheckoutPremium() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                       {selectedPaymentAccount.label} Transaction ID {deliveryCharge > 0 && <span className="text-red-500">*</span>}
                     </label>
                     <input
@@ -493,13 +741,13 @@ export default function CheckoutPremium() {
                       value={paymentInfo.transactionId}
                       onChange={handlePaymentChange}
                       required={deliveryCharge > 0}
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      className={fieldClass}
                       placeholder={`${selectedPaymentAccount.label} transaction ID`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
                       Your {selectedPaymentAccount.label} Sender Number {deliveryCharge > 0 && <span className="text-red-500">*</span>}
                     </label>
                     <input
@@ -508,7 +756,7 @@ export default function CheckoutPremium() {
                       value={paymentInfo.senderNumber}
                       onChange={handlePaymentChange}
                       required={deliveryCharge > 0}
-                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      className={fieldClass}
                       placeholder="01XXXXXXXXX"
                     />
                   </div>
@@ -530,14 +778,14 @@ export default function CheckoutPremium() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1 mt-12 lg:mt-0">
-            <div className="bg-gray-50 p-8 sticky top-24">
-              <h2 className="font-display text-xl text-black mb-6">Order Summary</h2>
+            <div className="bg-gray-50 p-8 sticky top-24 dark:bg-gray-900">
+              <h2 className="font-display text-xl text-black mb-6 dark:text-white">Order Summary</h2>
 
               {/* Cart Items */}
-              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
                 {cart.map((item) => (
                   <div key={`${item._id}_${item.selectedSize || 'no-size'}_${item.selectedColor?.name || 'no-color'}`} className="flex gap-4">
-                    <div className="w-16 h-20 flex-shrink-0 bg-white border border-gray-200 overflow-hidden">
+                    <div className="w-16 h-20 flex-shrink-0 bg-white border border-gray-200 overflow-hidden dark:border-gray-800 dark:bg-gray-950">
                       <img
                         src={item.selectedImage || item.image}
                         alt={item.title}
@@ -545,7 +793,7 @@ export default function CheckoutPremium() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-black font-medium truncate mb-2">
+                      <p className="text-sm text-black font-medium truncate mb-2 dark:text-white">
                         {item.title}
                       </p>
                       
@@ -572,10 +820,10 @@ export default function CheckoutPremium() {
                       )}
                       
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
                           ৳{item.price.toLocaleString()} × {item.quantity}
                         </p>
-                        <p className="text-sm font-semibold text-black">
+                        <p className="text-sm font-semibold text-black dark:text-white">
                           ৳{(item.price * item.quantity).toLocaleString()}
                         </p>
                       </div>
@@ -585,10 +833,10 @@ export default function CheckoutPremium() {
               </div>
 
               {/* Totals */}
-              <div className="space-y-3 mb-6 pb-6 border-b border-gray-200">
+              <div className="space-y-3 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
                 {/* Coupon Section */}
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="block text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-950">
+                  <label className="block text-sm font-medium text-black mb-3 uppercase tracking-wide dark:text-white">
                     Promo Code
                   </label>
                   <div className="flex gap-2">
@@ -625,22 +873,22 @@ export default function CheckoutPremium() {
                 </div>
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Product Total</span>
-                  <span className="font-medium text-black">
+                  <span className="text-gray-600 dark:text-gray-300">Product Total</span>
+                  <span className="font-medium text-black dark:text-white">
                     ৳{cartTotal.toLocaleString()}
                   </span>
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount</span>
+                    <span className="text-gray-600 dark:text-gray-300">Discount</span>
                     <span className="font-medium text-green-600">
                       -৳{couponDiscount.toLocaleString()}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-black'}`}>
+                  <span className="text-gray-600 dark:text-gray-300">Shipping</span>
+                  <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600 dark:text-green-400' : 'text-black dark:text-white'}`}>
                     {deliveryCharge === 0 ? 'Free' : `৳${deliveryCharge.toLocaleString()}`}
                   </span>
                 </div>
@@ -652,16 +900,16 @@ export default function CheckoutPremium() {
                   <span className="font-semibold text-orange-800">Pay on Delivery</span>
                   <span className="font-bold text-orange-700">৳{dueAmount.toLocaleString()}</span>
                 </div>
-                {freeDeliveryEnabled && cartTotal < freeDeliveryThreshold && (
+                {freeDeliveryEnabled && chargeableSubtotal < freeDeliveryThreshold && (
                   <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                    Add ৳{(freeDeliveryThreshold - cartTotal).toLocaleString()} more for free delivery
+                    Add ৳{(freeDeliveryThreshold - chargeableSubtotal).toLocaleString()} more for free delivery
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between text-lg mb-8">
-                <span className="font-medium text-black">Total</span>
-                <span className="font-display text-2xl font-semibold text-black">
+                <span className="font-medium text-black dark:text-white">Total</span>
+                <span className="font-display text-2xl font-semibold text-black dark:text-white">
                   ৳{finalTotal.toLocaleString()}
                 </span>
               </div>
@@ -679,8 +927,8 @@ export default function CheckoutPremium() {
               </div>
 
               {/* Security Badge */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center gap-3 text-xs text-gray-500">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -694,3 +942,6 @@ export default function CheckoutPremium() {
     </div>
   );
 }
+
+
+

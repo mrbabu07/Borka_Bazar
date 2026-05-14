@@ -11,6 +11,28 @@ const getUserAddresses = async (req, res) => {
   }
 };
 
+const cleanAddressData = (body = {}, userId) => {
+  const cleanText = (value, maxLength = 160) =>
+    typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+  const district = cleanText(body.district || body.city, 80);
+  const upazila = cleanText(body.upazila || body.upzila, 80);
+
+  return {
+    userId,
+    name: cleanText(body.name || body.fullName, 80),
+    phone: cleanText(body.phone, 30),
+    address: cleanText(body.address || body.street, 240),
+    division: cleanText(body.division, 80),
+    district,
+    upazila,
+    union: cleanText(body.union, 80),
+    area: cleanText(body.area, 120),
+    city: district,
+    zipCode: cleanText(body.zipCode || body.postalCode, 20),
+    isDefault: Boolean(body.isDefault),
+  };
+};
+
 const getAddressById = async (req, res) => {
   try {
     const Address = req.app.locals.models.Address;
@@ -61,10 +83,7 @@ const createAddress = async (req, res) => {
   try {
     const Address = req.app.locals.models.Address;
     const userId = req.user.uid;
-    const addressData = {
-      ...req.body,
-      userId,
-    };
+    const addressData = cleanAddressData(req.body, userId);
 
     // Validate address data
     const validation = await Address.validateAddress(addressData);
@@ -99,7 +118,8 @@ const updateAddress = async (req, res) => {
     const Address = req.app.locals.models.Address;
     const { id } = req.params;
     const userId = req.user.uid;
-    const updateData = req.body;
+    const updateData = cleanAddressData(req.body, userId);
+    delete updateData.userId;
 
     // Check if address exists and belongs to user
     const existingAddress = await Address.findById(id);

@@ -9,21 +9,20 @@ import {
 } from "../services/api";
 import Loading from "../components/Loading";
 import Modal from "../components/Modal";
+import {
+  BANGLADESH_DIVISIONS,
+  createEmptyAddress,
+  getAddressSummary,
+  normalizeAddress,
+  toAddressPayload,
+} from "../utils/bangladeshAddress";
 
 export default function Addresses() {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    city: "",
-    area: "",
-    zipCode: "",
-    isDefault: false,
-  });
+  const [formData, setFormData] = useState(createEmptyAddress());
 
   useEffect(() => {
     fetchAddresses();
@@ -49,9 +48,9 @@ export default function Addresses() {
     e.preventDefault();
     try {
       if (editingAddress) {
-        await updateAddress(editingAddress._id, formData);
+        await updateAddress(editingAddress._id, toAddressPayload(formData));
       } else {
-        await createAddress(formData);
+        await createAddress(toAddressPayload(formData));
       }
       await fetchAddresses();
       handleCloseModal();
@@ -67,15 +66,7 @@ export default function Addresses() {
 
   const handleEdit = (address) => {
     setEditingAddress(address);
-    setFormData({
-      name: address.name,
-      phone: address.phone,
-      address: address.address,
-      city: address.city,
-      area: address.area,
-      zipCode: address.zipCode || "",
-      isDefault: address.isDefault,
-    });
+    setFormData(normalizeAddress(address));
     setShowModal(true);
   };
 
@@ -103,15 +94,7 @@ export default function Addresses() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingAddress(null);
-    setFormData({
-      name: "",
-      phone: "",
-      address: "",
-      city: "",
-      area: "",
-      zipCode: "",
-      isDefault: false,
-    });
+    setFormData(createEmptyAddress());
   };
 
   if (loading) return <Loading />;
@@ -235,9 +218,7 @@ export default function Addresses() {
 
                 <div className="mb-4">
                   <p className="text-gray-700 text-sm leading-relaxed">
-                    {address.address}
-                    <br />
-                    {address.area}, {address.city}
+                    {getAddressSummary(address)}
                     {address.zipCode && ` - ${address.zipCode}`}
                   </p>
                 </div>
@@ -333,45 +314,90 @@ export default function Addresses() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Area/District *
+                Division *
               </label>
-              <input
-                type="text"
-                value={formData.area}
+              <select
+                value={formData.division}
                 onChange={(e) =>
-                  setFormData({ ...formData, area: e.target.value })
+                  setFormData({ ...formData, division: e.target.value })
                 }
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                placeholder="e.g., Dhanmondi, Gulshan"
+              >
+                <option value="">Select Division</option>
+                {BANGLADESH_DIVISIONS.map((division) => (
+                  <option key={division} value={division}>
+                    {division}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                District *
+              </label>
+              <input
+                type="text"
+                value={formData.district}
+                onChange={(e) =>
+                  setFormData({ ...formData, district: e.target.value })
+                }
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                placeholder="District"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Upazila *
+              </label>
+              <input
+                type="text"
+                value={formData.upazila}
+                onChange={(e) =>
+                  setFormData({ ...formData, upazila: e.target.value })
+                }
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                placeholder="Upazila"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                City *
+                Union *
               </label>
-              <select
-                value={formData.city}
+              <input
+                type="text"
+                value={formData.union}
                 onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
+                  setFormData({ ...formData, union: e.target.value })
                 }
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              >
-                <option value="">Select City</option>
-                <option value="Dhaka">Dhaka</option>
-                <option value="Chittagong">Chittagong</option>
-                <option value="Sylhet">Sylhet</option>
-                <option value="Rajshahi">Rajshahi</option>
-                <option value="Khulna">Khulna</option>
-                <option value="Barisal">Barisal</option>
-                <option value="Rangpur">Rangpur</option>
-                <option value="Mymensingh">Mymensingh</option>
-                <option value="Comilla">Comilla</option>
-                <option value="Gazipur">Gazipur</option>
-              </select>
+                placeholder="Union"
+              />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Area Name *
+            </label>
+            <input
+              type="text"
+              value={formData.area}
+              onChange={(e) =>
+                setFormData({ ...formData, area: e.target.value })
+              }
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              placeholder="Village or area name"
+            />
           </div>
 
           <div>
