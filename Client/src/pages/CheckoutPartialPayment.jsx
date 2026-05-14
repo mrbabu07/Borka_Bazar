@@ -4,12 +4,16 @@ import useCart from '../hooks/useCart';
 import useAuth from '../hooks/useAuth';
 import { useCurrency } from '../hooks/useCurrency';
 import toast from 'react-hot-toast';
+import { createOrder } from '../services/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export default function CheckoutPartialPayment() {
   const navigate = useNavigate();
   const { cart, clearCart } = useCart();
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
+  const paymentNumber = process.env.NEXT_PUBLIC_BKASH_PAYMENT_NUMBER || '01878305319';
 
   const [loading, setLoading] = useState(false);
   const [orderCode, setOrderCode] = useState('');
@@ -18,6 +22,7 @@ export default function CheckoutPartialPayment() {
   const [paymentData, setPaymentData] = useState({
     method: 'bKash',
     transactionId: '',
+    senderNumber: '',
   });
 
   const [orderSummary, setOrderSummary] = useState({
@@ -34,7 +39,7 @@ export default function CheckoutPartialPayment() {
     const fetchDeliverySettings = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          `${API_URL}/delivery-settings?t=${Date.now()}`,
           {
             cache: 'no-cache',
             headers: {
@@ -46,9 +51,17 @@ export default function CheckoutPartialPayment() {
         const data = await response.json();
         if (data.success) {
           setDeliverySettings(data.data);
+          const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          const deliveryFee =
+            data.data.freeDeliveryEnabled !== false &&
+            subtotal >= (data.data.freeDeliveryThreshold || 0)
+              ? 0
+              : data.data.standardDeliveryCharge || 100;
           setOrderSummary(prev => ({
             ...prev,
-            deliveryFee: data.data.standardDeliveryCharge || 200
+            subtotal,
+            deliveryFee,
+            total: subtotal + deliveryFee,
           }));
         }
       } catch (err) {
@@ -56,7 +69,7 @@ export default function CheckoutPartialPayment() {
         // Use default if fetch fails
         setOrderSummary(prev => ({
           ...prev,
-          deliveryFee: 200
+          deliveryFee: 100
         }));
       }
     };
@@ -75,18 +88,25 @@ export default function CheckoutPartialPayment() {
   useEffect(() => {
     if (cart.length > 0) {
       const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const total = subtotal + orderSummary.deliveryFee;
+      const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+      const standardDeliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
+      const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
+      const deliveryFee =
+        freeDeliveryEnabled && subtotal >= freeDeliveryThreshold
+          ? 0
+          : standardDeliveryCharge;
+      const total = subtotal + deliveryFee;
 
       setOrderSummary({
         subtotal,
-        deliveryFee: orderSummary.deliveryFee,
+        deliveryFee,
         total,
       });
     }
-  }, [cart]);
+  }, [cart, deliverySettings]);
 
   const handleCopyPhone = () => {
-    navigator.clipboard.writeText('01978305319');
+    navigator.clipboard.writeText(paymentNumber);
     toast.success('Phone number copied!');
   };
 
@@ -107,8 +127,11 @@ export default function CheckoutPartialPayment() {
 
   const validatePayment = () => {
     const newErrors = {};
-    if (!paymentData.transactionId.trim()) {
+    if (orderSummary.deliveryFee > 0 && !paymentData.transactionId.trim()) {
       newErrors.transactionId = 'Transaction ID is required';
+    }
+    if (orderSummary.deliveryFee > 0 && !paymentData.senderNumber.trim()) {
+      newErrors.senderNumber = 'Sender number is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -148,19 +171,12 @@ export default function CheckoutPartialPayment() {
         deliveryFee: orderSummary.deliveryFee,
         paymentMethod: paymentData.method,
         transactionId: paymentData.transactionId,
+        senderNumber: paymentData.senderNumber,
+        receiverNumber: process.env.NEXT_PUBLIC_BKASH_PAYMENT_NUMBER || '01878305319',
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create order');
-      }
+      const response = await createOrder(orderData);
+      const result = response.data;
 
       clearCart();
       toast.success('Payment submitted! Waiting for verification...');
@@ -311,7 +327,7 @@ export default function CheckoutPartialPayment() {
                 <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                   <p className="text-sm text-purple-700 mb-2">Payment Number</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-2xl font-bold text-purple-600">01978305319</p>
+                  <p className="text-2xl font-bold text-purple-600">{paymentNumber}</p>
                     <button
                       onClick={handleCopyPhone}
                       className="p-2 hover:bg-purple-100 rounded-lg transition"
@@ -339,7 +355,7 @@ export default function CheckoutPartialPayment() {
                   </li>
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">3</span>
-                    <span>Enter number: <strong>01978305319</strong></span>
+                    <span>Enter number: <strong>{paymentNumber}</strong></span>
                   </li>
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">4</span>
@@ -381,6 +397,25 @@ export default function CheckoutPartialPayment() {
                 <p className="text-xs text-gray-500 mt-2">
                   You will receive a notification from {paymentData.method} after payment
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sender Number {orderSummary.deliveryFee > 0 && '*'}
+                </label>
+                <input
+                  type="tel"
+                  name="senderNumber"
+                  value={paymentData.senderNumber}
+                  onChange={handleChange}
+                  placeholder="01XXXXXXXXX"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    errors.senderNumber ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.senderNumber && (
+                  <p className="text-red-500 text-sm mt-1">{errors.senderNumber}</p>
+                )}
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

@@ -1,4 +1,62 @@
 const webpush = require("web-push");
+const admin = require("firebase-admin");
+
+const sseClients = new Map();
+
+const toClientNotification = (notification) => ({
+  id: notification._id?.toString?.() || notification.id || String(Date.now()),
+  _id: notification._id?.toString?.() || notification.id,
+  title: notification.title,
+  message: notification.message,
+  type: notification.type,
+  link: notification.link,
+  read: Boolean(notification.read),
+  timestamp: notification.createdAt || notification.timestamp || new Date().toISOString(),
+  metadata: notification.metadata || {},
+});
+
+const getUserContext = async (req) => {
+  const User = req.app.locals.models.User;
+  const dbUser = req.user?.uid ? await User.findByFirebaseUid(req.user.uid) : null;
+  const role = dbUser?.role?.toLowerCase?.();
+
+  return {
+    userId: req.user?.uid,
+    email: req.user?.email,
+    isAdmin: ["admin", "manager", "support", "moderator"].includes(role),
+  };
+};
+
+const getAccessFilter = ({ userId, email, isAdmin }) => {
+  const filters = [];
+  if (userId) filters.push({ recipientUserId: userId });
+  if (email) filters.push({ recipientEmail: email });
+  if (isAdmin) filters.push({ audience: "admin" });
+  return filters.length ? { $or: filters } : { recipientUserId: "__none__" };
+};
+
+const broadcastNotification = (notification) => {
+  const payload = toClientNotification(notification);
+  const message = `event: notification\ndata: ${JSON.stringify(payload)}\n\n`;
+
+  for (const client of sseClients.values()) {
+    const isRecipient =
+      notification.recipientUserId === client.userId ||
+      notification.recipientEmail === client.email ||
+      (notification.audience === "admin" && client.isAdmin);
+
+    if (isRecipient) {
+      client.res.write(message);
+    }
+  }
+};
+
+const createRealtimeNotification = async (models, data) => {
+  if (!models?.AppNotification) return null;
+  const notification = await models.AppNotification.create(data);
+  broadcastNotification(notification);
+  return notification;
+};
 
 // Configure web-push with VAPID keys from environment variables
 const vapidKeys = {
@@ -168,6 +226,102 @@ const getPreferences = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to get preferences",
+    });
+  }
+};
+
+const getInAppNotifications = async (req, res) => {
+  try {
+    const context = await getUserContext(req);
+    const notifications = await req.app.locals.models.AppNotification.findForUser({
+      ...context,
+      limit: req.query.limit || 30,
+    });
+
+    res.json({
+      success: true,
+      data: notifications.map(toClientNotification),
+    });
+  } catch (error) {
+    console.error("Failed to fetch in-app notifications:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch notifications",
+    });
+  }
+};
+
+const streamNotifications = async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
+    const context = await getUserContext(req);
+    const clientId = `${context.userId}-${Date.now()}-${Math.random()}`;
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+
+    res.write(`event: connected\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+
+    sseClients.set(clientId, { ...context, res });
+
+    const heartbeat = setInterval(() => {
+      res.write(`event: ping\ndata: ${Date.now()}\n\n`);
+    }, 25000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      sseClients.delete(clientId);
+    });
+  } catch (error) {
+    console.error("Notification stream failed:", error);
+    res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+const markInAppNotificationRead = async (req, res) => {
+  try {
+    const context = await getUserContext(req);
+    const notification = await req.app.locals.models.AppNotification.markAsRead(
+      req.params.id,
+      getAccessFilter(context),
+    );
+
+    res.json({
+      success: true,
+      data: notification ? toClientNotification(notification) : null,
+    });
+  } catch (error) {
+    console.error("Failed to mark notification read:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update notification",
+    });
+  }
+};
+
+const markAllInAppNotificationsRead = async (req, res) => {
+  try {
+    const context = await getUserContext(req);
+    await req.app.locals.models.AppNotification.markAllAsRead(
+      getAccessFilter(context),
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to mark all notifications read:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update notifications",
     });
   }
 };
@@ -456,4 +610,9 @@ module.exports = {
   sendTestNotification,
   sendTestNotificationPublic,
   getVapidPublicKey,
+  getInAppNotifications,
+  streamNotifications,
+  markInAppNotificationRead,
+  markAllInAppNotificationsRead,
+  createRealtimeNotification,
 };

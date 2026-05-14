@@ -42,7 +42,7 @@ export default function PayRemainingForm({ order, onPaymentSubmitted }) {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/orders/${order._id}/pay-remaining`,
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/${order._id}/pay-remaining`,
         {
           method: 'PATCH',
           headers: {

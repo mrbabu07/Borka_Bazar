@@ -1,40 +1,32 @@
-const Loyalty = require("../models/Loyalty");
-
 class LoyaltyService {
-  // Calculate points from order amount (1 point per $1)
   calculatePointsFromOrder(orderAmount) {
-    return Math.floor(orderAmount);
+    return Math.floor(Number(orderAmount) || 0);
   }
 
-  // Get or create loyalty account
-  async getOrCreateAccount(userId, email) {
-    let loyalty = await Loyalty.findOne({ userId });
+  async getOrCreateAccount(models, userId, email) {
+    let loyalty = await models.Loyalty.findOne({ userId });
 
     if (!loyalty) {
-      const referralCode = await Loyalty.generateReferralCode(userId);
-      loyalty = new Loyalty({
+      loyalty = await models.Loyalty.create({
         userId,
         email,
-        referralCode,
+        referralCode: models.Loyalty.generateReferralCode(userId),
       });
-      await loyalty.save();
     }
 
     return loyalty;
   }
 
-  // Award points for order
-  async awardPointsForOrder(userId, email, orderAmount, orderId) {
+  async awardPointsForOrder(models, userId, email, orderAmount, orderId) {
     try {
-      const loyalty = await this.getOrCreateAccount(userId, email);
+      await this.getOrCreateAccount(models, userId, email);
       const basePoints = this.calculatePointsFromOrder(orderAmount);
-      const earnedPoints = loyalty.addPoints(
+      const { loyalty, earnedPoints } = await models.Loyalty.addPoints(
+        userId,
         basePoints,
         `Order #${orderId}`,
         orderId,
       );
-
-      await loyalty.save();
 
       return {
         earnedPoints,
@@ -47,34 +39,35 @@ class LoyaltyService {
     }
   }
 
-  // Award referral bonus
-  async awardReferralBonus(referrerId, newUserId, newUserEmail) {
+  async awardReferralBonus(models, referrerId, newUserId, newUserEmail) {
     try {
-      const referrerLoyalty = await Loyalty.findOne({ userId: referrerId });
-      if (!referrerLoyalty) {
-        throw new Error("Referrer not found");
-      }
+      const referrerLoyalty = await models.Loyalty.findOne({
+        userId: referrerId,
+      });
+      if (!referrerLoyalty) throw new Error("Referrer not found");
 
-      // Award 500 points to referrer
-      referrerLoyalty.addPoints(500, `Referral bonus for ${newUserEmail}`);
-      await referrerLoyalty.save();
+      const referrerResult = await models.Loyalty.addPoints(
+        referrerId,
+        500,
+        `Referral bonus for ${newUserEmail}`,
+      );
 
-      // Create account for new user with referral
-      const newUserReferralCode = await Loyalty.generateReferralCode(newUserId);
-      const newUserLoyalty = new Loyalty({
+      const newUserLoyalty = await models.Loyalty.create({
         userId: newUserId,
         email: newUserEmail,
-        referralCode: newUserReferralCode,
+        referralCode: models.Loyalty.generateReferralCode(newUserId),
         referredBy: referrerId,
       });
 
-      // Award 100 points to new user as welcome bonus
-      newUserLoyalty.addPoints(100, "Welcome bonus");
-      await newUserLoyalty.save();
+      const welcomeResult = await models.Loyalty.addPoints(
+        newUserId,
+        100,
+        "Welcome bonus",
+      );
 
       return {
-        referrerPoints: referrerLoyalty.points,
-        newUserPoints: newUserLoyalty.points,
+        referrerPoints: referrerResult.loyalty.points,
+        newUserPoints: welcomeResult.loyalty?.points || newUserLoyalty.points,
       };
     } catch (error) {
       console.error("Error awarding referral bonus:", error);
@@ -82,23 +75,21 @@ class LoyaltyService {
     }
   }
 
-  // Award birthday bonus
-  async awardBirthdayBonus(userId) {
+  async awardBirthdayBonus(models, userId) {
     try {
-      const loyalty = await Loyalty.findOne({ userId });
-      if (!loyalty) {
-        throw new Error("Loyalty account not found");
-      }
+      const loyalty = await models.Loyalty.findOne({ userId });
+      if (!loyalty) throw new Error("Loyalty account not found");
 
-      const benefits = loyalty.getTierBenefits();
-      const bonusPoints = benefits.birthdayBonus;
-
-      loyalty.addPoints(bonusPoints, "Birthday bonus");
-      await loyalty.save();
+      const benefits = models.Loyalty.getTierBenefits(loyalty.tier);
+      const result = await models.Loyalty.addPoints(
+        userId,
+        benefits.birthdayBonus,
+        "Birthday bonus",
+      );
 
       return {
-        bonusPoints,
-        totalPoints: loyalty.points,
+        bonusPoints: result.earnedPoints,
+        totalPoints: result.loyalty.points,
       };
     } catch (error) {
       console.error("Error awarding birthday bonus:", error);
@@ -106,21 +97,17 @@ class LoyaltyService {
     }
   }
 
-  // Redeem points for discount
-  async redeemPoints(userId, points, orderId) {
+  async redeemPoints(models, userId, points, orderId) {
     try {
-      const loyalty = await Loyalty.findOne({ userId });
-      if (!loyalty) {
-        throw new Error("Loyalty account not found");
-      }
+      const loyalty = await models.Loyalty.redeemPoints(
+        userId,
+        Number(points),
+        `Redeemed for order #${orderId}`,
+        orderId,
+      );
 
-      loyalty.redeemPoints(points, `Redeemed for order #${orderId}`, orderId);
-      await loyalty.save();
-
-      // Convert points to discount (100 points = 1 BDT = 1/110 USD)
-      // Since prices are stored in USD, we need to convert BDT to USD
-      const discountInBDT = points / 100; // 100 points = 1 BDT
-      const discountAmount = discountInBDT / 110; // Convert BDT to USD
+      const discountInBDT = Number(points) / 100;
+      const discountAmount = discountInBDT / 110;
 
       return {
         discountAmount,
@@ -132,10 +119,9 @@ class LoyaltyService {
     }
   }
 
-  // Get loyalty statistics
-  async getStatistics() {
+  async getStatistics(models) {
     try {
-      const stats = await Loyalty.aggregate([
+      const stats = await models.Loyalty.aggregate([
         {
           $group: {
             _id: "$tier",
@@ -146,14 +132,9 @@ class LoyaltyService {
         },
       ]);
 
-      const totalMembers = await Loyalty.countDocuments();
-      const totalPointsIssued = await Loyalty.aggregate([
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$totalEarned" },
-          },
-        },
+      const totalMembers = await models.Loyalty.countDocuments();
+      const totalPointsIssued = await models.Loyalty.aggregate([
+        { $group: { _id: null, total: { $sum: "$totalEarned" } } },
       ]);
 
       return {
@@ -167,36 +148,25 @@ class LoyaltyService {
     }
   }
 
-  // Get leaderboard
-  async getLeaderboard(limit = 10) {
+  async getLeaderboard(models, limit = 10) {
     try {
-      const leaderboard = await Loyalty.find()
-        .sort({ totalEarned: -1 })
-        .limit(limit)
-        .select("email points tier totalEarned");
-
-      return leaderboard;
+      return models.Loyalty.getLeaderboard(limit);
     } catch (error) {
       console.error("Error getting leaderboard:", error);
       throw error;
     }
   }
 
-  // Check if user can redeem points
   canRedeemPoints(loyalty, points) {
-    return loyalty.points >= points && points >= 100; // Minimum 100 points to redeem
+    return loyalty.points >= points && points >= 100;
   }
 
-  // Get points value in currency (USD)
   getPointsValue(points) {
-    // 100 points = 1 BDT = 1/110 USD
-    const bdtValue = points / 100;
-    return bdtValue / 110; // Convert BDT to USD for database
+    return points / 100 / 110;
   }
 
-  // Get points value in BDT for display
   getPointsValueInBDT(points) {
-    return points / 100; // 100 points = 1 BDT
+    return points / 100;
   }
 }
 

@@ -11,6 +11,7 @@ import ProductRecommendations from "../components/ProductRecommendations";
 import SocialShare from "../components/SocialShare";
 import SizeGuide from "../components/SizeGuide";
 import { toast } from "react-hot-toast";
+import { getArrayData, getObjectData } from "../utils/apiConfig";
 
 export default function ProductDetailPremium() {
   const { id } = useParams();
@@ -36,7 +37,12 @@ export default function ProductDetailPremium() {
     try {
       setLoading(true);
       const response = await getProductById(id);
-      const productData = response.data.data;
+      const productData = getObjectData(response);
+      if (!productData) {
+        setProduct(null);
+        setRelatedProducts([]);
+        return;
+      }
       setProduct(productData);
 
       // Set default selections
@@ -51,8 +57,8 @@ export default function ProductDetailPremium() {
 
       // Fetch related products
       const allProducts = await getProducts();
-      const related = allProducts.data.data
-        .filter(p => p._id !== id && p.category?._id === productData.category?._id)
+      const related = getArrayData(allProducts)
+        .filter((p) => p._id !== id && p.category?._id === productData.category?._id)
         .slice(0, 4);
       setRelatedProducts(related);
     } catch (error) {
@@ -105,17 +111,17 @@ export default function ProductDetailPremium() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black dark:border-white"></div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center dark:bg-gray-950">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Product not found</p>
+          <p className="text-gray-500 mb-4 dark:text-gray-400">Product not found</p>
           <Link to="/products" className="text-gold-600 hover:text-gold-700">
             Back to Shop
           </Link>
@@ -127,16 +133,16 @@ export default function ProductDetailPremium() {
   const images = product.images?.length > 0 ? product.images : [product.image];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-950 transition-colors dark:bg-gray-950 dark:text-gray-100">
       {/* Breadcrumb */}
-      <div className="border-b border-gray-100">
+      <div className="border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to="/" className="hover:text-black transition-colors">Home</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <Link to="/" className="hover:text-black transition-colors dark:hover:text-white">Home</Link>
             <span>/</span>
-            <Link to="/products" className="hover:text-black transition-colors">Shop</Link>
+            <Link to="/products" className="hover:text-black transition-colors dark:hover:text-white">Shop</Link>
             <span>/</span>
-            <span className="text-black">{product.title}</span>
+            <span className="text-black dark:text-white">{product.title || product.name}</span>
           </div>
         </div>
       </div>
@@ -147,7 +153,7 @@ export default function ProductDetailPremium() {
           {/* Left: Image Gallery */}
           <div>
             {/* Main Image */}
-            <div className="aspect-[3/4] mb-6 overflow-hidden bg-gray-50">
+            <div className="aspect-[3/4] mb-6 overflow-hidden bg-gray-50 dark:bg-gray-900">
               <img
                 src={images[selectedImage]}
                 alt={product.title}
@@ -164,8 +170,8 @@ export default function ProductDetailPremium() {
                     onClick={() => setSelectedImage(index)}
                     className={`aspect-[3/4] overflow-hidden border-2 transition-all ${
                       selectedImage === index
-                        ? "border-black"
-                        : "border-gray-200 hover:border-gray-400"
+                        ? "border-black dark:border-white"
+                        : "border-gray-200 hover:border-gray-400 dark:border-gray-700 dark:hover:border-gray-400"
                     }`}
                   >
                     <img
@@ -183,37 +189,37 @@ export default function ProductDetailPremium() {
           <div className="space-y-8">
             {/* Title & Price */}
             <div>
-              <h1 className="font-display text-3xl md:text-4xl text-black mb-4">
-                {product.title}
+              <h1 className="font-display text-2xl leading-tight text-black mb-4 dark:text-white sm:text-3xl md:text-4xl">
+                {product.title || product.name}
               </h1>
-              <p className="text-3xl font-semibold text-black">
+              <p className="text-2xl font-semibold text-black dark:text-white sm:text-3xl">
                 {formatPrice(product.price)}
               </p>
             </div>
 
             {/* Product Details */}
-            <div className="space-y-3 text-sm border-t border-b border-gray-100 py-6">
+            <div className="space-y-3 text-sm border-t border-b border-gray-100 py-6 dark:border-gray-800">
               {product.fabric && (
                 <div className="flex">
-                  <span className="font-medium text-black w-24 uppercase tracking-wide">Fabric:</span>
-                  <span className="text-gray-700">{product.fabric}</span>
+                  <span className="font-medium text-black w-24 uppercase tracking-wide dark:text-white">Fabric:</span>
+                  <span className="text-gray-700 dark:text-gray-300">{product.fabric}</span>
                 </div>
               )}
               {product.style && (
                 <div className="flex">
-                  <span className="font-medium text-black w-24 uppercase tracking-wide">Style:</span>
-                  <span className="text-gray-700">{product.style}</span>
+                  <span className="font-medium text-black w-24 uppercase tracking-wide dark:text-white">Style:</span>
+                  <span className="text-gray-700 dark:text-gray-300">{product.style}</span>
                 </div>
               )}
               {product.category && (
                 <div className="flex">
-                  <span className="font-medium text-black w-24 uppercase tracking-wide">Category:</span>
-                  <span className="text-gray-700">{product.category.name}</span>
+                  <span className="font-medium text-black w-24 uppercase tracking-wide dark:text-white">Category:</span>
+                  <span className="text-gray-700 dark:text-gray-300">{product.category.name}</span>
                 </div>
               )}
               {product.stock !== undefined && (
                 <div className="flex">
-                  <span className="font-medium text-black w-24 uppercase tracking-wide">Stock:</span>
+                  <span className="font-medium text-black w-24 uppercase tracking-wide dark:text-white">Stock:</span>
                   <span className={product.stock > 0 ? "text-green-600" : "text-red-600"}>
                     {product.stock > 0 ? `${product.stock} Available` : "Out of Stock"}
                   </span>
@@ -225,7 +231,7 @@ export default function ProductDetailPremium() {
             {(product.sizes?.length > 0 || product.availableSizes?.length > 0) && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm font-medium text-black uppercase tracking-wide">
+                  <p className="text-sm font-medium text-black uppercase tracking-wide dark:text-white">
                     Select Size
                   </p>
                   <button
@@ -248,10 +254,10 @@ export default function ProductDetailPremium() {
                         disabled={sizeItem.stock === 0}
                         className={`px-6 py-3 border text-sm font-medium transition-all relative ${
                           selectedSize === sizeItem.size
-                            ? "border-black bg-black text-white"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
                             : sizeItem.stock === 0
-                            ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
-                            : "border-gray-300 text-gray-700 hover:border-black"
+                            ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50 dark:border-gray-700 dark:text-gray-600"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         <div className="text-center">
@@ -276,8 +282,8 @@ export default function ProductDetailPremium() {
                         onClick={() => setSelectedSize(size)}
                         className={`px-6 py-3 border text-sm font-medium transition-all ${
                           selectedSize === size
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 text-gray-700 hover:border-black"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {size}
@@ -291,7 +297,7 @@ export default function ProductDetailPremium() {
             {/* Color Selector */}
             {product.colors?.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                <p className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                   Select Color
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -301,8 +307,8 @@ export default function ProductDetailPremium() {
                       onClick={() => setSelectedColor(color)}
                       className={`px-6 py-3 border text-sm font-medium transition-all ${
                         selectedColor === color
-                          ? "border-black bg-black text-white"
-                          : "border-gray-300 text-gray-700 hover:border-black"
+                          ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                          : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                       }`}
                     >
                       {color}
@@ -314,22 +320,22 @@ export default function ProductDetailPremium() {
 
             {/* Quantity Selector */}
             <div>
-              <p className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <p className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Quantity
               </p>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-12 h-12 border border-gray-300 hover:border-black transition-colors flex items-center justify-center"
+                  className="w-12 h-12 border border-gray-300 hover:border-black transition-colors flex items-center justify-center dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                   </svg>
                 </button>
-                <span className="text-lg font-medium w-12 text-center">{quantity}</span>
+                <span className="text-lg font-medium w-12 text-center text-gray-900 dark:text-white">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-12 h-12 border border-gray-300 hover:border-black transition-colors flex items-center justify-center"
+                  className="w-12 h-12 border border-gray-300 hover:border-black transition-colors flex items-center justify-center dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -343,20 +349,20 @@ export default function ProductDetailPremium() {
               <button
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
-                className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed dark:bg-white dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
               >
                 {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
               </button>
               <button
                 onClick={handleBuyNow}
                 disabled={product.stock === 0}
-                className="w-full py-4 border-2 border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed"
+                className="w-full py-4 border-2 border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-gray-950 dark:disabled:border-gray-700 dark:disabled:text-gray-600"
               >
                 Buy Now
               </button>
               <button
                 onClick={toggleWishlist}
-                className="w-full py-4 border border-gray-300 text-gray-700 text-sm tracking-widest uppercase font-medium hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2"
+                className="w-full py-4 border border-gray-300 text-gray-700 text-sm tracking-widest uppercase font-medium hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300 dark:hover:text-white"
               >
                 <svg
                   className={`w-5 h-5 ${isInWishlist(product._id) ? "fill-current" : ""}`}
@@ -371,7 +377,7 @@ export default function ProductDetailPremium() {
             </div>
 
             {/* Social Share */}
-            <div className="border-t border-gray-100 pt-6">
+            <div className="border-t border-gray-100 pt-6 dark:border-gray-800">
               <SocialShare 
                 url={window.location.href}
                 title={product.title}
@@ -381,17 +387,17 @@ export default function ProductDetailPremium() {
 
             {/* Description */}
             {product.description && (
-              <div className="border-t border-gray-100 pt-8">
-                <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <div className="border-t border-gray-100 pt-8 dark:border-gray-800">
+                <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                   Description
                 </h3>
-                <p className="text-gray-700 leading-relaxed">{product.description}</p>
+                <p className="text-gray-700 leading-relaxed dark:text-gray-300">{product.description}</p>
               </div>
             )}
 
             {/* Product Rating Summary */}
             {product.rating && (
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-gray-100 pt-8 dark:border-gray-800">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
@@ -409,7 +415,7 @@ export default function ProductDetailPremium() {
                       </svg>
                     ))}
                   </div>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     {product.rating.toFixed(1)} ({product.reviewCount || 0} reviews)
                   </span>
                 </div>
@@ -419,12 +425,12 @@ export default function ProductDetailPremium() {
         </div>
 
         {/* Reviews & Q&A Section */}
-        <div className="mt-20 border-t border-gray-100 pt-16">
+        <div className="mt-20 border-t border-gray-100 pt-16 dark:border-gray-800">
           <div className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl text-black text-center mb-3">
+            <h2 className="font-display text-2xl md:text-3xl text-black text-center mb-3 dark:text-white">
               Customer Reviews & Questions
             </h2>
-            <p className="text-center text-gray-500">
+            <p className="text-center text-gray-500 dark:text-gray-400">
               See what our customers are saying
             </p>
           </div>
@@ -435,12 +441,12 @@ export default function ProductDetailPremium() {
           </div>
 
           {/* Q&A Section */}
-          <div className="border-t border-gray-100 pt-16 mb-16">
+          <div className="border-t border-gray-100 pt-16 mb-16 dark:border-gray-800">
             <ProductQA productId={id} />
           </div>
 
           {/* Product Recommendations */}
-          <div className="border-t border-gray-100 pt-16">
+          <div className="border-t border-gray-100 pt-16 dark:border-gray-800">
             <ProductRecommendations 
               currentProductId={id}
               category={product?.category}
@@ -452,8 +458,8 @@ export default function ProductDetailPremium() {
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <div className="mt-20 border-t border-gray-100 pt-16">
-            <h2 className="font-display text-2xl md:text-3xl text-black text-center mb-12">
+          <div className="mt-20 border-t border-gray-100 pt-16 dark:border-gray-800">
+            <h2 className="font-display text-2xl md:text-3xl text-black text-center mb-12 dark:text-white">
               You May Also Like
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
@@ -472,15 +478,15 @@ export default function ProductDetailPremium() {
           onClick={() => setShowSizeGuide(false)}
         >
           <div 
-            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto text-gray-950 dark:bg-gray-900 dark:text-gray-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="font-display text-2xl text-black">Burka Size Guide</h2>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between dark:border-gray-800 dark:bg-gray-900">
+              <h2 className="font-display text-2xl text-black dark:text-white">Burka Size Guide</h2>
               <button
                 onClick={() => setShowSizeGuide(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors dark:hover:bg-gray-800"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

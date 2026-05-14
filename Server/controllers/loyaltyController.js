@@ -1,4 +1,3 @@
-const Loyalty = require("../models/Loyalty");
 const loyaltyService = require("../services/loyaltyService");
 
 // Get user's loyalty account
@@ -11,8 +10,13 @@ exports.getMyPoints = async (req, res) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const loyalty = await loyaltyService.getOrCreateAccount(userId, email);
-    const benefits = loyalty.getTierBenefits();
+    const models = req.app.locals.models;
+    const loyalty = await loyaltyService.getOrCreateAccount(
+      models,
+      userId,
+      email,
+    );
+    const benefits = models.Loyalty.getTierBenefits(loyalty.tier);
 
     res.json({
       success: true,
@@ -44,7 +48,7 @@ exports.getPointsHistory = async (req, res) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const loyalty = await Loyalty.findOne({ userId });
+    const loyalty = await req.app.locals.models.Loyalty.findOne({ userId });
 
     if (!loyalty) {
       return res.json({
@@ -82,7 +86,12 @@ exports.redeemPoints = async (req, res) => {
       });
     }
 
-    const result = await loyaltyService.redeemPoints(userId, points, orderId);
+    const result = await loyaltyService.redeemPoints(
+      req.app.locals.models,
+      userId,
+      points,
+      orderId,
+    );
 
     res.json({
       success: true,
@@ -110,7 +119,8 @@ exports.applyReferralCode = async (req, res) => {
     }
 
     // Check if user already has a loyalty account
-    const existingLoyalty = await Loyalty.findOne({ userId });
+    const models = req.app.locals.models;
+    const existingLoyalty = await models.Loyalty.findOne({ userId });
     if (existingLoyalty && existingLoyalty.referredBy) {
       return res.status(400).json({
         message: "You have already used a referral code",
@@ -118,7 +128,7 @@ exports.applyReferralCode = async (req, res) => {
     }
 
     // Find referrer by code
-    const referrer = await Loyalty.findOne({ referralCode });
+    const referrer = await models.Loyalty.findOne({ referralCode });
     if (!referrer) {
       return res.status(404).json({
         message: "Invalid referral code",
@@ -133,6 +143,7 @@ exports.applyReferralCode = async (req, res) => {
     }
 
     const result = await loyaltyService.awardReferralBonus(
+      models,
       referrer.userId,
       userId,
       email,
@@ -156,7 +167,10 @@ exports.applyReferralCode = async (req, res) => {
 exports.getLeaderboard = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
-    const leaderboard = await loyaltyService.getLeaderboard(limit);
+    const leaderboard = await loyaltyService.getLeaderboard(
+      req.app.locals.models,
+      limit,
+    );
 
     res.json({
       success: true,
@@ -174,7 +188,7 @@ exports.getLeaderboard = async (req, res) => {
 // Get loyalty statistics (Admin only)
 exports.getStatistics = async (req, res) => {
   try {
-    const stats = await loyaltyService.getStatistics();
+    const stats = await loyaltyService.getStatistics(req.app.locals.models);
 
     res.json({
       success: true,
@@ -200,7 +214,10 @@ exports.awardBirthdayBonus = async (req, res) => {
       });
     }
 
-    const result = await loyaltyService.awardBirthdayBonus(userId);
+    const result = await loyaltyService.awardBirthdayBonus(
+      req.app.locals.models,
+      userId,
+    );
 
     res.json({
       success: true,

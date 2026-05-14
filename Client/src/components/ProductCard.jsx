@@ -47,28 +47,28 @@ export default function ProductCard({ product }) {
     if (product.stock === 0)
       return {
         text: "Out of Stock",
-        color: "text-red-600",
-        bgColor: "bg-red-100",
+        color: "text-red-600 dark:text-red-200",
+        bgColor: "bg-red-100 dark:bg-red-950/60",
         available: false,
       };
     if (product.stock <= 3)
       return {
         text: `Only ${product.stock} left`,
-        color: "text-orange-600",
-        bgColor: "bg-orange-100",
+        color: "text-orange-600 dark:text-orange-200",
+        bgColor: "bg-orange-100 dark:bg-orange-950/60",
         available: true,
       };
     if (product.stock <= 10)
       return {
         text: "Low Stock",
-        color: "text-yellow-600",
-        bgColor: "bg-yellow-100",
+        color: "text-yellow-600 dark:text-yellow-200",
+        bgColor: "bg-yellow-100 dark:bg-yellow-950/60",
         available: true,
       };
     return {
       text: "In Stock",
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-green-600 dark:text-green-200",
+      bgColor: "bg-green-100 dark:bg-green-950/60",
       available: true,
     };
   };
@@ -123,7 +123,7 @@ export default function ProductCard({ product }) {
               )}
               <img
                 src={displayImage}
-                alt={product.title}
+                alt={product.title || product.name || "Product"}
                 className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
                   imageLoaded ? "opacity-100" : "opacity-0"
                 }`}
@@ -211,7 +211,7 @@ export default function ProductCard({ product }) {
           <div className="p-4">
             {/* Title */}
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-tight min-h-[2.5rem]">
-              {product.title}
+              {product.title || product.name || "Product"}
             </h3>
 
             {/* Burka Quick Info - Simplified */}
@@ -279,7 +279,7 @@ export default function ProductCard({ product }) {
                   isAdding
                     ? "bg-green-500 text-white"
                     : !stockStatus.available
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400"
                       : "bg-primary-600 text-white hover:bg-primary-700"
                 }`}
               >

@@ -334,11 +334,13 @@ class Product {
   }
 
   async create(productData) {
+    const now = new Date();
     const result = await this.collection.insertOne({
       ...productData,
-      createdAt: new Date(),
+      createdAt: productData.createdAt || now,
+      updatedAt: productData.updatedAt || now,
     });
-    return result.insertedId;
+    return { ...productData, _id: result.insertedId };
   }
 
   async update(id, productData) {
@@ -380,6 +382,9 @@ class Product {
   }
 
   async delete(id) {
+    if (!id || typeof id !== "string" || id.length !== 24) {
+      throw new Error(`Invalid ObjectId format: ${id}`);
+    }
     return await this.collection.deleteOne({ _id: new ObjectId(id) });
   }
 

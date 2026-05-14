@@ -21,7 +21,7 @@ export default function SharedWishlist() {
   const fetchSharedWishlist = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/wishlist/shared/${shareId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/wishlist/shared/${shareId}`,
       );
 
       if (response.data.success) {

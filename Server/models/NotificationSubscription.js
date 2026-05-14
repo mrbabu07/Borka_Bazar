@@ -77,6 +77,23 @@ class NotificationSubscription {
     return await this.collection.find(query).toArray();
   }
 
+  find(filter = {}) {
+    return this.collection.find(filter);
+  }
+
+  async findByIdAndUpdate(id, update = {}) {
+    const objectId = id instanceof ObjectId ? id : new ObjectId(id);
+    return await this.collection.updateOne(
+      { _id: objectId },
+      {
+        $set: {
+          ...update,
+          updatedAt: new Date(),
+        },
+      },
+    );
+  }
+
   async cleanup() {
     // Remove subscriptions older than 6 months that are inactive
     const sixMonthsAgo = new Date();

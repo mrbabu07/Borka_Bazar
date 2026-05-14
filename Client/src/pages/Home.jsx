@@ -7,6 +7,7 @@ import CategoryCarousel from "../components/CategoryCarousel";
 import ProductsByCategory from "../components/ProductsByCategory";
 import FlashSaleFinal from "../components/FlashSaleFinal";
 import { ProductCardSkeleton } from "../components/Skeleton";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -42,7 +43,7 @@ export default function Home() {
   const fetchProducts = async () => {
     try {
       const response = await getProducts();
-      const allProducts = response.data.data;
+      const allProducts = getArrayData(response);
 
       // Featured products (first 8)
       setProducts(allProducts.slice(0, 8));
@@ -59,7 +60,7 @@ export default function Home() {
   const fetchActiveCoupons = async () => {
     try {
       const response = await getActiveCoupons();
-      setActiveCoupons(response.data.data || []);
+      setActiveCoupons(getArrayData(response));
     } catch (error) {
       console.error("Failed to fetch coupons:", error);
     }

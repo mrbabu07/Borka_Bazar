@@ -29,7 +29,7 @@ export default function LoyaltyDashboard() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/loyalty/my-points`,
+        `${process.env.NEXT_PUBLIC_API_URL}/loyalty/my-points`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,7 +54,7 @@ export default function LoyaltyDashboard() {
   const fetchLeaderboard = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/loyalty/leaderboard?limit=10`,
+        `${process.env.NEXT_PUBLIC_API_URL}/loyalty/leaderboard?limit=10`,
       );
 
       if (response.ok) {
@@ -70,7 +70,7 @@ export default function LoyaltyDashboard() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/loyalty/history`,
+        `${process.env.NEXT_PUBLIC_API_URL}/loyalty/history`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -96,7 +96,7 @@ export default function LoyaltyDashboard() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/loyalty/apply-referral`,
+        `${process.env.NEXT_PUBLIC_API_URL}/loyalty/apply-referral`,
         {
           method: "POST",
           headers: {
@@ -137,7 +137,7 @@ export default function LoyaltyDashboard() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/loyalty/redeem`,
+        `${process.env.NEXT_PUBLIC_API_URL}/loyalty/redeem`,
         {
           method: "POST",
           headers: {

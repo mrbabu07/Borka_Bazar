@@ -91,7 +91,7 @@ const AdminUserManagement = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/users?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/users?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -118,7 +118,7 @@ const AdminUserManagement = () => {
       if (!token) return;
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/users/stats`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/users/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

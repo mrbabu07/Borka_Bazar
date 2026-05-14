@@ -82,7 +82,7 @@ export default function OfferForm() {
       // Set image preview
       const imageUrl = offer.image?.startsWith("http")
         ? offer.image
-        : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${offer.image}`;
+        : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${offer.image}`;
       setImagePreview(imageUrl);
     } catch (error) {
       console.error("Failed to fetch offer:", error);

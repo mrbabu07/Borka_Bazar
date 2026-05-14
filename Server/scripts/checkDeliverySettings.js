@@ -1,54 +1,23 @@
-/**
- * Check Current Delivery Settings
- *
- * This script shows the current delivery settings in the database.
- */
-
-require("dotenv").config();
-const mongoose = require("mongoose");
-
-const uri = process.env.MONGO_URI;
+const DeliverySettings = require("../models/DeliverySettings");
+const { connectDb } = require("./db");
 
 async function checkDeliverySettings() {
+  let client;
   try {
-    await mongoose.connect(uri);
-    console.log("✅ Connected to MongoDB\n");
+    const connection = await connectDb();
+    client = connection.client;
+    const settings = await new DeliverySettings(connection.db).getSettings();
 
-    const DeliverySettings = require("../models/DeliverySettings");
-    const settings = await DeliverySettings.getSettings();
-
-    console.log("📦 Current Delivery Settings:");
-    console.log("=".repeat(60));
-    console.log(`Free Delivery Enabled: ${settings.freeDeliveryEnabled}`);
-    console.log(
-      `Free Delivery Threshold: $${settings.freeDeliveryThreshold} USD (৳${Math.round(settings.freeDeliveryThreshold * 110)} BDT)`,
-    );
-    console.log(
-      `Standard Delivery Charge: $${settings.standardDeliveryCharge.toFixed(4)} USD (৳${Math.round(settings.standardDeliveryCharge * 110)} BDT)`,
-    );
-    console.log(
-      `Express Delivery Charge: $${settings.expressDeliveryCharge.toFixed(4)} USD (৳${Math.round(settings.expressDeliveryCharge * 110)} BDT)`,
-    );
-    console.log(`Express Delivery Enabled: ${settings.expressDeliveryEnabled}`);
-    console.log("=".repeat(60));
-
-    console.log("\n💡 Interpretation:");
-    if (settings.freeDeliveryEnabled) {
-      console.log(
-        `   ✅ Free delivery is ENABLED for orders over ৳${Math.round(settings.freeDeliveryThreshold * 110)}`,
-      );
-    } else {
-      console.log("   ❌ Free delivery is DISABLED - all orders pay delivery");
-    }
-    console.log(
-      `   💰 Standard delivery charge: ৳${Math.round(settings.standardDeliveryCharge * 110)}`,
-    );
-
-    await mongoose.disconnect();
-    console.log("\n👋 Disconnected from MongoDB");
+    console.log("Current delivery settings:");
+    console.log(`Free delivery enabled: ${settings.freeDeliveryEnabled}`);
+    console.log(`Free delivery threshold: ${settings.freeDeliveryThreshold}`);
+    console.log(`Standard delivery charge: ${settings.standardDeliveryCharge}`);
+    console.log(`Express delivery charge: ${settings.expressDeliveryCharge}`);
   } catch (error) {
-    console.error("❌ Error:", error);
-    process.exit(1);
+    console.error("Error checking delivery settings:", error.message);
+    process.exitCode = 1;
+  } finally {
+    if (client) await client.close();
   }
 }
 

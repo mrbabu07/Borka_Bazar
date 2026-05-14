@@ -5,6 +5,18 @@ import useAuth from "../hooks/useAuth";
 import { createOrder, validateCoupon } from "../services/api";
 import { toast } from "react-hot-toast";
 
+const PAYMENT_ACCOUNTS = {
+  bKash: {
+    label: "bKash",
+    number: process.env.NEXT_PUBLIC_BKASH_PAYMENT_NUMBER || "01878305319",
+  },
+  Nagad: {
+    label: "Nagad",
+    number: process.env.NEXT_PUBLIC_NAGAD_PAYMENT_NUMBER || "01878305319",
+  },
+};
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+
 export default function CheckoutPremium() {
   const navigate = useNavigate();
   const { cart, cartTotal, clearCart } = useCart();
@@ -26,7 +38,11 @@ export default function CheckoutPremium() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("COD"); // 'COD', 'bkash', 'nagad'
+  const [paymentInfo, setPaymentInfo] = useState({
+    method: "bKash",
+    transactionId: "",
+    senderNumber: "",
+  });
 
   // Fetch delivery settings
   useEffect(() => {
@@ -34,7 +50,7 @@ export default function CheckoutPremium() {
       try {
         // Add cache-busting parameter to ensure fresh data
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          `${API_URL}/delivery-settings?t=${Date.now()}`,
           {
             cache: 'no-cache',
             headers: {
@@ -71,6 +87,8 @@ export default function CheckoutPremium() {
       : deliveryChargeAmount;
   
   const finalTotal = cartTotal + deliveryCharge - couponDiscount;
+  const dueAmount = Math.max(finalTotal - deliveryCharge, 0);
+  const selectedPaymentAccount = PAYMENT_ACCOUNTS[paymentInfo.method];
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -82,6 +100,13 @@ export default function CheckoutPremium() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handlePaymentChange = (e) => {
+    setPaymentInfo({
+      ...paymentInfo,
       [e.target.name]: e.target.value,
     });
   };
@@ -132,13 +157,24 @@ export default function CheckoutPremium() {
       return;
     }
 
-    // If partial payment is selected, redirect to partial payment checkout
-    if (paymentMethod === 'partial') {
-      navigate('/checkout-partial-payment');
+    if (deliveryCharge > 0 && !paymentInfo.transactionId.trim()) {
+      toast.error("Please enter your bKash transaction ID");
       return;
     }
 
-    // Otherwise, proceed with COD order
+    if (deliveryCharge > 0 && !paymentInfo.senderNumber.trim()) {
+      toast.error("Please enter the bKash sender number");
+      return;
+    }
+
+    if (
+      deliveryCharge > 0 &&
+      !/^(\+?88)?01[3-9]\d{8}$/.test(paymentInfo.senderNumber.trim())
+    ) {
+      toast.error("Please enter a valid Bangladeshi sender number");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -164,8 +200,10 @@ export default function CheckoutPremium() {
           area: "",
           zipCode: formData.postalCode || "",
         },
-        paymentMethod: "COD",
-        transactionId: null,
+        paymentMethod: paymentInfo.method,
+        transactionId: paymentInfo.transactionId.trim(),
+        senderNumber: paymentInfo.senderNumber.trim(),
+        receiverNumber: selectedPaymentAccount.number,
         specialInstructions: formData.notes || "",
         couponCode: couponApplied ? couponCode : null,
         couponDiscount: couponDiscount,
@@ -223,9 +261,9 @@ export default function CheckoutPremium() {
               total: confirmationTotalPrice,
               deliveryFee: confirmationDeliveryCharge,
               subtotal: confirmationSubtotal,
-              remainingAmount: confirmationSubtotal,
+              remainingAmount: dueAmount,
             },
-            paymentMethod: "COD",
+            paymentMethod: "Hybrid bKash + COD",
           },
         });
       }
@@ -385,59 +423,95 @@ export default function CheckoutPremium() {
                 />
               </div>
 
-              {/* Payment Method */}
+              {/* Delivery Fee Payment */}
               <div className="pt-8 border-t border-gray-100">
                 <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide">
-                  Payment Method
+                  Delivery Fee Payment
                 </h2>
-                <div className="space-y-3">
-                  {/* Partial Payment Option */}
-                  <label
-                    className={`flex items-center gap-3 cursor-pointer p-4 border-2 rounded-lg transition-colors ${
-                      paymentMethod === "partial"
-                        ? "border-black"
-                        : "border-gray-200 hover:border-black"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="partial"
-                      checked={paymentMethod === 'partial'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-black">Partial Payment (bKash/Nagad)</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pay delivery fee now via bKash/Nagad, remaining on delivery
-                      </p>
-                    </div>
-                  </label>
+                <div className="mb-5 grid grid-cols-2 gap-3">
+                  {Object.entries(PAYMENT_ACCOUNTS).map(([method, account]) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() =>
+                        setPaymentInfo((current) => ({
+                          ...current,
+                          method,
+                        }))
+                      }
+                      className={`rounded-lg border-2 p-4 text-left transition ${
+                        paymentInfo.method === method
+                          ? "border-pink-500 bg-pink-50"
+                          : "border-gray-200 bg-white hover:border-pink-200"
+                      }`}
+                    >
+                      <p className="text-sm font-bold text-gray-950">{account.label}</p>
+                      <p className="mt-1 font-mono text-sm text-gray-600">{account.number}</p>
+                    </button>
+                  ))}
+                </div>
 
-                  {/* Cash on Delivery Option */}
-                  <label
-                    className={`flex items-center gap-3 cursor-pointer p-4 border-2 rounded-lg transition-colors ${
-                      paymentMethod === "COD"
-                        ? "border-black"
-                        : "border-gray-200 hover:border-black"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="COD"
-                      checked={paymentMethod === 'COD'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5"
-                    />
+                <div className="rounded-lg border-2 border-pink-200 bg-pink-50 p-5 mb-5">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-black">Cash on Delivery</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pay with cash when your order is delivered
+                      <p className="text-sm font-semibold text-pink-800">
+                        Send Money to this {selectedPaymentAccount.label} number
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <p className="rounded-lg bg-white px-3 py-2 font-mono text-xl font-bold text-pink-800 shadow-sm">
+                          {selectedPaymentAccount.number}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedPaymentAccount.number);
+                            toast.success(`${selectedPaymentAccount.label} number copied`);
+                          }}
+                          className="rounded-lg border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-pink-700 transition hover:bg-pink-100"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <p className="text-xs text-pink-700 mt-1">
+                        Send only the delivery fee. Product amount stays cash on delivery.
                       </p>
                     </div>
-                  </label>
+                    <p className="text-2xl font-bold text-pink-700">
+                      ৳{deliveryCharge.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                      {selectedPaymentAccount.label} Transaction ID {deliveryCharge > 0 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      name="transactionId"
+                      value={paymentInfo.transactionId}
+                      onChange={handlePaymentChange}
+                      required={deliveryCharge > 0}
+                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      placeholder={`${selectedPaymentAccount.label} transaction ID`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide">
+                      Your {selectedPaymentAccount.label} Sender Number {deliveryCharge > 0 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="tel"
+                      name="senderNumber"
+                      value={paymentInfo.senderNumber}
+                      onChange={handlePaymentChange}
+                      required={deliveryCharge > 0}
+                      className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
+                      placeholder="01XXXXXXXXX"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -551,7 +625,7 @@ export default function CheckoutPremium() {
                 </div>
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-600">Product Total</span>
                   <span className="font-medium text-black">
                     ৳{cartTotal.toLocaleString()}
                   </span>
@@ -569,6 +643,14 @@ export default function CheckoutPremium() {
                   <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-black'}`}>
                     {deliveryCharge === 0 ? 'Free' : `৳${deliveryCharge.toLocaleString()}`}
                   </span>
+                </div>
+                <div className="flex justify-between text-sm rounded-lg bg-pink-50 border border-pink-200 px-3 py-2">
+                  <span className="font-semibold text-pink-800">Pay Now</span>
+                  <span className="font-bold text-pink-700">৳{deliveryCharge.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm rounded-lg bg-orange-50 border border-orange-200 px-3 py-2">
+                  <span className="font-semibold text-orange-800">Pay on Delivery</span>
+                  <span className="font-bold text-orange-700">৳{dueAmount.toLocaleString()}</span>
                 </div>
                 {freeDeliveryEnabled && cartTotal < freeDeliveryThreshold && (
                   <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">

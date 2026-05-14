@@ -48,7 +48,7 @@ export default function Checkout() {
       try {
         // Add cache-busting parameter to ensure fresh data
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/delivery-settings?t=${Date.now()}`,
           {
             cache: 'no-cache',
             headers: {
@@ -134,7 +134,7 @@ export default function Checkout() {
         try {
           const token = await user.getIdToken();
           const loyaltyResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/loyalty/my-points`,
+            `${process.env.NEXT_PUBLIC_API_URL}/loyalty/my-points`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,

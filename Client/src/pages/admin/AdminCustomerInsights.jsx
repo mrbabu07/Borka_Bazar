@@ -60,7 +60,7 @@ const AdminCustomerInsights = () => {
       });
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/insights?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/insights?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${await getCurrentUserToken()}`,
@@ -84,7 +84,7 @@ const AdminCustomerInsights = () => {
   const fetchSegmentStats = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/insights/segments`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/insights/segments`,
         {
           headers: {
             Authorization: `Bearer ${await getCurrentUserToken()}`,
@@ -104,7 +104,7 @@ const AdminCustomerInsights = () => {
   const generateInsight = async (userId) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/insights/${userId}/generate`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/insights/${userId}/generate`,
         {
           method: "POST",
           headers: {

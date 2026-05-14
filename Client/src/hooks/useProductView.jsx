@@ -1,24 +1,43 @@
 import { useEffect, useRef } from "react";
+import { auth } from "../firebase/firebase.config";
+import { buildApiUrl } from "../utils/apiConfig";
 
 const useProductView = (productId) => {
-  const hasViewed = useRef(false);
+  const viewedProductIds = useRef(new Set());
 
   useEffect(() => {
-    if (!productId || hasViewed.current) return;
+    if (!productId || viewedProductIds.current.has(productId)) return;
+
+    const controller = new AbortController();
 
     const trackView = async () => {
       try {
-        await fetch(
-          `${import.meta.env.VITE_API_URL}/products/${productId}/view`,
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        const currentUser = auth.currentUser;
+
+        if (currentUser) {
+          const token = await currentUser.getIdToken();
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch(
+          buildApiUrl(`/products/${encodeURIComponent(productId)}/view`),
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers,
+            signal: controller.signal,
           },
         );
-        hasViewed.current = true;
+
+        if (!response.ok) {
+          return;
+        }
+
+        viewedProductIds.current.add(productId);
       } catch (error) {
+        if (error.name === "AbortError") return;
         console.error("Failed to track product view:", error);
       }
     };
@@ -26,7 +45,10 @@ const useProductView = (productId) => {
     // Track view after a short delay to ensure the user actually sees the product
     const timer = setTimeout(trackView, 1000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [productId]);
 };
 

@@ -4,6 +4,7 @@ import { getProducts, getCategories } from "../services/api";
 import ProductCardPremium from "../components/ProductCardPremium";
 import HeroSectionPremium from "../components/HeroSectionPremium";
 import { ProductCardSkeleton } from "../components/Skeleton";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function HomePremium() {
   const [products, setProducts] = useState([]);
@@ -22,10 +23,10 @@ export default function HomePremium() {
         getCategories(),
       ]);
 
-      const allProducts = productsRes.data.data;
+      const allProducts = getArrayData(productsRes);
       setProducts(allProducts.slice(0, 8));
       setNewArrivals(allProducts.slice(-4).reverse());
-      setCategories(categoriesRes.data.data || []);
+      setCategories(getArrayData(categoriesRes));
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {

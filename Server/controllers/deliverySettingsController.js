@@ -1,8 +1,9 @@
-const DeliverySettings = require("../models/DeliverySettings");
+const getDeliverySettingsModel = (req) => req.app.locals.models.DeliverySettings;
 
 // Get delivery settings
 exports.getDeliverySettings = async (req, res) => {
   try {
+    const DeliverySettings = getDeliverySettingsModel(req);
     const settings = await DeliverySettings.getSettings();
     res.json({
       success: true,
@@ -20,32 +21,25 @@ exports.getDeliverySettings = async (req, res) => {
 // Update delivery settings (Admin only)
 exports.updateDeliverySettings = async (req, res) => {
   try {
-    const settings = await DeliverySettings.getSettings();
+    const DeliverySettings = getDeliverySettingsModel(req);
+    const allowedFields = [
+      "freeDeliveryThreshold",
+      "standardDeliveryCharge",
+      "expressDeliveryCharge",
+      "expressDeliveryEnabled",
+      "freeDeliveryEnabled",
+      "deliveryAreas",
+      "estimatedDeliveryDays",
+    ];
+    const updateData = {};
 
-    // Update fields
-    if (req.body.freeDeliveryThreshold !== undefined) {
-      settings.freeDeliveryThreshold = req.body.freeDeliveryThreshold;
-    }
-    if (req.body.standardDeliveryCharge !== undefined) {
-      settings.standardDeliveryCharge = req.body.standardDeliveryCharge;
-    }
-    if (req.body.expressDeliveryCharge !== undefined) {
-      settings.expressDeliveryCharge = req.body.expressDeliveryCharge;
-    }
-    if (req.body.expressDeliveryEnabled !== undefined) {
-      settings.expressDeliveryEnabled = req.body.expressDeliveryEnabled;
-    }
-    if (req.body.freeDeliveryEnabled !== undefined) {
-      settings.freeDeliveryEnabled = req.body.freeDeliveryEnabled;
-    }
-    if (req.body.deliveryAreas !== undefined) {
-      settings.deliveryAreas = req.body.deliveryAreas;
-    }
-    if (req.body.estimatedDeliveryDays !== undefined) {
-      settings.estimatedDeliveryDays = req.body.estimatedDeliveryDays;
-    }
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
 
-    await settings.save();
+    const settings = await DeliverySettings.updateSettings(updateData);
 
     res.json({
       success: true,
@@ -64,18 +58,12 @@ exports.updateDeliverySettings = async (req, res) => {
 // Calculate delivery charge for an order
 exports.calculateDeliveryCharge = async (req, res) => {
   try {
+    const DeliverySettings = getDeliverySettingsModel(req);
     const { subtotal, area } = req.body;
+    const orderSubtotal = Number(subtotal) || 0;
     const settings = await DeliverySettings.getSettings();
 
     let deliveryCharge = settings.standardDeliveryCharge;
-
-    // Check if free delivery applies
-    if (
-      settings.freeDeliveryEnabled &&
-      subtotal >= settings.freeDeliveryThreshold
-    ) {
-      deliveryCharge = 0;
-    }
 
     // Check for area-specific charges
     if (area && settings.deliveryAreas.length > 0) {
@@ -87,14 +75,22 @@ exports.calculateDeliveryCharge = async (req, res) => {
       }
     }
 
+    // Free delivery is an admin rule and should override standard/area charges.
+    if (
+      settings.freeDeliveryEnabled &&
+      orderSubtotal >= settings.freeDeliveryThreshold
+    ) {
+      deliveryCharge = 0;
+    }
+
     res.json({
       success: true,
       data: {
         deliveryCharge,
         isFree: deliveryCharge === 0,
         amountNeededForFreeDelivery:
-          subtotal < settings.freeDeliveryThreshold
-            ? settings.freeDeliveryThreshold - subtotal
+          orderSubtotal < settings.freeDeliveryThreshold
+            ? settings.freeDeliveryThreshold - orderSubtotal
             : 0,
       },
     });

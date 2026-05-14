@@ -1,9 +1,26 @@
-const StockAlert = require("../models/StockAlert");
 const stockAlertService = require("../services/stockAlertService");
+
+const getStockAlertModel = (req) => req.app.locals.models.StockAlert;
+const getProductModel = (req) => req.app.locals.models.Product;
+
+const attachProducts = async (req, alerts) => {
+  const Product = getProductModel(req);
+  return Promise.all(
+    alerts.map(async (alert) => {
+      const productId = alert.productId?.toString?.() || alert.productId;
+      const product = productId ? await Product.findById(productId) : null;
+      return {
+        ...alert,
+        productId: product || alert.productId,
+      };
+    }),
+  );
+};
 
 // Subscribe to stock alert
 exports.subscribeToAlert = async (req, res) => {
   try {
+    const StockAlert = getStockAlertModel(req);
     const { productId, alertType, priceThreshold } = req.body;
     const userId = req.user?.uid;
     const email = req.user?.email;
@@ -25,15 +42,13 @@ exports.subscribeToAlert = async (req, res) => {
     }
 
     // Create new alert
-    const alert = new StockAlert({
+    const alert = await StockAlert.create({
       userId,
       email,
       productId,
       alertType,
       priceThreshold: alertType === "price_drop" ? priceThreshold : null,
     });
-
-    await alert.save();
 
     res.status(201).json({
       success: true,
@@ -51,17 +66,17 @@ exports.subscribeToAlert = async (req, res) => {
 // Unsubscribe from alert
 exports.unsubscribeFromAlert = async (req, res) => {
   try {
+    const StockAlert = getStockAlertModel(req);
     const { id } = req.params;
     const userId = req.user?.uid;
 
-    const alert = await StockAlert.findOne({ _id: id, userId });
+    const alert = await StockAlert.findById(id);
 
-    if (!alert) {
+    if (!alert || alert.userId !== userId) {
       return res.status(404).json({ message: "Alert not found" });
     }
 
-    alert.active = false;
-    await alert.save();
+    await StockAlert.updateById(id, { active: false });
 
     res.json({
       success: true,
@@ -78,22 +93,21 @@ exports.unsubscribeFromAlert = async (req, res) => {
 // Get user's alerts
 exports.getUserAlerts = async (req, res) => {
   try {
+    const StockAlert = getStockAlertModel(req);
     const userId = req.user?.uid;
 
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const alerts = await StockAlert.find({
+    const alerts = await StockAlert.findAll({
       userId,
       active: true,
-    })
-      .populate("productId")
-      .sort({ createdAt: -1 });
+    });
 
     res.json({
       success: true,
-      data: alerts,
+      data: await attachProducts(req, alerts),
     });
   } catch (error) {
     console.error("Error getting user alerts:", error);
@@ -106,7 +120,7 @@ exports.getUserAlerts = async (req, res) => {
 // Check and send alerts (Admin only)
 exports.checkAndSendAlerts = async (req, res) => {
   try {
-    const result = await stockAlertService.checkAllAlerts();
+    const result = await stockAlertService.checkAllAlerts(req.app.locals.models);
 
     res.json({
       success: true,
@@ -124,6 +138,7 @@ exports.checkAndSendAlerts = async (req, res) => {
 // Get alert statistics (Admin only)
 exports.getAlertStats = async (req, res) => {
   try {
+    const StockAlert = getStockAlertModel(req);
     const stats = await StockAlert.aggregate([
       {
         $group: {

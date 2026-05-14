@@ -42,7 +42,7 @@ const getActiveCoupons = async (req, res) => {
 const validateCoupon = async (req, res) => {
   try {
     const Coupon = req.app.locals.models.Coupon;
-    const Offer = require("../models/Offer"); // Import Mongoose model directly
+    const Offer = req.app.locals.models.Offer;
     const { code, orderTotal } = req.body;
     const userId = req.user?.uid;
 

@@ -7,7 +7,9 @@ import useWishlist from "../hooks/useWishlist";
 import { getCategories } from "../services/api";
 import SearchBar from "./SearchBar";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./NotificationBell";
 import { socialLinks } from "../config/socialLinks";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function NavbarPremium() {
   const { t } = useTranslation();
@@ -26,7 +28,7 @@ export default function NavbarPremium() {
     const fetchCategories = async () => {
       try {
         const response = await getCategories();
-        setCategories(response.data.data || []);
+        setCategories(getArrayData(response));
       } catch (error) {
         console.error("Failed to fetch categories:", error);
       }
@@ -146,6 +148,11 @@ export default function NavbarPremium() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
+
+              {/* Wishlist */}
+              {user && (
+                <NotificationBell />
+              )}
 
               {/* Wishlist */}
               {user && (

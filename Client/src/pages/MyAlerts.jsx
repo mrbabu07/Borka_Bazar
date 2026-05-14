@@ -23,7 +23,7 @@ export default function MyAlerts() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/stock-alerts/my-alerts`,
+        `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/my-alerts`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -49,7 +49,7 @@ export default function MyAlerts() {
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/stock-alerts/${alertId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/${alertId}`,
         {
           method: "DELETE",
           headers: {

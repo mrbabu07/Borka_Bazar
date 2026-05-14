@@ -21,11 +21,6 @@ const {
 router.get("/", getAllProducts);
 router.get("/search", searchProducts);
 router.get("/filter-options", getFilterOptions);
-router.get("/:id", getProductById);
-router.get("/:id/variants", getProductVariants);
-router.post("/:id/view", incrementProductView);
-
-// Admin routes
 router.get("/admin/low-stock", verifyToken, verifyAdmin, getLowStockProducts);
 router.get(
   "/admin/out-of-stock",
@@ -33,6 +28,11 @@ router.get(
   verifyAdmin,
   getOutOfStockProducts,
 );
+router.get("/:id", getProductById);
+router.get("/:id/variants", getProductVariants);
+router.post("/:id/view", incrementProductView);
+
+// Admin routes
 router.post("/", verifyToken, verifyAdmin, createProduct);
 router.put("/:id", verifyToken, verifyAdmin, updateProduct);
 router.put("/:id/variants", verifyToken, verifyAdmin, updateProductVariants);

@@ -67,7 +67,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
         {/* Product Info */}
         <div className="flex flex-col">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {product.title}
+            {product.title || product.name || "Product"}
           </h2>
 
           <div className="flex items-center gap-4 mb-4">
@@ -129,8 +129,8 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
                       selectedSize === sizeItem.size
                         ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400"
                         : sizeItem.stock === 0
-                        ? "border-gray-200 text-gray-400 cursor-not-allowed line-through"
-                        : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400"
+                        ? "border-gray-200 text-gray-400 cursor-not-allowed line-through dark:border-gray-700 dark:text-gray-600"
+                        : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-400"
                     }`}
                   >
                     {sizeItem.size}
@@ -186,7 +186,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
               >
                 −
               </button>
-              <span className="w-12 text-center font-semibold">{quantity}</span>
+              <span className="w-12 text-center font-semibold text-gray-900 dark:text-white">{quantity}</span>
               <button
                 onClick={() =>
                   setQuantity(Math.min(product.stock, quantity + 1))
@@ -208,7 +208,7 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
                 isAdding
                   ? "bg-green-500 text-white"
                   : product.stock === 0
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400"
                     : "bg-primary-500 hover:bg-primary-600 text-white"
               }`}
             >

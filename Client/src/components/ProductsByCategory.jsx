@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import ProductCard from "./ProductCard";
+import { API_URL, getArrayData } from "../utils/apiConfig";
 
 export default function ProductsByCategory() {
   const [categoriesWithProducts, setCategoriesWithProducts] = useState([]);
@@ -13,15 +14,13 @@ export default function ProductsByCategory() {
 
   const fetchCategoriesWithProducts = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
-
       // Fetch categories
-      const categoriesResponse = await axios.get(`${apiUrl}/categories`);
-      const categories = categoriesResponse.data.data || [];
+      const categoriesResponse = await axios.get(`${API_URL}/categories`);
+      const categories = getArrayData(categoriesResponse);
 
       // Fetch all products
-      const productsResponse = await axios.get(`${apiUrl}/products`);
-      const allProducts = productsResponse.data.data || [];
+      const productsResponse = await axios.get(`${API_URL}/products`);
+      const allProducts = getArrayData(productsResponse);
 
       // Group products by category
       const categoriesWithProductsData = categories

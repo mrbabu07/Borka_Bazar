@@ -46,6 +46,7 @@ export default function ProductCardPremium({ product }) {
 
   const displayImage =
     product.image || (product.images && product.images[0]) || fallbackImage;
+  const displayTitle = product.title || product.name || "Product";
 
   const isOutOfStock = product.stock === 0;
 
@@ -66,9 +67,9 @@ export default function ProductCardPremium({ product }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative bg-white overflow-hidden">
+      <div className="relative overflow-hidden bg-white text-gray-950 transition-colors dark:bg-gray-900 dark:text-gray-100">
         {/* Image Container */}
-        <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
+        <div className="relative aspect-[3/4] overflow-hidden bg-gray-50 dark:bg-gray-800">
           {/* Discount Badge */}
           {discountPercentage > 0 && (
             <div className="absolute top-4 left-4 z-20">
@@ -89,11 +90,11 @@ export default function ProductCardPremium({ product }) {
           {/* Image with loading state */}
           <div className="relative w-full h-full">
             {!imageLoaded && (
-              <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+              <div className="absolute inset-0 bg-gray-100 animate-pulse dark:bg-gray-800" />
             )}
             <img
               src={displayImage}
-              alt={product.title}
+              alt={displayTitle}
               className={`w-full h-full object-cover transition-all duration-700 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               } ${isHovered ? "scale-105" : "scale-100"}`}
@@ -104,8 +105,8 @@ export default function ProductCardPremium({ product }) {
 
           {/* Out of Stock Overlay */}
           {isOutOfStock && (
-            <div className="absolute inset-0 bg-white/90 flex items-center justify-center">
-              <span className="text-sm tracking-widest uppercase font-medium text-gray-500">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/90 dark:bg-gray-950/85">
+              <span className="text-sm font-medium uppercase tracking-widest text-gray-500 dark:text-gray-300">
                 Out of Stock
               </span>
             </div>
@@ -125,7 +126,7 @@ export default function ProductCardPremium({ product }) {
                   className={`w-full py-3 text-sm tracking-widest uppercase font-medium transition-all ${
                     isAdding
                       ? "bg-gold-500 text-white"
-                      : "bg-white text-black hover:bg-gold-500 hover:text-white"
+                      : "bg-white text-black hover:bg-gold-500 hover:text-white dark:bg-gray-100 dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white"
                   }`}
                 >
                   {isAdding ? "Added!" : "Add to Cart"}
@@ -145,26 +146,26 @@ export default function ProductCardPremium({ product }) {
         </div>
 
         {/* Product Info */}
-        <div className="p-6 text-center space-y-2">
+        <div className="space-y-2 p-6 text-center">
           {/* Title */}
-          <h3 className="font-display text-base md:text-lg text-black group-hover:text-gold-600 transition-colors leading-tight min-h-[3rem] line-clamp-2">
-            {product.title}
+          <h3 className="font-display min-h-[3rem] text-base leading-tight text-black transition-colors line-clamp-2 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400 md:text-lg">
+            {displayTitle}
           </h3>
 
           {/* Fabric/Style Info */}
           {(product.fabric || product.style) && (
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
+            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               {product.fabric || product.style}
             </p>
           )}
 
           {/* Price */}
           <div className="flex items-center justify-center gap-3 pt-2">
-            <span className="text-lg md:text-xl font-semibold text-black">
+            <span className="text-lg font-semibold text-black dark:text-white md:text-xl">
               {formatPrice(product.price)}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
-              <span className="text-sm text-gray-400 line-through">
+              <span className="text-sm text-gray-400 line-through dark:text-gray-500">
                 {formatPrice(product.originalPrice)}
               </span>
             )}
@@ -172,7 +173,7 @@ export default function ProductCardPremium({ product }) {
 
           {/* Stock Status - Minimal */}
           {product.stock > 0 && product.stock <= 5 && (
-            <p className="text-xs text-gold-600 tracking-wide">
+            <p className="text-xs tracking-wide text-gold-600 dark:text-gold-400">
               Only {product.stock} left
             </p>
           )}
@@ -187,10 +188,10 @@ export default function ProductCardPremium({ product }) {
           className="absolute inset-0 bg-black/50"
           onClick={() => setQuickViewOpen(false)}
         />
-        <div className="relative bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto bg-white text-gray-950 shadow-2xl dark:bg-gray-900 dark:text-gray-100">
           <button
             onClick={() => setQuickViewOpen(false)}
-            className="absolute top-4 right-4 z-10 p-2 bg-white hover:bg-gray-100 transition-colors"
+            className="absolute right-4 top-4 z-10 bg-white p-2 text-gray-900 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -199,10 +200,10 @@ export default function ProductCardPremium({ product }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
             {/* Image */}
-            <div className="aspect-[3/4] overflow-hidden bg-gray-50">
+            <div className="aspect-[3/4] overflow-hidden bg-gray-50 dark:bg-gray-800">
               <img
-                src={product.image}
-                alt={product.title}
+                src={displayImage}
+                alt={displayTitle}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -210,16 +211,16 @@ export default function ProductCardPremium({ product }) {
             {/* Info */}
             <div className="space-y-6">
               <div>
-                <h2 className="font-display text-2xl md:text-3xl text-black mb-2">
-                  {product.title}
+                <h2 className="font-display mb-2 text-2xl text-black dark:text-white md:text-3xl">
+                  {displayTitle}
                 </h2>
-                <p className="text-2xl font-semibold text-black">
+                <p className="text-2xl font-semibold text-black dark:text-white">
                   {formatPrice(product.price)}
                 </p>
               </div>
 
               {product.description && (
-                <p className="text-gray-600 leading-relaxed">
+                <p className="leading-relaxed text-gray-600 dark:text-gray-300">
                   {product.description}
                 </p>
               )}
@@ -227,7 +228,7 @@ export default function ProductCardPremium({ product }) {
               {/* Size Selector */}
               {product.sizes && product.sizes.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                  <p className="mb-3 text-sm font-medium uppercase tracking-wide text-black dark:text-white">
                     Select Size <span className="text-red-500">*</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -237,8 +238,8 @@ export default function ProductCardPremium({ product }) {
                         onClick={() => setSelectedSize(size)}
                         className={`px-4 py-2 border text-sm transition-all ${
                           selectedSize === size
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 hover:border-black"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {size}
@@ -256,7 +257,7 @@ export default function ProductCardPremium({ product }) {
               {/* Available Sizes (with stock info) */}
               {product.availableSizes && product.availableSizes.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                  <p className="mb-3 text-sm font-medium uppercase tracking-wide text-black dark:text-white">
                     Select Size <span className="text-red-500">*</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -267,10 +268,10 @@ export default function ProductCardPremium({ product }) {
                         disabled={sizeItem.stock === 0}
                         className={`px-4 py-2 border text-sm transition-all relative ${
                           selectedSize === sizeItem.size
-                            ? "border-black bg-black text-white"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
                             : sizeItem.stock === 0
-                            ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                            : "border-gray-300 hover:border-black"
+                            ? "border-gray-200 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:text-gray-600"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {sizeItem.size}
@@ -293,7 +294,7 @@ export default function ProductCardPremium({ product }) {
               {/* Color Selector */}
               {product.colors && product.colors.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-black mb-3 uppercase tracking-wide">
+                  <p className="mb-3 text-sm font-medium uppercase tracking-wide text-black dark:text-white">
                     Select Color
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -303,8 +304,8 @@ export default function ProductCardPremium({ product }) {
                         onClick={() => setSelectedColor(color)}
                         className={`px-4 py-2 border text-sm transition-all ${
                           selectedColor === color
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 hover:border-black"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {color}
@@ -331,14 +332,14 @@ export default function ProductCardPremium({ product }) {
                     setQuickViewOpen(false);
                   }}
                   disabled={isAdding || product.stock === 0}
-                  className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full bg-black py-4 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-gold-500 disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-white dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
                 >
                   {product.stock === 0 ? "Out of Stock" : isAdding ? "Adding..." : "Add to Cart"}
                 </button>
                 <Link
                   to={`/product/${product._id}`}
                   onClick={() => setQuickViewOpen(false)}
-                  className="block w-full py-4 border-2 border-black text-black text-center text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors"
+                  className="block w-full border-2 border-black py-4 text-center text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-gray-950"
                 >
                   View Full Details
                 </Link>

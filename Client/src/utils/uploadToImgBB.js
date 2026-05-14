@@ -23,9 +23,9 @@ const uploadToImgBB = async (imageFile) => {
     }
 
     // Get API key from environment
-    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
     if (!apiKey) {
-      throw new Error("imgBB API key not configured. Please add VITE_IMGBB_API_KEY to .env.local");
+      throw new Error("imgBB API key not configured. Please add NEXT_PUBLIC_IMGBB_API_KEY to .env.local");
     }
 
     // Create FormData

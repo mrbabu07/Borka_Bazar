@@ -4,6 +4,8 @@ import { useCurrency } from "../../hooks/useCurrency";
 import Loading from "../../components/Loading";
 import { getCurrentUserToken } from "../../utils/auth";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+
 export default function AdminDeliverySettings() {
   const { success, error } = useToast();
   const { formatPrice } = useCurrency();
@@ -18,7 +20,7 @@ export default function AdminDeliverySettings() {
   const fetchSettings = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/delivery-settings`,
+        `${API_URL}/delivery-settings`,
       );
       const data = await response.json();
       if (data.success) {
@@ -38,7 +40,7 @@ export default function AdminDeliverySettings() {
       const token = await getCurrentUserToken();
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/delivery-settings`,
+        `${API_URL}/delivery-settings`,
         {
           method: "PUT",
           headers: {

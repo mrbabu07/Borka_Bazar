@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getProducts } from "../services/api";
 import { useCurrency } from "../hooks/useCurrency";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function ProductRecommendations({ 
   currentProductId, 
@@ -20,15 +21,22 @@ export default function ProductRecommendations({
   const fetchRecommendations = async () => {
     try {
       const response = await getProducts();
-      let products = response.data.data || [];
+      let products = getArrayData(response);
 
       // Filter out current product
       products = products.filter(p => p._id !== currentProductId);
 
       // Prioritize same category
       if (category) {
-        const sameCategory = products.filter(p => p.category === category);
-        const otherProducts = products.filter(p => p.category !== category);
+        const categoryId = typeof category === "object" ? category._id : category;
+        const sameCategory = products.filter((p) => {
+          const productCategoryId = typeof p.category === "object" ? p.category?._id : p.category;
+          return productCategoryId === categoryId;
+        });
+        const otherProducts = products.filter((p) => {
+          const productCategoryId = typeof p.category === "object" ? p.category?._id : p.category;
+          return productCategoryId !== categoryId;
+        });
         products = [...sameCategory, ...otherProducts];
       }
 

@@ -47,9 +47,9 @@ export default function WishlistButton({
         ${
           inWishlist
             ? "bg-red-500 text-white hover:bg-red-600"
-            : "bg-white text-gray-600 hover:bg-gray-50 hover:text-red-500"
+            : "bg-white text-gray-600 hover:bg-gray-50 hover:text-red-500 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-400"
         }
-        rounded-full border border-gray-200 transition-all duration-200 
+        rounded-full border border-gray-200 dark:border-gray-700 transition-all duration-200
         flex items-center justify-center shadow-sm hover:shadow-md
         disabled:opacity-50 disabled:cursor-not-allowed
         ${className}

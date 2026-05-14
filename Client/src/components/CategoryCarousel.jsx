@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { API_URL, getArrayData } from "../utils/apiConfig";
 
 export default function CategoryCarousel() {
   const [categories, setCategories] = useState([]);
@@ -13,12 +14,8 @@ export default function CategoryCarousel() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const response = await axios.get(`${apiUrl}/categories`);
-        const categoriesData = Array.isArray(response.data.data)
-          ? response.data.data
-          : [];
-        setCategories(categoriesData);
+        const response = await axios.get(`${API_URL}/categories`);
+        setCategories(getArrayData(response));
       } catch (error) {
         console.error("Error fetching categories:", error);
       } finally {

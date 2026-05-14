@@ -1,1730 +1,869 @@
-import { useState, useEffect, useContext } from "react";
-import { getAllOrders, updateOrderStatus } from "../../services/api";
-import { useCurrency } from "../../hooks/useCurrency";
-import { AuthContext } from "../../context/AuthContext";
-import Loading from "../../components/Loading";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock3,
+  CreditCard,
+  Database,
+  Eye,
+  Home,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Printer,
+  RefreshCcw,
+  Search,
+  Trash2,
+  Truck,
+  WalletCards,
+  X,
+  XCircle,
+} from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  confirmDeliveryPayment,
+  deleteDeliveredOrderCleanup,
+  getAllOrders,
+  previewDeliveredOrderCleanup,
+  rejectDeliveryPayment,
+  updateOrderStatus,
+} from "../../services/api";
+import { useCurrency } from "../../hooks/useCurrency";
+import Loading from "../../components/Loading";
 import { generateProfessionalInvoice } from "../../utils/printTemplate";
 
+const orderStatuses = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+];
+
+const filters = [
+  { value: "all", label: "All" },
+  { value: "pending_payment", label: "Payment Pending" },
+  { value: "confirmed_payment", label: "Payment Confirmed" },
+  { value: "rejected_payment", label: "Payment Rejected" },
+  { value: "processing", label: "Processing" },
+  { value: "delivered", label: "Delivered" },
+];
+
+const paymentBadge = {
+  pending: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+  confirmed: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  rejected: "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200",
+};
+
+const orderBadge = {
+  pending: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+  confirmed: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  processing: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200",
+  shipped: "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200",
+  delivered: "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-200",
+  cancelled: "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200",
+};
+
+const normalize = (value, fallback = "pending") =>
+  (value || fallback).toString().toLowerCase();
+
+const getItems = (order) => order.orderItems || order.products || order.items || [];
+
+const getResponseOrders = (response) => {
+  const data = response?.data?.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.orders)) return data.orders;
+  if (Array.isArray(response?.data?.orders)) return response.data.orders;
+  return [];
+};
+
+const getTotals = (order) => {
+  const total =
+    order.totalAmount ??
+    order.totalPrice ??
+    order.pricing?.total ??
+    order.total ??
+    0;
+  const deliveryFee =
+    order.deliveryFee ??
+    order.deliveryCharge ??
+    order.pricing?.deliveryFee ??
+    0;
+  const paidAmount = order.paidAmount ?? deliveryFee;
+  const dueAmount =
+    order.dueAmount ??
+    order.pricing?.remainingAmount ??
+    Math.max(total - paidAmount, 0);
+
+  return { total, deliveryFee, paidAmount, dueAmount };
+};
+
+const getOrderStatus = (order) =>
+  normalize(order.orderStatus || order.order?.status || order.status);
+
+const getPaymentStatus = (order) =>
+  normalize(order.deliveryPaymentStatus || order.paymentInfo?.status);
+
+const getOrderCode = (order) =>
+  order.orderCode || order._id?.slice?.(-8)?.toUpperCase() || "ORDER";
+
+const getCustomer = (order) => ({
+  name: order.shippingInfo?.name || order.customer?.name || "Customer",
+  phone: order.shippingInfo?.phone || order.customer?.phone || "No phone",
+  email: order.shippingInfo?.email || order.customer?.email || "No email",
+  address:
+    [
+      order.shippingInfo?.address || order.customer?.address,
+      order.shippingInfo?.city,
+      order.shippingInfo?.zipCode,
+    ]
+      .filter(Boolean)
+      .join(", ") || "No address",
+});
+
+function Badge({ value, type = "payment" }) {
+  const status = normalize(value);
+  const styles = type === "order" ? orderBadge : paymentBadge;
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold capitalize ${
+        styles[status] || styles.pending
+      }`}
+    >
+      {status.replace("_", " ")}
+    </span>
+  );
+}
+
+function StatCard({ title, value, helper, icon: Icon, tone }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{title}</p>
+          <p className="mt-2 text-2xl font-bold text-gray-950 dark:text-white">{value}</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helper}</p>
+        </div>
+        <div className={`rounded-lg border p-2.5 ${tone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminOrders() {
-  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
-  const [expandedOrder, setExpandedOrder] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
-  const [transactionId, setTransactionId] = useState("");
-  const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("pending_payment");
+  const [expanded, setExpanded] = useState({});
+  const [busyOrder, setBusyOrder] = useState("");
+  const [cleanupDays, setCleanupDays] = useState(30);
+  const [cleanupPreview, setCleanupPreview] = useState(null);
+  const [cleanupConfirm, setCleanupConfirm] = useState("");
+  const [cleanupLoading, setCleanupLoading] = useState(false);
   const { formatPrice } = useCurrency();
 
-  // Utility function to safely render color
-  const renderColor = (color) => {
-    if (!color) return null;
-    if (typeof color === "string") return color;
-    if (typeof color === "object" && color.name) return color.name;
-    return "Unknown Color";
-  };
-
-  const getAdvancePaymentInfo = (order) => {
-    return order.advancePayment || order.payment?.advance || null;
-  };
-
-  const isAdvancePaymentPending = (order) => {
-    const advancePayment = getAdvancePaymentInfo(order);
-    return advancePayment?.status === "Pending";
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllOrders({ limit: 200 });
+      setOrders(getResponseOrders(response));
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to fetch orders",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const fetchOrders = async () => {
+  const stats = useMemo(() => {
+    const pendingPayment = orders.filter(
+      (order) => getPaymentStatus(order) === "pending",
+    ).length;
+    const confirmedPayment = orders.filter(
+      (order) => getPaymentStatus(order) === "confirmed",
+    ).length;
+    const processing = orders.filter((order) =>
+      ["confirmed", "processing", "shipped"].includes(getOrderStatus(order)),
+    ).length;
+    const codDue = orders.reduce(
+      (sum, order) => sum + Number(getTotals(order).dueAmount || 0),
+      0,
+    );
+
+    return { pendingPayment, confirmedPayment, processing, codDue };
+  }, [orders]);
+
+  const visibleOrders = useMemo(() => {
+    const search = query.trim().toLowerCase();
+
+    return orders
+      .filter((order) => {
+        const paymentStatus = getPaymentStatus(order);
+        const orderStatus = getOrderStatus(order);
+
+        if (activeFilter === "pending_payment") return paymentStatus === "pending";
+        if (activeFilter === "confirmed_payment")
+          return paymentStatus === "confirmed";
+        if (activeFilter === "rejected_payment") return paymentStatus === "rejected";
+        if (activeFilter === "processing")
+          return ["confirmed", "processing", "shipped"].includes(orderStatus);
+        if (activeFilter === "delivered") return orderStatus === "delivered";
+        return true;
+      })
+      .filter((order) => {
+        if (!search) return true;
+        const customer = getCustomer(order);
+        const haystack = [
+          order._id,
+          order.orderCode,
+          customer.name,
+          customer.phone,
+          customer.email,
+          order.transactionId,
+          order.senderNumber,
+          order.receiverNumber,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(search);
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime(),
+      );
+  }, [activeFilter, orders, query]);
+
+  const updateOrderLocally = (updatedOrder, orderId) => {
+    setOrders((current) =>
+      current.map((order) =>
+        order._id === orderId ? { ...order, ...updatedOrder } : order,
+      ),
+    );
+  };
+
+  const handleConfirm = async (orderId) => {
+    setBusyOrder(orderId);
+    const loadingToast = toast.loading("Confirming delivery payment...");
+
     try {
-      console.log('📋 Fetching all orders...');
-      const response = await getAllOrders();
-      console.log('✅ Orders fetched:', response.data.data);
-      setOrders(response.data.data);
+      const response = await confirmDeliveryPayment(orderId);
+      updateOrderLocally(response.data.data, orderId);
+      toast.success("Payment confirmed and order moved to confirmed", {
+        id: loadingToast,
+      });
     } catch (error) {
-      console.error("❌ Failed to fetch orders:", error);
-      console.error("Error response:", error.response?.data);
-      
-      // Show error to user
-      let errorMessage = "Failed to fetch orders";
-      if (error.response?.status === 403) {
-        errorMessage = "Admin access required. Please contact administrator to set your role to 'admin'.";
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.message || "Failed to confirm payment", {
+        id: loadingToast,
+      });
     } finally {
-      setLoading(false);
+      setBusyOrder("");
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleReject = async (orderId) => {
+    setBusyOrder(orderId);
+    const loadingToast = toast.loading("Rejecting delivery payment...");
+
+    try {
+      const response = await rejectDeliveryPayment(orderId);
+      updateOrderLocally(response.data.data, orderId);
+      toast.success("Payment rejected", { id: loadingToast });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reject payment", {
+        id: loadingToast,
+      });
+    } finally {
+      setBusyOrder("");
+    }
+  };
+
+  const handleStatusChange = async (orderId, status) => {
+    setBusyOrder(orderId);
     const loadingToast = toast.loading("Updating order status...");
-    try {
-      await updateOrderStatus(orderId, newStatus);
-      setOrders(
-        orders.map((order) =>
-          order._id === orderId ? { ...order, status: newStatus } : order,
-        ),
-      );
-
-      // Note: Notification will be sent to the customer's account
-      // This would require backend implementation to send notifications to specific users
-
-      toast.success(`Order status updated to ${newStatus}!`, {
-        id: loadingToast,
-      });
-    } catch (error) {
-      console.error("Failed to update status:", error);
-      toast.error("Failed to update order status", {
-        id: loadingToast,
-      });
-    }
-  };
-
-  const handleConfirmAdvancePayment = async () => {
-    if (!transactionId.trim()) {
-      toast.error("Please enter a transaction ID");
-      return;
-    }
-
-    if (!user) {
-      toast.error("You must be logged in to confirm payments");
-      return;
-    }
-
-    setConfirmingPayment(true);
-    const loadingToast = toast.loading("Confirming advance payment...");
 
     try {
-      // Get Firebase ID token
-      const token = await user.getIdToken();
-
-      const response = await fetch(
-        `/api/orders/${selectedOrderForPayment._id}/confirm-advance-payment`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            transactionId: transactionId.trim(),
-            adminId: user.uid,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        // Handle 401 Unauthorized
-        if (response.status === 401) {
-          throw new Error("Unauthorized. Please login again.");
-        }
-        
-        // Try to parse JSON error response
-        let errorMessage = "Failed to confirm payment";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          // Response is not JSON (e.g., HTML error page)
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      // Update the order in the list
-      setOrders(
-        orders.map((order) =>
-          order._id === selectedOrderForPayment._id
-            ? {
-                ...order,
-                advancePayment: {
-                  ...order.advancePayment,
-                  status: "Confirmed",
-                  transactionId: transactionId.trim(),
-                  confirmedAt: new Date(),
-                },
-                orderStatus: "Processing",
-                status: "processing",
-              }
-            : order
-        )
-      );
-
-      toast.success("Advance payment confirmed successfully!", {
-        id: loadingToast,
-      });
-
-      // Close modal and reset
-      setShowPaymentModal(false);
-      setSelectedOrderForPayment(null);
-      setTransactionId("");
+      const response = await updateOrderStatus(orderId, status);
+      updateOrderLocally(response.data.data, orderId);
+      toast.success("Order status updated", { id: loadingToast });
     } catch (error) {
-      console.error("Payment confirmation error:", error);
-      toast.error(error.message || "Failed to confirm payment", {
+      toast.error(error.response?.data?.message || "Failed to update order", {
         id: loadingToast,
       });
     } finally {
-      setConfirmingPayment(false);
+      setBusyOrder("");
     }
   };
 
-  const printOrder = (order) => {
-    try {
-      // Create print content using professional template
-      const printContent = generateProfessionalInvoice(order);
+  const handlePrintReceipt = (order) => {
+    const printWindow = window.open("", "_blank", "width=900,height=700");
 
-      // Create a new window for printing
-      const printWindow = window.open("", "_blank", "width=800,height=600");
-
-      if (!printWindow) {
-        // Fallback: Use iframe method if popup is blocked
-        printOrderWithIframe(order);
-        return;
-      }
-
-      // Write content to the new window
-      printWindow.document.open();
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-
-      // Wait for content to load, then print
-      printWindow.onload = function () {
-        printWindow.focus();
-        printWindow.print();
-
-        // Close window after printing (with delay to ensure print dialog appears)
-        setTimeout(() => {
-          printWindow.close();
-        }, 1000);
-      };
-    } catch (error) {
-      console.error("Print error:", error);
-      // Fallback to iframe method
-      printOrderWithIframe(order);
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups to print receipts.");
+      return;
     }
+
+    printWindow.document.open();
+    printWindow.document.write(generateProfessionalInvoice(order));
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
   };
 
-  const printOrderWithIframe = (order) => {
+  const handlePreviewCleanup = async () => {
+    setCleanupLoading(true);
     try {
-      // Create hidden iframe for printing
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "absolute";
-      iframe.style.top = "-9999px";
-      iframe.style.left = "-9999px";
-      iframe.style.width = "0px";
-      iframe.style.height = "0px";
-
-      document.body.appendChild(iframe);
-
-      const printContent = generateProfessionalInvoice(order);
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-
-      iframeDoc.open();
-      iframeDoc.write(printContent);
-      iframeDoc.close();
-
-      // Wait for content to load, then print
-      iframe.onload = function () {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-
-        // Remove iframe after printing
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      };
+      const response = await previewDeliveredOrderCleanup(cleanupDays);
+      setCleanupPreview(response.data.data);
     } catch (error) {
-      console.error("Iframe print error:", error);
-      alert(
-        "Unable to print. Please check your browser settings and try again.",
+      toast.error(
+        error.response?.data?.message || "Failed to preview cleanup",
       );
+    } finally {
+      setCleanupLoading(false);
     }
   };
 
-  const generatePrintContent = (order) => {
-    const orderDate = new Date(order.createdAt).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const handleDeleteCleanup = async () => {
+    if (cleanupConfirm !== "DELETE DELIVERED ORDERS") {
+      toast.error("Type DELETE DELIVERED ORDERS to confirm");
+      return;
+    }
 
-    const subtotal = order.subtotal || order.pricing?.subtotal || order.total || 0;
-    const deliveryCharge = order.deliveryCharge || order.pricing?.deliveryFee || 0;
-    const total = order.totalPrice || order.total || order.pricing?.total || 0;
+    setCleanupLoading(true);
+    const loadingToast = toast.loading("Deleting old delivered orders...");
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Order #${order._id.slice(-8).toUpperCase()} - Borka Bazar</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          
-          .header {
-            text-align: center;
-            border-bottom: 3px solid #1e7098;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
-          
-          .company-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1e7098;
-            margin-bottom: 5px;
-          }
-          
-          .company-tagline {
-            color: #666;
-            font-size: 14px;
-          }
-          
-          .order-header {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border-left: 4px solid #1e7098;
-          }
-          
-          .order-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1e7098;
-            margin-bottom: 10px;
-          }
-          
-          .order-meta {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 15px;
-          }
-          
-          .meta-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-          }
-          
-          .meta-label {
-            font-weight: bold;
-            color: #555;
-          }
-          
-          .meta-value {
-            color: #333;
-          }
-          
-          .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-          }
-          
-          .status-pending { background: #fff3cd; color: #856404; }
-          .status-processing { background: #cce5ff; color: #004085; }
-          .status-shipped { background: #e2e3ff; color: #383d41; }
-          .status-delivered { background: #d4edda; color: #155724; }
-          .status-cancelled { background: #f8d7da; color: #721c24; }
-          
-          .section {
-            margin-bottom: 30px;
-            page-break-inside: avoid;
-          }
-          
-          .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1e7098;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #e9ecef;
-          }
-          
-          .two-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-          }
-          
-          .info-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-          }
-          
-          .info-item {
-            margin-bottom: 12px;
-          }
-          
-          .info-label {
-            font-weight: bold;
-            color: #495057;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-          }
-          
-          .info-value {
-            color: #212529;
-            font-size: 14px;
-          }
-          
-          .address-box {
-            background: white;
-            border: 2px solid #1e7098;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-family: 'Courier New', monospace;
-            white-space: pre-line;
-            line-height: 1.8;
-          }
-          
-          .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-          }
-          
-          .products-table th,
-          .products-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #dee2e6;
-          }
-          
-          .products-table th {
-            background: #f8f9fa;
-            font-weight: bold;
-            color: #495057;
-            border-bottom: 2px solid #1e7098;
-          }
-          
-          .product-image {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-          }
-          
-          .product-details {
-            font-size: 13px;
-            color: #666;
-            margin-top: 4px;
-          }
-          
-          .total-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            margin-top: 20px;
-          }
-          
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #dee2e6;
-          }
-          
-          .total-row:last-child {
-            border-bottom: none;
-            font-weight: bold;
-            font-size: 16px;
-            color: #1e7098;
-            border-top: 2px solid #1e7098;
-            padding-top: 12px;
-            margin-top: 8px;
-          }
-          
-          .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #e9ecef;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-          }
-          
-          .print-date {
-            margin-top: 10px;
-            font-style: italic;
-          }
-          
-          @media print {
-            body {
-              margin: 0;
-              padding: 15px;
-            }
-            
-            .section {
-              page-break-inside: avoid;
-            }
-            
-            .order-header {
-              page-break-after: avoid;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <!-- Header -->
-        <div class="header">
-          <div class="company-name">Borka Bazar</div>
-          <div class="company-tagline">Elegant Modest Fashion</div>
-        </div>
-
-        <!-- Order Header -->
-        <div class="order-header">
-          <div class="order-title">Order #${order._id.slice(-8).toUpperCase()}</div>
-          <div class="order-meta">
-            <div>
-              <div class="meta-item">
-                <span class="meta-label">Order Date:</span>
-                <span class="meta-value">${orderDate}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Payment Method:</span>
-                <span class="meta-value">${order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A"}</span>
-              </div>
-            </div>
-            <div>
-              <div class="meta-item">
-                <span class="meta-label">Status:</span>
-                <span class="meta-value">
-                  <span class="status-badge status-${order.status}">${order.status.toUpperCase()}</span>
-                </span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Total Amount:</span>
-                <span class="meta-value" style="font-weight: bold; color: #1e7098;">${formatPrice(total)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Customer & Shipping Information -->
-        <div class="section">
-          <div class="section-title">📋 Customer & Shipping Information</div>
-          <div class="two-column">
-            <!-- Customer Info -->
-            <div>
-              <h4 style="margin-bottom: 15px; color: #495057;">👤 Customer Details</h4>
-              <div class="info-card">
-                ${
-                  order.shippingInfo
-                    ? `
-                  <div class="info-item">
-                    <div class="info-label">Full Name</div>
-                    <div class="info-value">${order.shippingInfo.name || "N/A"}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Phone Number</div>
-                    <div class="info-value">${order.shippingInfo.phone || "N/A"}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Email Address</div>
-                    <div class="info-value">${order.shippingInfo.email || "N/A"}</div>
-                  </div>
-                `
-                    : `
-                  <div style="text-align: center; color: #666; padding: 20px;">
-                    <strong>⚠️ No Customer Information Available</strong><br>
-                    <small>This order was placed before customer info collection was implemented</small>
-                  </div>
-                `
-                }
-                <div class="info-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
-                  <div class="info-label">System User ID</div>
-                  <div class="info-value" style="font-family: monospace; font-size: 11px; word-break: break-all;">${order.userId}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Shipping Address -->
-            <div>
-              <h4 style="margin-bottom: 15px; color: #495057;">📍 Delivery Address</h4>
-              ${
-                order.shippingInfo
-                  ? `
-                <div class="info-card">
-                  <div class="info-item">
-                    <div class="info-label">Street Address</div>
-                    <div class="info-value">${order.shippingInfo.address || "N/A"}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Area/Thana</div>
-                    <div class="info-value">${order.shippingInfo.area || "N/A"}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">City/District</div>
-                    <div class="info-value">${order.shippingInfo.city || "N/A"}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Postal Code</div>
-                    <div class="info-value">${order.shippingInfo.zipCode || "N/A"}</div>
-                  </div>
-                  
-                  <div style="margin-top: 15px;">
-                    <div class="info-label">📦 Complete Shipping Address</div>
-                    <div class="address-box">${[
-                      order.shippingInfo.name,
-                      order.shippingInfo.phone,
-                      order.shippingInfo.address,
-                      order.shippingInfo.area +
-                        (order.shippingInfo.city
-                          ? `, ${order.shippingInfo.city}`
-                          : ""),
-                      order.shippingInfo.zipCode,
-                    ]
-                      .filter(Boolean)
-                      .join("\n")}</div>
-                  </div>
-                </div>
-              `
-                  : `
-                <div class="info-card" style="text-align: center; color: #666; padding: 30px;">
-                  <strong>⚠️ No Shipping Address Available</strong><br>
-                  <small>Please contact customer for delivery details</small>
-                </div>
-              `
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Order Items -->
-        <div class="section">
-          <div class="section-title">🛍️ Order Items (${order.products?.length || 0} items)</div>
-          <table class="products-table">
-            <thead>
-              <tr>
-                <th style="width: 60px;">Image</th>
-                <th>Product Details</th>
-                <th style="width: 80px; text-align: center;">Qty</th>
-                <th style="width: 100px; text-align: right;">Unit Price</th>
-                <th style="width: 100px; text-align: right;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${
-                order.products
-                  ?.map(
-                    (item) => `
-                <tr>
-                  <td>
-                    ${
-                      item.image
-                        ? `<img src="${item.image}" alt="${item.title}" class="product-image" />`
-                        : '<div style="width: 40px; height: 40px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666;">No Image</div>'
-                    }
-                  </td>
-                  <td>
-                    <div style="font-weight: bold; margin-bottom: 4px;">${item.title}</div>
-                    <div class="product-details">
-                      ${(item.selectedSize || item.size || item.variant?.size) ? `Size: <strong>${item.selectedSize || item.size || item.variant?.size}</strong>` : ""}
-                      ${(item.selectedSize || item.size || item.variant?.size) && (item.selectedColor || item.color || item.variant?.color) ? " • " : ""}
-                      ${(item.selectedColor || item.color || item.variant?.color) ? `Color: <strong>${renderColor(item.selectedColor || item.color || item.variant?.color)}</strong>` : ""}
-                      ${(item.productId || item._id) ? ` • ID: <strong>${(item.productId || item._id).slice(-6)}</strong>` : ""}
-                    </div>
-                    </div>
-                    </div>
-                  </td>
-                  <td style="text-align: center; font-weight: bold;">${item.quantity}</td>
-                  <td style="text-align: right;">${formatPrice(item.price)}</td>
-                  <td style="text-align: right; font-weight: bold;">${formatPrice(item.price * item.quantity)}</td>
-                </tr>
-              `,
-                  )
-                  .join("") ||
-                '<tr><td colspan="5" style="text-align: center; color: #666; padding: 20px;">No items found</td></tr>'
-              }
-            </tbody>
-          </table>
-
-          <!-- Order Total -->
-          <div class="total-section">
-            <div class="total-row">
-              <span>Subtotal:</span>
-              <span>${formatPrice(subtotal)}</span>
-            </div>
-            <div class="total-row">
-              <span>Delivery Charge:</span>
-              <span>${deliveryCharge > 0 ? formatPrice(deliveryCharge) : "FREE"}</span>
-            </div>
-            <div class="total-row">
-              <span>Total Amount:</span>
-              <span>${formatPrice(total)}</span>
-            </div>
-          </div>
-        </div>
-
-        ${
-          order.specialInstructions
-            ? `
-          <!-- Special Instructions -->
-          <div class="section">
-            <div class="section-title">📝 Special Instructions</div>
-            <div class="info-card" style="background: #fff3cd; border-color: #ffeaa7;">
-              <div style="color: #856404; font-weight: bold; margin-bottom: 8px;">Customer Notes:</div>
-              <div style="color: #856404;">${order.specialInstructions}</div>
-            </div>
-          </div>
-        `
-            : ""
-        }
-
-        <!-- Footer -->
-        <div class="footer">
-          <div><strong>Borka Bazar</strong> - Elegant Modest Fashion</div>
-          <div>📞 Contact: +880 1521-721946 | 📧 Email: mdjahedulislamjaved@gmail.com</div>
-          <div class="print-date">Printed on: ${new Date().toLocaleString()}</div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
-  const statusConfig = {
-    pending: {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      icon: "⏳",
-    },
-    processing: {
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      icon: "🔄",
-    },
-    shipped: {
-      color: "bg-purple-100 text-purple-800 border-purple-200",
-      icon: "📦",
-    },
-    delivered: {
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: "✅",
-    },
-    cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: "❌" },
-  };
-
-  const filteredOrders =
-    filter === "all"
-      ? orders
-      : orders.filter((order) => order.status === filter);
-
-  const stats = {
-    total: orders.length,
-    pending: orders.filter((o) => o.status === "pending").length,
-    processing: orders.filter((o) => o.status === "processing").length,
-    delivered: orders.filter((o) => o.status === "delivered").length,
+    try {
+      const response = await deleteDeliveredOrderCleanup(
+        cleanupDays,
+        cleanupConfirm,
+      );
+      toast.success(response.data.message || "Old delivered orders deleted", {
+        id: loadingToast,
+      });
+      setCleanupConfirm("");
+      setCleanupPreview(null);
+      await fetchOrders();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to delete delivered orders",
+        { id: loadingToast },
+      );
+    } finally {
+      setCleanupLoading(false);
+    }
   };
 
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <main className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Toaster position="top-right" />
-      
-      {/* Header */}
-      <div className="bg-white/90 dark:bg-gray-950/90 border-b border-gray-100 dark:border-gray-800 sticky top-20 z-30 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Orders Management
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-            Manage and track all customer orders
-          </p>
+
+      <div className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                to="/admin"
+                className="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 hover:text-gray-950 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                title="Back to dashboard"
+              >
+                <Home className="h-5 w-5" />
+              </Link>
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+                  Fulfillment
+                </p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-950 dark:text-white sm:text-3xl">
+                  Admin Orders
+                </h1>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                  Verify delivery payments, update fulfillment status, and print
+                  parcel receipts for COD delivery.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={fetchOrders}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFilter("pending_payment")}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-gray-200"
+              >
+                <WalletCards className="h-4 w-4" />
+                Review Payments
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Orders</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              {stats.pending}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Processing</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {stats.processing}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Delivered</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {stats.delivered}
-            </p>
-          </div>
+      <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Pending Payments"
+            value={stats.pendingPayment}
+            helper="Needs confirm or reject"
+            icon={AlertTriangle}
+            tone="border-amber-100 bg-amber-50 text-amber-700"
+          />
+          <StatCard
+            title="Confirmed Payments"
+            value={stats.confirmedPayment}
+            helper="Ready for fulfillment"
+            icon={CheckCircle2}
+            tone="border-emerald-100 bg-emerald-50 text-emerald-700"
+          />
+          <StatCard
+            title="In Progress"
+            value={stats.processing}
+            helper="Confirmed, processing, shipped"
+            icon={Truck}
+            tone="border-blue-100 bg-blue-50 text-blue-700"
+          />
+          <StatCard
+            title="COD To Collect"
+            value={formatPrice(stats.codDue)}
+            helper="Remaining due from customers"
+            icon={Package}
+            tone="border-orange-100 bg-orange-50 text-orange-700"
+          />
         </div>
 
-        {/* Filter Tabs */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-2 mb-6 flex flex-wrap gap-2 border border-gray-100 dark:border-gray-800">
-          {[
-            "all",
-            "pending",
-            "processing",
-            "shipped",
-            "delivered",
-            "cancelled",
-          ].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filter === status
-                  ? "bg-black dark:bg-white text-white dark:text-black"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Orders List */}
-        {filteredOrders.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-12 text-center border border-gray-100 dark:border-gray-800">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
+        <div className="sticky top-0 z-10 mb-6 rounded-lg border border-gray-200 bg-white/95 p-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-12 w-full rounded-lg border border-gray-200 bg-white pl-12 pr-11 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-950 focus:ring-2 focus:ring-gray-950/10 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300/10"
+                placeholder="Search order ID, customer, phone, email, transaction ID, sender number"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No orders found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              {filter === "all"
-                ? "No orders have been placed yet"
-                : `No ${filter} orders`}
+
+            <div className="flex gap-2 overflow-x-auto pb-1 xl:pb-0">
+              {filters.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.value)}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    activeFilter === filter.value
+                      ? "bg-gray-950 text-white dark:bg-white dark:text-gray-950"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-950 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 rounded-lg border border-red-100 bg-white p-4 shadow-sm dark:border-red-900/60 dark:bg-gray-900">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
+                <Database className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-950 dark:text-white">
+                  Delivered Order Cleanup
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
+                  Delete only delivered orders older than the selected retention
+                  period. Minimum retention is 30 days.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[140px_150px_minmax(220px,1fr)_160px] xl:min-w-[760px]">
+              <select
+                value={cleanupDays}
+                onChange={(event) => {
+                  setCleanupDays(Number(event.target.value));
+                  setCleanupPreview(null);
+                }}
+                className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-800 outline-none transition focus:border-gray-950 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-300"
+              >
+                <option value={30}>30 days</option>
+                <option value={60}>60 days</option>
+                <option value={90}>90 days</option>
+                <option value={180}>180 days</option>
+                <option value={365}>1 year</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handlePreviewCleanup}
+                disabled={cleanupLoading}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-bold text-gray-800 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-800"
+              >
+                <Eye className="h-4 w-4" />
+                Preview
+              </button>
+
+              <input
+                value={cleanupConfirm}
+                onChange={(event) => setCleanupConfirm(event.target.value)}
+                className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/10 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500"
+                placeholder="Type DELETE DELIVERED ORDERS"
+              />
+
+              <button
+                type="button"
+                onClick={handleDeleteCleanup}
+                disabled={
+                  cleanupLoading ||
+                  cleanupConfirm !== "DELETE DELIVERED ORDERS" ||
+                  !cleanupPreview?.count
+                }
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Old
+              </button>
+            </div>
+          </div>
+
+          {cleanupPreview && (
+            <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-900/70 dark:bg-red-950/30">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                  {cleanupPreview.count} delivered orders older than{" "}
+                  {cleanupPreview.days} days match this cleanup rule.
+                </p>
+                <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                  Cutoff:{" "}
+                  {new Date(cleanupPreview.cutoffDate).toLocaleDateString()}
+                </p>
+              </div>
+              {cleanupPreview.sampleOrders?.length > 0 && (
+                <p className="mt-2 text-xs text-red-700 dark:text-red-300">
+                  Sample:{" "}
+                  {cleanupPreview.sampleOrders
+                    .map((order) => getOrderCode(order))
+                    .join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {visibleOrders.length === 0 ? (
+          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <CreditCard className="mx-auto mb-4 h-12 w-12 text-gray-300 dark:text-gray-600" />
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">No orders found</h2>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Change the filter or search term to see more orders.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <div
-                key={order._id}
-                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800"
-              >
-                {/* Order Header */}
-                <div
-                  className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition"
-                  onClick={() =>
-                    setExpandedOrder(
-                      expandedOrder === order._id ? null : order._id,
-                    )
-                  }
+            {visibleOrders.map((order) => {
+              const totals = getTotals(order);
+              const items = getItems(order);
+              const customer = getCustomer(order);
+              const paymentStatus = getPaymentStatus(order);
+              const orderStatus = getOrderStatus(order);
+              const isOpen = expanded[order._id];
+              const isBusy = busyOrder === order._id;
+
+              return (
+                <article
+                  key={order._id}
+                  className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl">
-                        {statusConfig[order.status]?.icon}
+                  <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_520px]">
+                    <div className="min-w-0">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpanded((current) => ({
+                              ...current,
+                              [order._id]: !current[order._id],
+                            }))
+                          }
+                          className="inline-flex items-center gap-2 text-left text-lg font-bold text-gray-950 hover:text-gray-700 dark:text-white dark:hover:text-gray-200"
+                        >
+                          #{getOrderCode(order)}
+                          {isOpen ? (
+                            <ChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                        <Badge value={paymentStatus} />
+                        <Badge value={orderStatus} type="order" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            Order #{order._id.slice(-8).toUpperCase()}
-                          </p>
-                          {order.paymentMethod && (
-                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                              {order.paymentMethod.toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span>
-                            {new Date(order.createdAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
+
+                      <div className="grid gap-3 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-2 xl:grid-cols-4">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Phone className="h-4 w-4 shrink-0 text-gray-400" />
+                          <span className="truncate">{customer.phone}</span>
+                        </span>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                          <span className="truncate">{customer.email}</span>
+                        </span>
+                        <span className="flex min-w-0 items-center gap-2 font-mono">
+                          <CreditCard className="h-4 w-4 shrink-0 text-gray-400" />
+                          <span className="truncate">
+                            {order.transactionId || "No TRX"}
                           </span>
-                          {order.shippingInfo?.name && (
-                            <>
-                              <span>•</span>
-                              <span>{order.shippingInfo.name}</span>
-                            </>
-                          )}
-                          {order.shippingInfo?.city && (
-                            <>
-                              <span>•</span>
-                              <span>{order.shippingInfo.city}</span>
-                            </>
-                          )}
+                        </span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {order.createdAt
+                            ? new Date(order.createdAt).toLocaleString()
+                            : "No date"}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            Total
+                          </p>
+                          <p className="mt-1 font-bold text-gray-950 dark:text-white">
+                            {formatPrice(totals.total)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/40">
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                            Paid Delivery
+                          </p>
+                          <p className="mt-1 font-bold text-emerald-800 dark:text-emerald-100">
+                            {formatPrice(totals.paidAmount)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-orange-50 p-3 dark:bg-orange-950/40">
+                          <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+                            COD Due
+                          </p>
+                          <p className="mt-1 font-bold text-orange-800 dark:text-orange-100">
+                            {formatPrice(totals.dueAmount)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-pink-50 p-3 dark:bg-pink-950/40">
+                          <p className="text-xs font-semibold text-pink-700 dark:text-pink-300">
+                            Sender
+                          </p>
+                          <p className="mt-1 truncate font-bold text-pink-900 dark:text-pink-100">
+                            {order.senderNumber || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {order.products?.length || 0} items
-                          </span>
-                          {order.products?.some(
-                            (item) => item.selectedSize || item.selectedColor,
-                          ) && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                              Customized Items
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-bold text-lg text-gray-900 dark:text-white">
-                          {formatPrice(order.totalPrice || order.total || order.pricing?.total || 0)}
-                          {(order.deliveryCharge || order.pricing?.deliveryFee) > 0 && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                              (+{formatPrice(order.deliveryCharge || order.pricing?.deliveryFee)} delivery)
-                            </span>
-                          )}
-                        </p>
-                      </div>
 
-                      {/* Quick Print Button */}
+                    <div className="grid content-start gap-3 sm:grid-cols-2">
+                      <select
+                        value={orderStatus}
+                        onChange={(event) =>
+                          handleStatusChange(order._id, event.target.value)
+                        }
+                        disabled={isBusy}
+                        className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold capitalize text-gray-800 outline-none transition focus:border-gray-950 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-300"
+                      >
+                        {orderStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          printOrder(order);
-                        }}
-                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Print Order Details"
+                        onClick={() => handlePrintReceipt(order)}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-gray-950 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:hover:border-gray-400 dark:hover:bg-gray-800"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                          />
-                        </svg>
+                        <Printer className="h-4 w-4" />
+                        Print Receipt
                       </button>
 
-                      <select
-                        value={order.status}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleStatusChange(order._id, e.target.value);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                          statusConfig[order.status]?.color
-                        } cursor-pointer focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                      <svg
-                        className={`w-5 h-5 text-gray-400 transition ${
-                          expandedOrder === order._id ? "rotate-180" : ""
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded Order Details */}
-                {expandedOrder === order._id && (
-                  <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Order Items with Details */}
-                      <div className="lg:col-span-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                          <svg
-                            className="w-5 h-5 text-gold-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                      {paymentStatus === "pending" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleReject(order._id)}
+                            disabled={isBusy}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:bg-gray-950 dark:text-red-300 dark:hover:bg-red-950/40"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                            />
-                          </svg>
-                          Order Items ({order.products?.length || 0})
-                        </h4>
-                        <div className="space-y-3">
-                          {order.products?.map((item, index) => (
-                            <div
-                              key={index}
-                              className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm"
-                            >
-                              <div className="flex items-start gap-4">
-                                {/* Product Image */}
-                                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                  {item.image ? (
-                                    <img
-                                      src={item.image}
-                                      alt={item.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                      <svg
-                                        className="w-6 h-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                        />
-                                      </svg>
-                                    </div>
-                                  )}
-                                </div>
+                            <XCircle className="h-4 w-4" />
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleConfirm(order._id)}
+                            disabled={isBusy}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Confirm
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpanded((current) => ({
+                              ...current,
+                              [order._id]: !current[order._id],
+                            }))
+                          }
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 sm:col-span-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          {isOpen ? "Hide Details" : "View Details"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-                                {/* Product Details */}
-                                <div className="flex-1">
-                                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">
-                                    {item.title}
-                                  </h5>
-                                  <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                      <span className="text-gray-500 dark:text-gray-400">
-                                        Quantity:
-                                      </span>
-                                      <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                                        {item.quantity}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-gray-500 dark:text-gray-400">
-                                        Unit Price:
-                                      </span>
-                                      <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                                        {formatPrice(item.price)}
-                                      </span>
-                                    </div>
-                                    
-                                    {/* Size - check multiple possible fields */}
-                                    {(item.selectedSize || item.size || item.variant?.size) && (
-                                      <div>
-                                        <span className="text-gray-500 dark:text-gray-400">
-                                          Size:
-                                        </span>
-                                        <span className="ml-2 font-medium text-black dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-xs">
-                                          {item.selectedSize || item.size || item.variant?.size}
-                                        </span>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Color - check multiple possible fields */}
-                                    {(item.selectedColor || item.color || item.variant?.color) && (
-                                      <div>
-                                        <span className="text-gray-500 dark:text-gray-400">
-                                          Color:
-                                        </span>
-                                        <div className="ml-2 inline-flex items-center gap-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md text-xs">
-                                          {typeof (item.selectedColor || item.color || item.variant?.color) ===
-                                            "object" &&
-                                            (item.selectedColor || item.color || item.variant?.color).value && (
-                                              <div
-                                                className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600"
-                                                style={{
-                                                  backgroundColor:
-                                                    (item.selectedColor || item.color || item.variant?.color).value,
-                                                }}
-                                              />
-                                            )}
-                                          {renderColor(item.selectedColor || item.color || item.variant?.color)}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Product ID for debugging */}
-                                    <div className="col-span-2">
-                                      <span className="text-gray-500 dark:text-gray-400 text-xs">
-                                        Product ID:
-                                      </span>
-                                      <span className="ml-2 font-mono text-xs text-gray-600 dark:text-gray-300">
-                                        {item.productId || item._id}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="col-span-2">
-                                      <span className="text-gray-500 dark:text-gray-400">
-                                        Subtotal:
-                                      </span>
-                                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">
-                                        {formatPrice(
-                                          (item.price || 0) *
-                                            (item.quantity || 0),
-                                        )}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Order Total Breakdown */}
-                          <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
-                            <h5 className="font-medium text-gray-900 dark:text-white mb-3">
-                              Order Summary
-                            </h5>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-gray-400">Subtotal:</span>
-                                <span className="text-gray-900 dark:text-white">
-                                  {formatPrice(order.subtotal || order.pricing?.subtotal || order.total || 0)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  Delivery Charge:
-                                </span>
-                                <span className="text-gray-900 dark:text-white">
-                                  {(order.deliveryCharge || order.pricing?.deliveryFee)
-                                    ? formatPrice(order.deliveryCharge || order.pricing?.deliveryFee)
-                                    : "FREE"}
-                                </span>
-                              </div>
-                              <div className="border-t pt-2 flex justify-between font-semibold">
-                                <span className="text-gray-900 dark:text-white">Total:</span>
-                                <span className="text-black dark:text-white">
-                                  {formatPrice(order.totalPrice || order.total || order.pricing?.total || 0)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Customer & Shipping Information */}
-                      <div className="space-y-6">
-                        {/* Customer Details */}
+                  <div
+                    className={`grid transition-all duration-300 ${
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="grid gap-5 border-t border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-950 xl:grid-cols-[minmax(0,1fr)_360px]">
                         <div>
-                          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <svg
-                              className="w-5 h-5 text-blue-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                              />
-                            </svg>
-                            Customer Information
-                          </h4>
-                          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-4">
-                            {order.shippingInfo ? (
-                              <>
-                                {order.shippingInfo.name && (
-                                  <div>
-                                    <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                      Full Name
-                                    </span>
-                                    <p className="text-sm font-medium text-gray-900 mt-1">
-                                      {order.shippingInfo.name}
-                                    </p>
-                                  </div>
-                                )}
-
-                                <div className="grid grid-cols-1 gap-4">
-                                  {order.shippingInfo.phone && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                        Phone Number
-                                      </span>
-                                      <p className="text-sm text-gray-900 mt-1">
-                                        <a
-                                          href={`tel:${order.shippingInfo.phone}`}
-                                          className="text-blue-600 hover:underline font-medium"
-                                        >
-                                          {order.shippingInfo.phone}
-                                        </a>
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {order.shippingInfo.email && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                        Email Address
-                                      </span>
-                                      <p className="text-sm text-gray-900 mt-1">
-                                        <a
-                                          href={`mailto:${order.shippingInfo.email}`}
-                                          className="text-blue-600 hover:underline"
-                                        >
-                                          {order.shippingInfo.email}
-                                        </a>
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-center py-6">
-                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                  <svg
-                                    className="w-6 h-6 text-yellow-600"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                    />
-                                  </svg>
-                                </div>
-                                <p className="text-sm font-medium text-gray-900 mb-1">
-                                  No Customer Information
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  This order was placed before customer info
-                                  collection was implemented
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Firebase User ID for reference */}
-                            <div className="pt-3 border-t border-gray-100">
-                              <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                System Reference
-                              </span>
-                              <p className="font-mono text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1">
-                                User ID: {order.userId}
-                              </p>
+                          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Products
+                          </h3>
+                          {items.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                              No products found for this order.
                             </div>
-                          </div>
+                          ) : (
+                            <div className="grid gap-3 md:grid-cols-2">
+                              {items.map((item, index) => (
+                                <div
+                                  key={`${order._id}-${item.productId || item._id || index}`}
+                                  className="flex gap-4 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+                                >
+                                  <div className="h-16 w-14 shrink-0 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
+                                    {(item.image || item.productImage) && (
+                                      <img
+                                        src={item.image || item.productImage}
+                                        alt={item.title || item.name || "Product"}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate font-semibold text-gray-950 dark:text-white">
+                                      {item.title || item.name || "Product"}
+                                    </p>
+                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                      Qty {item.quantity || 1} x{" "}
+                                      {formatPrice(item.price || 0)}
+                                    </p>
+                                    {(item.size || item.selectedSize) && (
+                                      <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                        Size: {item.size || item.selectedSize}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Shipping Address */}
-                        {order.shippingInfo && (
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <svg
-                                className="w-5 h-5 text-green-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                              Delivery Address
-                            </h4>
-                            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                              <div className="space-y-3">
-                                {/* Address Details */}
-                                {order.shippingInfo.address && (
-                                  <div>
-                                    <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                      Street Address
-                                    </span>
-                                    <p className="text-sm text-gray-900 mt-1 leading-relaxed">
-                                      {order.shippingInfo.address}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Location Details */}
-                                <div className="grid grid-cols-2 gap-4">
-                                  {order.shippingInfo.area && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                        Area/Thana
-                                      </span>
-                                      <p className="text-sm font-medium text-gray-900 mt-1">
-                                        {order.shippingInfo.area}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {order.shippingInfo.city && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                        City/District
-                                      </span>
-                                      <p className="text-sm font-medium text-gray-900 mt-1">
-                                        {order.shippingInfo.city}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {order.shippingInfo.zipCode && (
-                                  <div>
-                                    <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                      Postal Code
-                                    </span>
-                                    <p className="text-sm text-gray-900 mt-1">
-                                      {order.shippingInfo.zipCode}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Complete Address for Shipping Label */}
-                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                                      📦 Shipping Label Address
-                                    </span>
-                                    <button
-                                      onClick={() => {
-                                        const fullAddress = [
-                                          order.shippingInfo.name,
-                                          order.shippingInfo.phone,
-                                          order.shippingInfo.address,
-                                          order.shippingInfo.area,
-                                          order.shippingInfo.city,
-                                          order.shippingInfo.zipCode,
-                                        ]
-                                          .filter(Boolean)
-                                          .join("\n");
-                                        navigator.clipboard.writeText(
-                                          fullAddress,
-                                        );
-                                        alert(
-                                          "Shipping address copied to clipboard!",
-                                        );
-                                      }}
-                                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                                    >
-                                      <svg
-                                        className="w-3 h-3"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                        />
-                                      </svg>
-                                      Copy
-                                    </button>
-                                  </div>
-                                  <div className="text-sm text-gray-900 leading-relaxed whitespace-pre-line font-mono bg-white p-3 rounded border">
-                                    {[
-                                      order.shippingInfo.name,
-                                      order.shippingInfo.phone,
-                                      order.shippingInfo.address,
-                                      order.shippingInfo.area +
-                                        (order.shippingInfo.city
-                                          ? `, ${order.shippingInfo.city}`
-                                          : ""),
-                                      order.shippingInfo.zipCode,
-                                    ]
-                                      .filter(Boolean)
-                                      .join("\n")}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Payment & Additional Info */}
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <svg
-                              className="w-5 h-5 text-purple-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                              />
-                            </svg>
-                            Order Details
-                          </h4>
-                          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-3">
-                            {order.paymentMethod && (
-                              <div>
-                                <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                  Payment Method
-                                </span>
-                                <p className="text-sm font-medium text-gray-900 mt-1 capitalize">
-                                  {order.paymentMethod}
-                                </p>
-                              </div>
-                            )}
-                            {order.transactionId && (
-                              <div>
-                                <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                  Transaction ID
-                                </span>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <p className="text-sm font-mono font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
-                                    {order.transactionId}
-                                  </p>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(
-                                        order.transactionId,
-                                      );
-                                      toast.success("Transaction ID copied!");
-                                    }}
-                                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                    title="Copy Transaction ID"
-                                  >
-                                    <svg
-                                      className="w-4 h-4 text-gray-600"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                                {order.paymentStatus ===
-                                  "pending_verification" && (
-                                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                      />
-                                    </svg>
-                                    Payment verification pending
-                                  </p>
-                                )}
-                              </div>
-                            )}
+                        <aside className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                          <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Customer & Payment
+                          </h3>
+                          <div className="space-y-4 text-sm">
                             <div>
-                              <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                Order Date
-                              </span>
-                              <p className="text-sm text-gray-900 mt-1">
-                                {new Date(order.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
+                              <p className="text-gray-500 dark:text-gray-400">Customer</p>
+                              <p className="font-bold text-gray-950 dark:text-white">
+                                {customer.name}
                               </p>
                             </div>
-                            {order.specialInstructions && (
-                              <div>
-                                <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                  Special Instructions
-                                </span>
-                                <p className="text-sm text-gray-900 mt-1 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                                  {order.specialInstructions}
-                                </p>
-                              </div>
-                            )}
+                            <div>
+                              <p className="text-gray-500 dark:text-gray-400">Address</p>
+                              <p className="mt-1 flex gap-2 font-semibold text-gray-800 dark:text-gray-200">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                                {customer.address}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-pink-50 p-3 dark:bg-pink-950/40">
+                              <p className="text-pink-700 dark:text-pink-300">
+                                Transaction ID
+                              </p>
+                              <p className="break-all font-mono font-bold text-pink-950 dark:text-pink-100">
+                                {order.transactionId ||
+                                  order.advancePayment?.transactionId ||
+                                  "N/A"}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-pink-50 p-3 dark:bg-pink-950/40">
+                              <p className="text-pink-700 dark:text-pink-300">Sender Number</p>
+                              <p className="font-bold text-pink-950 dark:text-pink-100">
+                                {order.senderNumber ||
+                                  order.payment?.advance?.senderNumber ||
+                                  "N/A"}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                              <p className="text-gray-500 dark:text-gray-400">Receiver Number</p>
+                              <p className="font-bold text-gray-950 dark:text-white">
+                                {order.receiverNumber || "N/A"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                          <h5 className="font-medium text-gray-900 mb-3">
-                            Quick Actions
-                          </h5>
-                          <div className="space-y-2">
-                            {/* Advance Payment Confirmation */}
-                            {isAdvancePaymentPending(order) && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedOrderForPayment(order);
-                                  setShowPaymentModal(true);
-                                }}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-sm font-medium border border-yellow-200"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                </svg>
-                                Confirm Advance Payment (৳{formatPrice(getAdvancePaymentInfo(order)?.amount || 0)})
-                              </button>
-                            )}
-
-                            {/* Print Order Button */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                printOrder(order);
-                              }}
-                              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                                />
-                              </svg>
-                              Print Order Details
-                            </button>
-
-                            {order.shippingInfo?.phone && (
-                              <a
-                                href={`tel:${order.shippingInfo.phone}`}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                  />
-                                </svg>
-                                Call Customer
-                              </a>
-                            )}
-                            {order.shippingInfo?.email && (
-                              <a
-                                href={`mailto:${order.shippingInfo.email}?subject=Order Update - ${order._id.slice(-8).toUpperCase()}`}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                  />
-                                </svg>
-                                Email Customer
-                              </a>
-                            )}
-                          </div>
-                        </div>
+                        </aside>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Payment Confirmation Modal */}
-        {showPaymentModal && selectedOrderForPayment && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-6 py-4 border-b border-yellow-200">
-                <h3 className="text-lg font-bold text-gray-900">
-                  💳 Confirm Advance Payment
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Order #{selectedOrderForPayment._id.slice(-8).toUpperCase()}
-                </p>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                {/* Payment Info */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Payment Method</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {getAdvancePaymentInfo(selectedOrderForPayment)?.method || "bKash"}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-3 mb-1">Amount</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    ৳{formatPrice(getAdvancePaymentInfo(selectedOrderForPayment)?.amount || 0)}
-                  </p>
-                </div>
-
-                {/* Transaction ID Input */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Transaction ID *
-                  </label>
-                  <input
-                    type="text"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    placeholder="Enter transaction ID (e.g., TXN123456789)"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none"
-                    disabled={confirmingPayment}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    This ID will be recorded for audit trail
-                  </p>
-                </div>
-
-                {/* Info Box */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-700">
-                    <strong>ℹ️ After confirmation:</strong> Order status will change to "Processing" and customer will be notified.
-                  </p>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    setSelectedOrderForPayment(null);
-                    setTransactionId("");
-                  }}
-                  disabled={confirmingPayment}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmAdvancePayment}
-                  disabled={confirmingPayment || !transactionId.trim()}
-                  className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {confirmingPayment ? "Confirming..." : "Confirm Payment"}
-                </button>
-              </div>
-            </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

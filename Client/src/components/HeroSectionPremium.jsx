@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getProducts } from "../services/api";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function HeroSectionPremium() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -14,7 +15,7 @@ export default function HeroSectionPremium() {
   const fetchFeaturedProducts = async () => {
     try {
       const response = await getProducts();
-      const products = response.data.data || [];
+      const products = getArrayData(response);
       // Get 3 random products for hero carousel
       const shuffled = products.sort(() => 0.5 - Math.random());
       setFeaturedProducts(shuffled.slice(0, 3));

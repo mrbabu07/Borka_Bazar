@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { searchProducts, getCategories } from "../services/api";
 import useDebounce from "../hooks/useDebounce";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function SearchAutocomplete({
   value,
@@ -72,7 +73,7 @@ export default function SearchAutocomplete({
   const fetchCategories = async () => {
     try {
       const response = await getCategories();
-      setCategories(response.data.data || []);
+      setCategories(getArrayData(response));
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     }
@@ -85,7 +86,7 @@ export default function SearchAutocomplete({
     try {
       const [productsRes] = await Promise.all([searchProducts(query)]);
 
-      const products = productsRes.data.data || [];
+      const products = getArrayData(productsRes);
 
       // Create suggestions array
       const productSuggestions = products.slice(0, 5).map((product) => ({
@@ -189,7 +190,7 @@ export default function SearchAutocomplete({
   const handleSuggestionClick = (suggestion) => {
     switch (suggestion.type) {
       case "product":
-        navigate(`/products/${suggestion.id}`);
+        navigate(`/product/${suggestion.id}`);
         addToRecentSearches(suggestion.title);
         break;
       case "category":

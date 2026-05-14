@@ -1,87 +1,124 @@
-const mongoose = require("mongoose");
-
-const deliverySettingsSchema = new mongoose.Schema(
-  {
-    freeDeliveryThreshold: {
-      type: Number,
-      required: true,
-      default: 2000, // ৳2,000 BDT
-    },
-    standardDeliveryCharge: {
-      type: Number,
-      required: true,
-      default: 100, // ৳100 BDT
-    },
-    expressDeliveryCharge: {
-      type: Number,
-      default: 200, // ৳200 BDT
-    },
-    expressDeliveryEnabled: {
-      type: Boolean,
-      default: false,
-    },
-    freeDeliveryEnabled: {
-      type: Boolean,
-      default: true,
-    },
-    deliveryAreas: [
-      {
-        name: String,
-        charge: Number,
-        enabled: {
-          type: Boolean,
-          default: true,
-        },
-      },
-    ],
-    estimatedDeliveryDays: {
-      min: {
-        type: Number,
-        default: 2,
-      },
-      max: {
-        type: Number,
-        default: 5,
-      },
-    },
+const DEFAULT_SETTINGS = {
+  freeDeliveryThreshold: 2000,
+  standardDeliveryCharge: 100,
+  expressDeliveryCharge: 200,
+  expressDeliveryEnabled: false,
+  freeDeliveryEnabled: true,
+  deliveryAreas: [],
+  estimatedDeliveryDays: {
+    min: 2,
+    max: 5,
   },
-  {
-    timestamps: true,
-  },
-);
-
-// Ensure only one settings document exists, and auto-migrate legacy USD values
-deliverySettingsSchema.statics.getSettings = async function () {
-  let settings = await this.findOne();
-  if (!settings) {
-    settings = await this.create({});
-    return settings;
-  }
-
-  // Auto-migrate: if values look like USD (< 10), convert to BDT
-  let needsSave = false;
-  if (settings.standardDeliveryCharge > 0 && settings.standardDeliveryCharge < 10) {
-    settings.standardDeliveryCharge = Math.round(settings.standardDeliveryCharge * 110);
-    needsSave = true;
-  }
-  if (settings.expressDeliveryCharge > 0 && settings.expressDeliveryCharge < 10) {
-    settings.expressDeliveryCharge = Math.round(settings.expressDeliveryCharge * 110);
-    needsSave = true;
-  }
-  if (settings.freeDeliveryThreshold > 0 && settings.freeDeliveryThreshold < 100) {
-    settings.freeDeliveryThreshold = Math.round(settings.freeDeliveryThreshold * 110);
-    needsSave = true;
-  }
-  if (needsSave) {
-    console.log('🔄 Auto-migrated DeliverySettings from USD to BDT:', {
-      standardDeliveryCharge: settings.standardDeliveryCharge,
-      expressDeliveryCharge: settings.expressDeliveryCharge,
-      freeDeliveryThreshold: settings.freeDeliveryThreshold,
-    });
-    await settings.save();
-  }
-
-  return settings;
 };
 
-module.exports = mongoose.model("DeliverySettings", deliverySettingsSchema);
+class DeliverySettings {
+  constructor(db) {
+    this.collection = db.collection("deliverysettings");
+    this.createIndexes();
+  }
+
+  async createIndexes() {
+    try {
+      await this.collection.createIndex({ singleton: 1 }, { unique: true });
+    } catch (error) {
+      console.error("Error creating DeliverySettings indexes:", error);
+    }
+  }
+
+  normalize(settings = {}) {
+    return {
+      ...DEFAULT_SETTINGS,
+      ...settings,
+      estimatedDeliveryDays: {
+        ...DEFAULT_SETTINGS.estimatedDeliveryDays,
+        ...(settings.estimatedDeliveryDays || {}),
+      },
+      deliveryAreas: Array.isArray(settings.deliveryAreas)
+        ? settings.deliveryAreas
+        : DEFAULT_SETTINGS.deliveryAreas,
+    };
+  }
+
+  migrateLegacyCurrency(settings) {
+    const migrated = { ...settings };
+    let changed = false;
+
+    if (migrated.standardDeliveryCharge > 0 && migrated.standardDeliveryCharge < 10) {
+      migrated.standardDeliveryCharge = Math.round(migrated.standardDeliveryCharge * 110);
+      changed = true;
+    }
+
+    if (migrated.expressDeliveryCharge > 0 && migrated.expressDeliveryCharge < 10) {
+      migrated.expressDeliveryCharge = Math.round(migrated.expressDeliveryCharge * 110);
+      changed = true;
+    }
+
+    if (migrated.freeDeliveryThreshold > 0 && migrated.freeDeliveryThreshold < 100) {
+      migrated.freeDeliveryThreshold = Math.round(migrated.freeDeliveryThreshold * 110);
+      changed = true;
+    }
+
+    return { settings: migrated, changed };
+  }
+
+  async getSettings() {
+    let settings = await this.collection.findOne({ singleton: "delivery-settings" });
+
+    if (!settings) {
+      const now = new Date();
+      settings = {
+        ...DEFAULT_SETTINGS,
+        singleton: "delivery-settings",
+        createdAt: now,
+        updatedAt: now,
+      };
+      const result = await this.collection.insertOne(settings);
+      return { ...settings, _id: result.insertedId };
+    }
+
+    const normalized = this.normalize(settings);
+    const migration = this.migrateLegacyCurrency(normalized);
+
+    if (migration.changed) {
+      console.log("Auto-migrated DeliverySettings from legacy values to BDT:", {
+        standardDeliveryCharge: migration.settings.standardDeliveryCharge,
+        expressDeliveryCharge: migration.settings.expressDeliveryCharge,
+        freeDeliveryThreshold: migration.settings.freeDeliveryThreshold,
+      });
+      const { _id, ...migrationData } = {
+        ...migration.settings,
+        updatedAt: new Date(),
+      };
+      await this.collection.updateOne(
+        { singleton: "delivery-settings" },
+        { $set: migrationData },
+      );
+      return this.getSettings();
+    }
+
+    return normalized;
+  }
+
+  async updateSettings(data = {}) {
+    const current = await this.getSettings();
+    const now = new Date();
+    const updated = this.normalize({
+      ...current,
+      ...data,
+      singleton: "delivery-settings",
+      updatedAt: now,
+      createdAt: current.createdAt || now,
+    });
+
+    const { _id, ...updateData } = updated;
+
+    await this.collection.updateOne(
+      { singleton: "delivery-settings" },
+      { $set: updateData },
+    );
+
+    return this.getSettings();
+  }
+}
+
+module.exports = DeliverySettings;

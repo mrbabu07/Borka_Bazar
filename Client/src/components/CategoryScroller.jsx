@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getCategories } from "../services/api";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function CategoryScroller() {
   const [categories, setCategories] = useState([]);
@@ -33,7 +34,7 @@ export default function CategoryScroller() {
   const fetchCategories = async () => {
     try {
       const response = await getCategories();
-      setCategories(response.data.data || []);
+      setCategories(getArrayData(response));
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     } finally {

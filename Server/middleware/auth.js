@@ -67,6 +67,22 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+const optionalVerifyToken = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split("Bearer ")[1];
+
+    if (!token) {
+      return next();
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 const verifyAdmin = async (req, res, next) => {
   try {
     const User = req.app.locals.models.User;
@@ -108,4 +124,4 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken, verifyAdmin };
+module.exports = { verifyToken, optionalVerifyToken, verifyAdmin };

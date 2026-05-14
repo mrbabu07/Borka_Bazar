@@ -24,7 +24,7 @@ export default function StockAlertButton({
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/stock-alerts/my-alerts`,
+        `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/my-alerts`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -62,7 +62,7 @@ export default function StockAlertButton({
     try {
       const token = await getCurrentUserToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/stock-alerts/subscribe`,
+        `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/subscribe`,
         {
           method: "POST",
           headers: {
@@ -100,7 +100,7 @@ export default function StockAlertButton({
     try {
       const token = await getCurrentUserToken();
       const alertsResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/stock-alerts/my-alerts`,
+        `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/my-alerts`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -119,7 +119,7 @@ export default function StockAlertButton({
 
         if (alert) {
           const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/stock-alerts/${alert._id}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/stock-alerts/${alert._id}`,
             {
               method: "DELETE",
               headers: {

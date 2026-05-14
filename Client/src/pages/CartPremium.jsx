@@ -13,7 +13,7 @@ export default function CartPremium() {
     const fetchDeliverySettings = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery-settings?t=${Date.now()}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/delivery-settings?t=${Date.now()}`,
           {
             cache: 'no-cache',
             headers: {

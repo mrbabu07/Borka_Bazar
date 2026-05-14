@@ -13,8 +13,10 @@ export default function PaymentStep({ paymentData, setPaymentData, errors, setEr
     setOrderCode(code);
   }, []);
 
+  const paymentNumber = process.env.NEXT_PUBLIC_BKASH_PAYMENT_NUMBER || '01878305319';
+
   const handleCopyPhone = () => {
-    navigator.clipboard.writeText('01978305319');
+    navigator.clipboard.writeText(paymentNumber);
     setCopied(true);
     toast.success('Phone number copied!');
     setTimeout(() => setCopied(false), 2000);
@@ -98,7 +100,7 @@ export default function PaymentStep({ paymentData, setPaymentData, errors, setEr
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
             <p className="text-sm text-purple-700 mb-2">Payment Number</p>
             <div className="flex items-center gap-2">
-              <p className="text-2xl font-bold text-purple-600">01978305319</p>
+            <p className="text-2xl font-bold text-purple-600">{paymentNumber}</p>
               <button
                 onClick={handleCopyPhone}
                 className={`p-2 rounded-lg transition ${copied ? 'bg-green-100' : 'hover:bg-purple-100'}`}
@@ -126,7 +128,7 @@ export default function PaymentStep({ paymentData, setPaymentData, errors, setEr
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">3</span>
-              <span>Enter number: <strong>01978305319</strong></span>
+              <span>Enter number: <strong>{paymentNumber}</strong></span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">4</span>
@@ -150,7 +152,7 @@ export default function PaymentStep({ paymentData, setPaymentData, errors, setEr
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Transaction ID *
+            Transaction ID {deliveryFee > 0 && '*'}
           </label>
           <input
             type="text"
@@ -168,6 +170,25 @@ export default function PaymentStep({ paymentData, setPaymentData, errors, setEr
           <p className="text-xs text-gray-500 mt-2">
             You can find this in your {paymentData.method} transaction history
           </p>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sender Number {deliveryFee > 0 && '*'}
+          </label>
+          <input
+            type="tel"
+            name="senderNumber"
+            value={paymentData.senderNumber || ''}
+            onChange={handleChange}
+            placeholder="01XXXXXXXXX"
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              errors.senderNumber ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {errors.senderNumber && (
+            <p className="text-red-500 text-sm mt-1">{errors.senderNumber}</p>
+          )}
         </div>
 
         {/* Info Box */}

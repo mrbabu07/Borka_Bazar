@@ -1,203 +1,210 @@
-const mongoose = require("mongoose");
+const { ObjectId } = require("mongodb");
 
-const loyaltyTransactionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ["earned", "redeemed", "expired"],
-    required: true,
-  },
-  points: {
-    type: Number,
-    required: true,
-  },
-  reason: {
-    type: String,
-    required: true,
-  },
-  orderId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Order",
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-const loyaltySchema = new mongoose.Schema(
-  {
-    userId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    email: {
-      type: String,
-      required: true,
-    },
-    points: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    tier: {
-      type: String,
-      enum: ["bronze", "silver", "gold", "platinum"],
-      default: "bronze",
-    },
-    totalEarned: {
-      type: Number,
-      default: 0,
-    },
-    totalRedeemed: {
-      type: Number,
-      default: 0,
-    },
-    referralCode: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    referredBy: {
-      type: String,
-    },
-    transactions: [loyaltyTransactionSchema],
-    lastTierUpdate: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  {
-    timestamps: true,
-  },
-);
-
-// Calculate tier based on total earned points
-loyaltySchema.methods.updateTier = function () {
-  const oldTier = this.tier;
-
-  if (this.totalEarned >= 10000) {
-    this.tier = "platinum";
-  } else if (this.totalEarned >= 5000) {
-    this.tier = "gold";
-  } else if (this.totalEarned >= 1000) {
-    this.tier = "silver";
-  } else {
-    this.tier = "bronze";
+class Loyalty {
+  constructor(db) {
+    this.collection = db.collection("loyalties");
   }
 
-  if (oldTier !== this.tier) {
-    this.lastTierUpdate = new Date();
+  async createIndexes() {
+    await this.collection.createIndex({ userId: 1 }, { unique: true });
+    await this.collection.createIndex(
+      { referralCode: 1 },
+      { unique: true, sparse: true },
+    );
   }
 
-  return this.tier;
-};
-
-// Get tier multiplier for earning points
-loyaltySchema.methods.getTierMultiplier = function () {
-  switch (this.tier) {
-    case "platinum":
-      return 3;
-    case "gold":
-      return 2;
-    case "silver":
-      return 1.5;
-    case "bronze":
-    default:
-      return 1;
-  }
-};
-
-// Get tier benefits
-loyaltySchema.methods.getTierBenefits = function () {
-  switch (this.tier) {
-    case "platinum":
-      return {
-        pointsMultiplier: 3,
-        freeShipping: true,
-        expressShipping: true,
-        birthdayBonus: 5000,
-        exclusiveDeals: true,
-        personalShopper: true,
-        earlyAccess: true,
-      };
-    case "gold":
-      return {
-        pointsMultiplier: 2,
-        freeShipping: true,
-        expressShipping: false,
-        birthdayBonus: 2000,
-        exclusiveDeals: true,
-        personalShopper: false,
-        earlyAccess: true,
-      };
-    case "silver":
-      return {
-        pointsMultiplier: 1.5,
-        freeShipping: true,
-        expressShipping: false,
-        birthdayBonus: 1000,
-        exclusiveDeals: false,
-        personalShopper: false,
-        earlyAccess: true,
-      };
-    case "bronze":
-    default:
-      return {
-        pointsMultiplier: 1,
-        freeShipping: false,
-        expressShipping: false,
-        birthdayBonus: 500,
-        exclusiveDeals: false,
-        personalShopper: false,
-        earlyAccess: false,
-      };
-  }
-};
-
-// Add points
-loyaltySchema.methods.addPoints = function (points, reason, orderId = null) {
-  const multiplier = this.getTierMultiplier();
-  const earnedPoints = Math.floor(points * multiplier);
-
-  this.points += earnedPoints;
-  this.totalEarned += earnedPoints;
-
-  this.transactions.push({
-    type: "earned",
-    points: earnedPoints,
-    reason,
-    orderId,
-  });
-
-  this.updateTier();
-  return earnedPoints;
-};
-
-// Redeem points
-loyaltySchema.methods.redeemPoints = function (points, reason, orderId = null) {
-  if (this.points < points) {
-    throw new Error("Insufficient points");
+  toObjectId(id) {
+    if (id instanceof ObjectId) return id;
+    if (!id || typeof id !== "string" || id.length !== 24) return null;
+    try {
+      return new ObjectId(id);
+    } catch {
+      return null;
+    }
   }
 
-  this.points -= points;
-  this.totalRedeemed += points;
+  generateReferralCode(userId) {
+    return `REF${String(userId).substring(0, 8).toUpperCase()}`;
+  }
 
-  this.transactions.push({
-    type: "redeemed",
-    points,
-    reason,
-    orderId,
-  });
+  getTier(totalEarned = 0) {
+    if (totalEarned >= 10000) return "platinum";
+    if (totalEarned >= 5000) return "gold";
+    if (totalEarned >= 1000) return "silver";
+    return "bronze";
+  }
 
-  return points;
-};
+  getTierMultiplier(tier = "bronze") {
+    switch (tier) {
+      case "platinum":
+        return 3;
+      case "gold":
+        return 2;
+      case "silver":
+        return 1.5;
+      default:
+        return 1;
+    }
+  }
 
-// Generate unique referral code
-loyaltySchema.statics.generateReferralCode = async function (userId) {
-  const code = `REF${userId.substring(0, 8).toUpperCase()}`;
-  return code;
-};
+  getTierBenefits(tier = "bronze") {
+    switch (tier) {
+      case "platinum":
+        return {
+          pointsMultiplier: 3,
+          freeShipping: true,
+          expressShipping: true,
+          birthdayBonus: 5000,
+          exclusiveDeals: true,
+          personalShopper: true,
+          earlyAccess: true,
+        };
+      case "gold":
+        return {
+          pointsMultiplier: 2,
+          freeShipping: true,
+          expressShipping: false,
+          birthdayBonus: 2000,
+          exclusiveDeals: true,
+          personalShopper: false,
+          earlyAccess: true,
+        };
+      case "silver":
+        return {
+          pointsMultiplier: 1.5,
+          freeShipping: true,
+          expressShipping: false,
+          birthdayBonus: 1000,
+          exclusiveDeals: false,
+          personalShopper: false,
+          earlyAccess: true,
+        };
+      default:
+        return {
+          pointsMultiplier: 1,
+          freeShipping: false,
+          expressShipping: false,
+          birthdayBonus: 500,
+          exclusiveDeals: false,
+          personalShopper: false,
+          earlyAccess: false,
+        };
+    }
+  }
 
-module.exports = mongoose.model("Loyalty", loyaltySchema);
+  normalize(loyalty) {
+    if (!loyalty) return null;
+
+    return {
+      points: 0,
+      tier: "bronze",
+      totalEarned: 0,
+      totalRedeemed: 0,
+      transactions: [],
+      ...loyalty,
+    };
+  }
+
+  async findOne(filter = {}) {
+    return this.normalize(await this.collection.findOne(filter));
+  }
+
+  async create(data) {
+    const now = new Date();
+    const doc = this.normalize({
+      ...data,
+      points: data.points || 0,
+      tier: data.tier || "bronze",
+      totalEarned: data.totalEarned || 0,
+      totalRedeemed: data.totalRedeemed || 0,
+      transactions: data.transactions || [],
+      lastTierUpdate: data.lastTierUpdate || now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const result = await this.collection.insertOne(doc);
+    return { ...doc, _id: result.insertedId };
+  }
+
+  async updateById(id, update = {}) {
+    const objectId = this.toObjectId(id?.toString());
+    if (!objectId) return null;
+
+    await this.collection.updateOne(
+      { _id: objectId },
+      { $set: { ...update, updatedAt: new Date() } },
+    );
+
+    return this.findOne({ _id: objectId });
+  }
+
+  async addPoints(userId, points, reason, orderId = null) {
+    const loyalty = await this.findOne({ userId });
+    if (!loyalty) throw new Error("Loyalty account not found");
+
+    const multiplier = this.getTierMultiplier(loyalty.tier);
+    const earnedPoints = Math.floor(points * multiplier);
+    const totalEarned = loyalty.totalEarned + earnedPoints;
+    const nextTier = this.getTier(totalEarned);
+    const tierChanged = nextTier !== loyalty.tier;
+
+    const transaction = {
+      type: "earned",
+      points: earnedPoints,
+      reason,
+      orderId: this.toObjectId(orderId?.toString()) || orderId || null,
+      date: new Date(),
+    };
+
+    const update = {
+      points: loyalty.points + earnedPoints,
+      totalEarned,
+      tier: nextTier,
+      transactions: [...loyalty.transactions, transaction],
+    };
+
+    if (tierChanged) update.lastTierUpdate = new Date();
+
+    const updated = await this.updateById(loyalty._id, update);
+    return { loyalty: updated, earnedPoints };
+  }
+
+  async redeemPoints(userId, points, reason, orderId = null) {
+    const loyalty = await this.findOne({ userId });
+    if (!loyalty) throw new Error("Loyalty account not found");
+    if (loyalty.points < points) throw new Error("Insufficient points");
+
+    const transaction = {
+      type: "redeemed",
+      points,
+      reason,
+      orderId: this.toObjectId(orderId?.toString()) || orderId || null,
+      date: new Date(),
+    };
+
+    return this.updateById(loyalty._id, {
+      points: loyalty.points - points,
+      totalRedeemed: loyalty.totalRedeemed + points,
+      transactions: [...loyalty.transactions, transaction],
+    });
+  }
+
+  async countDocuments(filter = {}) {
+    return this.collection.countDocuments(filter);
+  }
+
+  async aggregate(pipeline = []) {
+    return this.collection.aggregate(pipeline).toArray();
+  }
+
+  async getLeaderboard(limit = 10) {
+    return this.collection
+      .find({}, { projection: { email: 1, points: 1, tier: 1, totalEarned: 1 } })
+      .sort({ totalEarned: -1 })
+      .limit(limit)
+      .toArray();
+  }
+}
+
+module.exports = Loyalty;

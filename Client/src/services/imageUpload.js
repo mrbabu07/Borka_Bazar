@@ -4,7 +4,7 @@
  * @returns {Promise<string>} - The uploaded image URL
  */
 export const uploadImage = async (imageFile) => {
-  const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
 
   if (!apiKey) {
     throw new Error("ImgBB API key not configured");

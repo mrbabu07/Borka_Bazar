@@ -8,11 +8,16 @@ const {
   sendTestNotification,
   sendTestNotificationPublic,
   getVapidPublicKey,
+  getInAppNotifications,
+  streamNotifications,
+  markInAppNotificationRead,
+  markAllInAppNotificationsRead,
 } = require("../controllers/notificationController");
 const { verifyToken } = require("../middleware/auth");
 
 // Public routes (no auth required)
 router.get("/vapid-public-key", getVapidPublicKey);
+router.get("/stream", streamNotifications);
 router.post("/subscribe", subscribe);
 router.post("/unsubscribe", unsubscribe);
 router.post("/test", sendTestNotificationPublic); // Public test endpoint
@@ -22,6 +27,9 @@ router.use(verifyToken);
 
 router.get("/preferences", getPreferences);
 router.post("/preferences", updatePreferences);
+router.get("/in-app", getInAppNotifications);
+router.patch("/in-app/read-all", markAllInAppNotificationsRead);
+router.patch("/in-app/:id/read", markInAppNotificationRead);
 router.post("/test-auth", sendTestNotification); // Authenticated test endpoint
 
 module.exports = router;

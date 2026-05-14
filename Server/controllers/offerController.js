@@ -1,9 +1,10 @@
-const Offer = require("../models/Offer");
+const getOfferModel = (req) => req.app.locals.models.Offer;
 
 // Get all offers (Admin)
 exports.getAllOffers = async (req, res) => {
   try {
-    const offers = await Offer.find().sort({ priority: -1, createdAt: -1 });
+    const Offer = getOfferModel(req);
+    const offers = await Offer.findAll();
 
     // Note: targetProducts population skipped because Product model uses native MongoDB driver
     // If you need product details, fetch them separately
@@ -18,6 +19,7 @@ exports.getAllOffers = async (req, res) => {
 // Get active popup offer (Public)
 exports.getActivePopupOffer = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offers = await Offer.getActivePopupOffers();
     const offer = offers.length > 0 ? offers[0] : null;
     res.json({ success: true, data: offer });
@@ -29,6 +31,7 @@ exports.getActivePopupOffer = async (req, res) => {
 // Get offer by ID
 exports.getOfferById = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offer = await Offer.findById(req.params.id);
 
     if (!offer) {
@@ -45,6 +48,7 @@ exports.getOfferById = async (req, res) => {
 // Create offer (Admin) - image URL from imgBB
 exports.createOffer = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offerData = {
       ...req.body,
     };
@@ -72,6 +76,7 @@ exports.createOffer = async (req, res) => {
 // Update offer (Admin) - image URL from imgBB
 exports.updateOffer = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offer = await Offer.findById(req.params.id);
     if (!offer) {
       return res.status(404).json({ success: false, error: "Offer not found" });
@@ -94,11 +99,7 @@ exports.updateOffer = async (req, res) => {
       }
     }
 
-    const updatedOffer = await Offer.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true },
-    );
+    const updatedOffer = await Offer.updateById(req.params.id, updateData);
 
     res.json({ success: true, data: updatedOffer });
   } catch (error) {
@@ -109,12 +110,13 @@ exports.updateOffer = async (req, res) => {
 // Delete offer (Admin)
 exports.deleteOffer = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offer = await Offer.findById(req.params.id);
     if (!offer) {
       return res.status(404).json({ success: false, error: "Offer not found" });
     }
 
-    await Offer.findByIdAndDelete(req.params.id);
+    await Offer.deleteById(req.params.id);
     res.json({ success: true, message: "Offer deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -124,15 +126,17 @@ exports.deleteOffer = async (req, res) => {
 // Toggle offer active status (Admin)
 exports.toggleOfferStatus = async (req, res) => {
   try {
+    const Offer = getOfferModel(req);
     const offer = await Offer.findById(req.params.id);
     if (!offer) {
       return res.status(404).json({ success: false, error: "Offer not found" });
     }
 
-    offer.isActive = !offer.isActive;
-    await offer.save();
+    const updatedOffer = await Offer.updateById(req.params.id, {
+      isActive: !offer.isActive,
+    });
 
-    res.json({ success: true, data: offer });
+    res.json({ success: true, data: updatedOffer });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

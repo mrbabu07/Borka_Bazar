@@ -1,29 +1,50 @@
-const FlashSale = require("../models/FlashSale");
-const mongoose = require("mongoose");
+const { ObjectId } = require("mongodb");
 
-// Define Product schema for querying
-const productSchema = new mongoose.Schema({}, { strict: false });
-const Product =
-  mongoose.models.Product || mongoose.model("Product", productSchema);
+const getFlashSaleModel = (req) => req.app.locals.models.FlashSale;
+const getProductModel = (req) => req.app.locals.models.Product;
+
+const normalizeProductId = (product) => {
+  if (!product) return null;
+  if (product instanceof ObjectId) return product.toString();
+  if (typeof product === "object" && product._id) return product._id.toString();
+  return product.toString();
+};
+
+const attachProducts = async (req, sales) => {
+  const Product = getProductModel(req);
+  const list = Array.isArray(sales) ? sales : [sales].filter(Boolean);
+
+  const populated = await Promise.all(
+    list.map(async (sale) => {
+      const productId = normalizeProductId(sale.product);
+      const product = productId ? await Product.findById(productId) : null;
+      return {
+        ...sale,
+        product: product || sale.product,
+      };
+    }),
+  );
+
+  return Array.isArray(sales) ? populated : populated[0] || null;
+};
 
 // Get all active flash sales
 exports.getActiveFlashSales = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
     const now = new Date();
 
-    const flashSales = await FlashSale.find({
-      isActive: true,
-      startTime: { $lte: now },
-      endTime: { $gte: now },
-      $expr: { $lt: ["$soldCount", "$totalStock"] },
-    })
-      .populate("product")
-      .sort({ endTime: 1 });
+    const flashSales = await FlashSale.findAll(
+      {
+        isActive: true,
+        startTime: { $lte: now },
+        endTime: { $gte: now },
+        $expr: { $lt: ["$soldCount", "$totalStock"] },
+      },
+      { sort: { endTime: 1 } },
+    );
 
-    // Update status for each sale
-    flashSales.forEach((sale) => sale.updateStatus());
-
-    res.json(flashSales);
+    res.json(await attachProducts(req, flashSales));
   } catch (error) {
     res
       .status(500)
@@ -34,17 +55,18 @@ exports.getActiveFlashSales = async (req, res) => {
 // Get upcoming flash sales
 exports.getUpcomingFlashSales = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
     const now = new Date();
 
-    const flashSales = await FlashSale.find({
-      isActive: true,
-      startTime: { $gt: now },
-    })
-      .populate("product")
-      .sort({ startTime: 1 })
-      .limit(10);
+    const flashSales = await FlashSale.findAll(
+      {
+        isActive: true,
+        startTime: { $gt: now },
+      },
+      { sort: { startTime: 1 }, limit: 10 },
+    );
 
-    res.json(flashSales);
+    res.json(await attachProducts(req, flashSales));
   } catch (error) {
     res.status(500).json({
       message: "Error fetching upcoming flash sales",
@@ -56,26 +78,24 @@ exports.getUpcomingFlashSales = async (req, res) => {
 // Get all flash sales (admin)
 exports.getAllFlashSales = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
     const { status, page = 1, limit = 20 } = req.query;
     const query = {};
 
     if (status) query.status = status;
 
-    const flashSales = await FlashSale.find(query)
-      .populate("product")
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    const flashSales = await FlashSale.findAll(query, {
+      sort: { createdAt: -1 },
+      limit: Number(limit),
+      skip: (Number(page) - 1) * Number(limit),
+    });
 
     const count = await FlashSale.countDocuments(query);
 
-    // Update status for each sale
-    flashSales.forEach((sale) => sale.updateStatus());
-
     res.json({
-      flashSales,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
+      flashSales: await attachProducts(req, flashSales),
+      totalPages: Math.ceil(count / Number(limit)),
+      currentPage: Number(page),
       total: count,
     });
   } catch (error) {
@@ -88,18 +108,14 @@ exports.getAllFlashSales = async (req, res) => {
 // Get single flash sale
 exports.getFlashSaleById = async (req, res) => {
   try {
-    const flashSale = await FlashSale.findById(req.params.id).populate(
-      "product",
-    );
+    const FlashSale = getFlashSaleModel(req);
+    const flashSale = await FlashSale.findById(req.params.id);
 
     if (!flashSale) {
       return res.status(404).json({ message: "Flash sale not found" });
     }
 
-    flashSale.updateStatus();
-    await flashSale.save();
-
-    res.json(flashSale);
+    res.json(await attachProducts(req, flashSale));
   } catch (error) {
     res
       .status(500)
@@ -110,6 +126,8 @@ exports.getFlashSaleById = async (req, res) => {
 // Create flash sale (admin)
 exports.createFlashSale = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
+    const Product = getProductModel(req);
     const {
       title,
       description,
@@ -121,23 +139,23 @@ exports.createFlashSale = async (req, res) => {
       maxPerUser,
     } = req.body;
 
-    // Validate product exists
     const productDoc = await Product.findById(product);
     if (!productDoc) {
       return res.status(404).json({ message: "Product not found" });
     }
 
     const originalPrice = productDoc.price;
+    const numericFlashPrice = Number(flashPrice);
     const discountPercentage = Math.round(
-      ((originalPrice - flashPrice) / originalPrice) * 100,
+      ((originalPrice - numericFlashPrice) / originalPrice) * 100,
     );
 
-    const flashSale = new FlashSale({
+    const flashSale = await FlashSale.create({
       title,
       description,
       product,
       originalPrice,
-      flashPrice,
+      flashPrice: numericFlashPrice,
       discountPercentage,
       startTime,
       endTime,
@@ -145,19 +163,13 @@ exports.createFlashSale = async (req, res) => {
       maxPerUser: maxPerUser || 5,
     });
 
-    flashSale.updateStatus();
-    await flashSale.save();
+    const populatedSale = await attachProducts(req, flashSale);
 
-    const populatedSale = await FlashSale.findById(flashSale._id).populate(
-      "product",
-    );
-
-    // Send push notification for new flash sale (if it's active)
     if (flashSale.status === "active") {
       try {
         const NotificationService = require("../services/notificationService");
 
-        console.log("📱 Sending flash sale notification:", {
+        console.log("Sending flash sale notification:", {
           flashSaleId: flashSale._id,
           title: flashSale.title,
           discountPercentage: flashSale.discountPercentage,
@@ -169,14 +181,8 @@ exports.createFlashSale = async (req, res) => {
           discountPercentage: flashSale.discountPercentage,
           product: productDoc,
         });
-
-        console.log("✅ Flash sale notification sent successfully");
       } catch (notificationError) {
-        console.error(
-          "⚠️ Failed to send flash sale notification:",
-          notificationError,
-        );
-        // Don't fail the flash sale creation if notification fails
+        console.error("Failed to send flash sale notification:", notificationError);
       }
     }
 
@@ -191,29 +197,25 @@ exports.createFlashSale = async (req, res) => {
 // Update flash sale (admin)
 exports.updateFlashSale = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
 
     const flashSale = await FlashSale.findById(id);
     if (!flashSale) {
       return res.status(404).json({ message: "Flash sale not found" });
     }
 
-    // Recalculate discount if prices change
     if (updates.flashPrice || updates.originalPrice) {
-      const originalPrice = updates.originalPrice || flashSale.originalPrice;
-      const flashPrice = updates.flashPrice || flashSale.flashPrice;
+      const originalPrice = Number(updates.originalPrice || flashSale.originalPrice);
+      const flashPrice = Number(updates.flashPrice || flashSale.flashPrice);
       updates.discountPercentage = Math.round(
         ((originalPrice - flashPrice) / originalPrice) * 100,
       );
     }
 
-    Object.assign(flashSale, updates);
-    flashSale.updateStatus();
-    await flashSale.save();
-
-    const populatedSale = await FlashSale.findById(id).populate("product");
-    res.json(populatedSale);
+    const updatedSale = await FlashSale.updateById(id, updates);
+    res.json(await attachProducts(req, updatedSale));
   } catch (error) {
     res
       .status(500)
@@ -224,9 +226,10 @@ exports.updateFlashSale = async (req, res) => {
 // Delete flash sale (admin)
 exports.deleteFlashSale = async (req, res) => {
   try {
-    const flashSale = await FlashSale.findByIdAndDelete(req.params.id);
+    const FlashSale = getFlashSaleModel(req);
+    const result = await FlashSale.deleteById(req.params.id);
 
-    if (!flashSale) {
+    if (!result) {
       return res.status(404).json({ message: "Flash sale not found" });
     }
 
@@ -241,28 +244,21 @@ exports.deleteFlashSale = async (req, res) => {
 // Record a purchase (called when order is placed)
 exports.recordPurchase = async (req, res) => {
   try {
+    const FlashSale = getFlashSaleModel(req);
     const { id } = req.params;
     const { quantity = 1 } = req.body;
 
-    const flashSale = await FlashSale.findById(id);
+    const result = await FlashSale.recordPurchase(id, Number(quantity));
 
-    if (!flashSale) {
-      return res.status(404).json({ message: "Flash sale not found" });
+    if (!result.sale && result.error === "Flash sale not found") {
+      return res.status(404).json({ message: result.error });
     }
 
-    if (!flashSale.isCurrentlyActive()) {
-      return res.status(400).json({ message: "Flash sale is not active" });
+    if (result.error) {
+      return res.status(400).json({ message: result.error });
     }
 
-    if (flashSale.soldCount + quantity > flashSale.totalStock) {
-      return res.status(400).json({ message: "Not enough stock available" });
-    }
-
-    flashSale.soldCount += quantity;
-    flashSale.updateStatus();
-    await flashSale.save();
-
-    res.json(flashSale);
+    res.json(await attachProducts(req, result.sale));
   } catch (error) {
     res
       .status(500)

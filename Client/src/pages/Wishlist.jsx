@@ -24,7 +24,7 @@ export default function Wishlist() {
 
       const token = await currentUser.getIdToken();
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/wishlist/toggle-public`,
+        `${process.env.NEXT_PUBLIC_API_URL}/wishlist/toggle-public`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -51,7 +51,7 @@ export default function Wishlist() {
 
         const token = await currentUser.getIdToken();
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/wishlist`,
+          `${process.env.NEXT_PUBLIC_API_URL}/wishlist`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -79,35 +79,35 @@ export default function Wishlist() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-black dark:border-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-950 transition-colors dark:bg-gray-950 dark:text-gray-100">
       {/* Page Header - Premium Style */}
-      <div className="bg-gray-50 border-b border-gray-100 py-16">
+      <div className="border-b border-gray-100 bg-gray-50 py-16 dark:border-gray-800 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
-            <Link to="/" className="hover:text-black transition">
+          <nav className="mb-6 flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+            <Link to="/" className="transition hover:text-black dark:hover:text-white">
               Home
             </Link>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <span className="text-black">Wishlist</span>
+            <span className="text-black dark:text-white">Wishlist</span>
           </nav>
 
           {/* Title & Share */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="font-display text-3xl md:text-4xl text-black mb-2">
+              <h1 className="font-display mb-2 text-3xl text-black dark:text-white md:text-4xl">
                 My Wishlist
               </h1>
-              <p className="text-gray-500">
+              <p className="text-gray-500 dark:text-gray-400">
                 {wishlist.length} {wishlist.length === 1 ? "item" : "items"} saved for later
               </p>
             </div>
@@ -128,7 +128,7 @@ export default function Wishlist() {
         {wishlist.length === 0 ? (
           <div className="text-center py-20">
             <svg
-              className="w-24 h-24 mx-auto mb-6 text-gray-300"
+              className="mx-auto mb-6 h-24 w-24 text-gray-300 dark:text-gray-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -140,15 +140,15 @@ export default function Wishlist() {
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-            <h2 className="font-display text-2xl text-black mb-4">
+            <h2 className="font-display mb-4 text-2xl text-black dark:text-white">
               Your wishlist is empty
             </h2>
-            <p className="text-gray-500 mb-8">
+            <p className="mb-8 text-gray-500 dark:text-gray-400">
               Save items you love to your wishlist and shop them later
             </p>
             <Link
               to="/products"
-              className="inline-block px-12 py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors"
+              className="inline-block bg-black px-12 py-4 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-gold-500 dark:bg-white dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white"
             >
               Start Shopping
             </Link>
@@ -157,13 +157,16 @@ export default function Wishlist() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
               {wishlist.map((product) => (
-                <div key={product._id} className="group relative bg-white">
+                <div
+                  key={product._id}
+                  className="group relative overflow-hidden bg-white text-gray-950 transition-colors dark:bg-gray-900 dark:text-gray-100"
+                >
                   {/* Product Image */}
-                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-50 dark:bg-gray-800">
                     <Link to={`/product/${product._id}`}>
                       <img
                         src={product.image || (product.images && product.images[0])}
-                        alt={product.title}
+                        alt={product.title || product.name || "Product"}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
                     </Link>
@@ -191,7 +194,7 @@ export default function Wishlist() {
                         <button
                           onClick={() => handleAddToCart(product)}
                           disabled={product.stock === 0}
-                          className="px-8 py-3 bg-white text-black text-sm tracking-widest uppercase font-medium hover:bg-gold-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          className="px-8 py-3 bg-white text-black text-sm tracking-widest uppercase font-medium transition-colors hover:bg-gold-500 hover:text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 dark:bg-gray-100 dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
                         >
                           {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
                         </button>
@@ -200,27 +203,27 @@ export default function Wishlist() {
                   </div>
 
                   {/* Product Info */}
-                  <div className="p-6 text-center">
+                  <div className="p-5 text-center md:p-6">
                     <Link to={`/product/${product._id}`}>
-                      <h3 className="font-display text-base md:text-lg text-black group-hover:text-gold-600 transition-colors leading-tight min-h-[3rem] line-clamp-2 mb-2">
-                        {product.title}
+                      <h3 className="font-display mb-2 min-h-[3rem] text-base leading-tight text-black transition-colors line-clamp-2 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400 md:text-lg">
+                        {product.title || product.name || "Product"}
                       </h3>
                     </Link>
 
                     {/* Fabric/Style Info */}
                     {(product.fabric || product.style) && (
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
+                      <p className="mb-3 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {product.fabric || product.style}
                       </p>
                     )}
 
                     {/* Price */}
                     <div className="flex items-center justify-center gap-3">
-                      <span className="text-lg md:text-xl font-semibold text-black">
+                      <span className="text-lg font-semibold text-black dark:text-white md:text-xl">
                         ৳{product.price?.toLocaleString()}
                       </span>
                       {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-sm text-gray-400 line-through">
+                        <span className="text-sm text-gray-400 line-through dark:text-gray-500">
                           ৳{product.originalPrice?.toLocaleString()}
                         </span>
                       )}
@@ -234,7 +237,7 @@ export default function Wishlist() {
             <div className="mt-12 text-center">
               <Link
                 to="/products"
-                className="inline-block px-12 py-4 border-2 border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-colors"
+                className="inline-block border-2 border-black px-12 py-4 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-gray-950"
               >
                 Continue Shopping
               </Link>

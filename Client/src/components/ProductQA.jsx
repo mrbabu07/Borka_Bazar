@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import useAuth from "../hooks/useAuth";
 import axios from "axios";
 import { auth } from "../firebase/firebase.config";
+import { buildApiUrl, getArrayData } from "../utils/apiConfig";
 
 export default function ProductQA({ productId }) {
   const { user } = useAuth();
@@ -20,11 +21,11 @@ export default function ProductQA({ productId }) {
   const fetchQuestions = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/products/${productId}/questions`,
+        buildApiUrl(`/products/${encodeURIComponent(productId)}/questions`),
       );
 
       if (response.data.success) {
-        setQuestions(response.data.data);
+        setQuestions(getArrayData(response));
       }
     } catch (error) {
       console.error("Failed to fetch questions:", error);
@@ -47,7 +48,7 @@ export default function ProductQA({ productId }) {
       const token = await currentUser.getIdToken();
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/products/${productId}/questions`,
+        buildApiUrl(`/products/${encodeURIComponent(productId)}/questions`),
         { question: questionText },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -83,7 +84,7 @@ export default function ProductQA({ productId }) {
       const token = await currentUser.getIdToken();
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/questions/${questionId}/answers`,
+        buildApiUrl(`/questions/${encodeURIComponent(questionId)}/answers`),
         { answer: answerText },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -117,7 +118,7 @@ export default function ProductQA({ productId }) {
       const token = await currentUser.getIdToken();
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/questions/${questionId}/helpful`,
+        buildApiUrl(`/questions/${encodeURIComponent(questionId)}/helpful`),
         { answerId },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -300,7 +301,7 @@ export default function ProductQA({ productId }) {
                   </div>
 
                   {/* Answers */}
-                  {question.answers.length > 0 && (
+                  {Array.isArray(question.answers) && question.answers.length > 0 && (
                     <div className="mt-4 space-y-4">
                       {question.answers.map((answer) => (
                         <div

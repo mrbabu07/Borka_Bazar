@@ -182,8 +182,8 @@ export default function ProductDetail() {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{error}</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 dark:text-white">{error}</h2>
+          <p className="text-gray-600 mb-6 dark:text-gray-300">
             The product you're looking for might have been removed or the link
             is invalid.
           </p>
@@ -207,7 +207,7 @@ export default function ProductDetail() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 dark:text-white">
             Product not found
           </h2>
           <Link to="/" className="btn-primary">
@@ -580,7 +580,7 @@ export default function ProductDetail() {
               <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                 >
                   −
                 </button>
@@ -599,7 +599,7 @@ export default function ProductDetail() {
                   disabled={
                     quantity >= (selectedVariant?.stock || product.stock)
                   }
-                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   +
                 </button>
@@ -757,17 +757,17 @@ export default function ProductDetail() {
       )}
 
       {/* Reviews Section */}
-      <div className="mt-16 border-t pt-12">
+      <div className="mt-16 border-t border-gray-200 pt-12 dark:border-gray-800">
         <ReviewsSection productId={id} />
       </div>
 
       {/* Q&A Section */}
-      <div className="mt-16 border-t pt-12">
+      <div className="mt-16 border-t border-gray-200 pt-12 dark:border-gray-800">
         <ProductQA productId={id} />
       </div>
 
       {/* Product Recommendations */}
-      <div className="mt-16 border-t pt-12">
+      <div className="mt-16 border-t border-gray-200 pt-12 dark:border-gray-800">
         <ProductRecommendations
           productId={id}
           category={product?.categoryId || product?.category}

@@ -1,34 +1,40 @@
 const recommendationService = require("../services/recommendationService");
-const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema({}, { strict: false });
-const Product =
-  mongoose.models.Product || mongoose.model("Product", productSchema);
-
-// Get personalized recommendations for logged-in user
 exports.getPersonalizedRecommendations = async (req, res) => {
   try {
     const userId = req.user?.uid;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const models = req.app.locals.models;
 
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
     const recommendations =
-      await recommendationService.getPersonalizedRecommendations(userId, limit);
+      await recommendationService.getPersonalizedRecommendations(
+        models,
+        userId,
+        limit,
+      );
 
-    // Fetch full product details
-    const productIds = recommendations.map((r) => r.productId);
-    const products = await Product.find({ _id: { $in: productIds } });
+    const productIds = recommendations
+      .map((recommendation) =>
+        models.Recommendation.toObjectId(recommendation.productId),
+      )
+      .filter(Boolean);
+
+    const products = await models.Product.collection
+      .find({ _id: { $in: productIds } })
+      .toArray();
 
     const productsWithReason = products.map((product) => {
-      const rec = recommendations.find(
-        (r) => r.productId.toString() === product._id.toString(),
+      const recommendation = recommendations.find(
+        (item) => item.productId.toString() === product._id.toString(),
       );
+
       return {
-        ...product.toObject(),
-        recommendationReason: rec?.reason || "personalized",
+        ...product,
+        recommendationReason: recommendation?.reason || "personalized",
       };
     });
 
@@ -38,110 +44,91 @@ exports.getPersonalizedRecommendations = async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting personalized recommendations:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching recommendations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching recommendations",
+      error: error.message,
+    });
   }
 };
 
-// Get "Frequently Bought Together"
 exports.getFrequentlyBoughtTogether = async (req, res) => {
   try {
     const { productId } = req.params;
-    const limit = parseInt(req.query.limit) || 4;
+    const limit = parseInt(req.query.limit, 10) || 4;
 
     const recommendations =
-      await recommendationService.getFrequentlyBoughtTogether(productId, limit);
+      await recommendationService.getFrequentlyBoughtTogether(
+        req.app.locals.models,
+        productId,
+        limit,
+      );
 
-    res.json({
-      success: true,
-      data: recommendations,
-    });
+    res.json({ success: true, data: recommendations });
   } catch (error) {
     console.error("Error getting frequently bought together:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching recommendations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching recommendations",
+      error: error.message,
+    });
   }
 };
 
-// Get "Customers Also Viewed"
 exports.getCustomersAlsoViewed = async (req, res) => {
   try {
     const { productId } = req.params;
-    const limit = parseInt(req.query.limit) || 6;
+    const limit = parseInt(req.query.limit, 10) || 6;
 
     const recommendations = await recommendationService.getCustomersAlsoViewed(
+      req.app.locals.models,
       productId,
       limit,
     );
 
-    res.json({
-      success: true,
-      data: recommendations,
-    });
+    res.json({ success: true, data: recommendations });
   } catch (error) {
     console.error("Error getting customers also viewed:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching recommendations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching recommendations",
+      error: error.message,
+    });
   }
 };
 
-// Get similar products
 exports.getSimilarProducts = async (req, res) => {
   try {
     const { productId } = req.params;
-    const limit = parseInt(req.query.limit) || 6;
+    const limit = parseInt(req.query.limit, 10) || 6;
 
     const recommendations = await recommendationService.getSimilarProducts(
+      req.app.locals.models,
       productId,
       limit,
     );
 
-    res.json({
-      success: true,
-      data: recommendations,
-    });
+    res.json({ success: true, data: recommendations });
   } catch (error) {
     console.error("Error getting similar products:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching recommendations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching recommendations",
+      error: error.message,
+    });
   }
 };
 
-// Get trending products
 exports.getTrendingProducts = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const recommendations = await recommendationService.getTrendingProducts(
+      req.app.locals.models,
+      limit,
+    );
 
-    const recommendations =
-      await recommendationService.getTrendingProducts(limit);
-
-    res.json({
-      success: true,
-      data: recommendations,
-    });
+    res.json({ success: true, data: recommendations });
   } catch (error) {
     console.error("Error getting trending products:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching recommendations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching recommendations",
+      error: error.message,
+    });
   }
 };

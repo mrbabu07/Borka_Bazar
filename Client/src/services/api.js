@@ -1,7 +1,6 @@
 import axios from "axios";
 import { auth } from "../firebase/firebase.config";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import { API_URL } from "../utils/apiConfig";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -61,18 +60,31 @@ export const rejectAdvancePayment = (orderId, data) =>
   api.patch(`/orders/${orderId}/reject-advance-payment`, data);
 export const confirmRemainingPayment = (orderId, data) =>
   api.patch(`/orders/${orderId}/confirm-remaining`, data);
+export const getPendingDeliveryPayments = () =>
+  api.get("/orders/admin/pending-delivery-payments");
+export const confirmDeliveryPayment = (orderId) =>
+  api.patch(`/orders/${orderId}/confirm-delivery-payment`);
+export const rejectDeliveryPayment = (orderId, data = {}) =>
+  api.patch(`/orders/${orderId}/reject-delivery-payment`, data);
 
 // Legacy Orders (kept for backward compatibility)
 export const getUserOrders = () => api.get("/orders/my-orders");
-export const getAllOrders = () => api.get("/orders");
+export const getAllOrders = (params = {}) => api.get("/orders", { params });
 export const createOrder = (data) => api.post("/orders", data);
 export const createGuestOrder = (data) => api.post("/orders/guest", data);
 export const updateOrderStatus = (id, status, trackingNumber) =>
-  api.patch(`/orders/${id}/status`, { status, trackingNumber });
+  api.patch(`/orders/${id}/update-status`, { status, trackingNumber });
 export const cancelOrder = (id) => api.post(`/orders/${id}/cancel`);
+export const previewDeliveredOrderCleanup = (days = 30) =>
+  api.get("/orders/admin/cleanup-delivered-preview", { params: { days } });
+export const deleteDeliveredOrderCleanup = (days = 30, confirmText) =>
+  api.delete("/orders/admin/cleanup-delivered", {
+    data: { days, confirmText },
+  });
 
 // User
 export const getCurrentUser = () => api.get("/user/me");
+export const updateUserProfile = (data) => api.patch("/user/profile", data);
 
 // Wishlist
 export const getWishlist = () => api.get("/wishlist");

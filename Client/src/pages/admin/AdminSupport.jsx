@@ -88,7 +88,7 @@ const AdminSupport = () => {
       });
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${await getCurrentUserToken()}`,
@@ -112,7 +112,7 @@ const AdminSupport = () => {
   const fetchStats = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/stats`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/stats`,
         {
           headers: {
             Authorization: `Bearer ${await getCurrentUserToken()}`,
@@ -132,7 +132,7 @@ const AdminSupport = () => {
   const fetchStaffUsers = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/users/staff`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/users/staff`,
         {
           headers: {
             Authorization: `Bearer ${await getCurrentUserToken()}`,
@@ -152,7 +152,7 @@ const AdminSupport = () => {
   const updateTicketStatus = async (ticketId, status) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/${ticketId}/status`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/${ticketId}/status`,
         {
           method: "PATCH",
           headers: {
@@ -181,7 +181,7 @@ const AdminSupport = () => {
   const assignTicket = async (ticketId, assignedTo) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/${ticketId}/assign`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/${ticketId}/assign`,
         {
           method: "PATCH",
           headers: {
@@ -209,7 +209,7 @@ const AdminSupport = () => {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/${selectedTicket._id}/messages`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/${selectedTicket._id}/messages`,
         {
           method: "POST",
           headers: {

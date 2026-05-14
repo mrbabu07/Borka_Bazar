@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useCurrency } from "../hooks/useCurrency";
+import { API_URL, getArrayData } from "../utils/apiConfig";
 
 export default function FlashSaleFinal() {
   const { formatPrice } = useCurrency();
@@ -15,10 +16,8 @@ export default function FlashSaleFinal() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const response = await axios.get(`${apiUrl}/flash-sales/active`);
-        const salesData = Array.isArray(response.data) ? response.data : [];
-        setFlashSales(salesData);
+        const response = await axios.get(`${API_URL}/flash-sales/active`);
+        setFlashSales(Array.isArray(response.data) ? response.data : getArrayData(response));
       } catch (error) {
         console.error("Error fetching flash sales:", error);
       } finally {

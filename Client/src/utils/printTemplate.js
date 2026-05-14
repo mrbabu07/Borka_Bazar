@@ -10,23 +10,25 @@ export const generateProfessionalInvoice = (order) => {
 
   // Support both new and legacy schema field names
   const subtotal = order.subtotal || order.pricing?.subtotal || 0;
-  const deliveryCharge = order.deliveryCharge || order.pricing?.deliveryFee || 0;
+  const deliveryCharge = order.deliveryFee ?? order.deliveryCharge ?? order.pricing?.deliveryFee ?? 0;
+  const paidAmount = order.paidAmount ?? deliveryCharge;
   const tax = order.tax || 0;
-  const total = order.totalPrice || order.pricing?.total || order.total || (subtotal + deliveryCharge);
+  const total = order.totalAmount ?? order.totalPrice ?? order.pricing?.total ?? order.total ?? (subtotal + deliveryCharge);
+  const dueAmount = order.dueAmount ?? order.pricing?.remainingAmount ?? Math.max(total - paidAmount, 0);
   const paymentMethod = order.paymentInfo?.method || order.payment?.advance?.method || order.paymentMethod || 'N/A';
-  const paymentStatus = order.paymentInfo?.status || order.payment?.paymentStatus || 'Pending';
+  const paymentStatus = order.deliveryPaymentStatus || order.paymentInfo?.status || order.payment?.paymentStatus || 'Pending';
   const transactionId = order.paymentInfo?.transactionId || order.payment?.advance?.transactionId || order.transactionId;
+  const senderNumber = order.senderNumber || order.payment?.advance?.senderNumber;
   const orderStatus = (order.orderStatus || order.order?.status || order.status || 'pending').toLowerCase();
   const items = order.orderItems || order.products || [];
 
   // Fixed to BDT only - no currency conversion
-  const BDT_RATE = 110; // 1 USD = 110 BDT
   const BDT_SYMBOL = "৳";
 
   // Format price in BDT (prices already stored in BDT in database)
   const formatPrice = (price) => {
-    if (!price && price !== 0) return `${BDT_SYMBOL}0`;
-    return `${BDT_SYMBOL}${Math.round(price).toLocaleString()}`;
+    if (!price && price !== 0) return `৳0`;
+    return `৳${Math.round(price).toLocaleString()}`;
   };
 
   // Utility function to safely render color
@@ -61,9 +63,10 @@ export const generateProfessionalInvoice = (order) => {
             <div>
               <h1 class="text-3xl font-bold mb-1" style="font-family: 'Playfair Display', serif;">Borka Bazar</h1>
               <p class="text-gray-300 text-sm">Premium Modest Fashion</p>
+              <p class="text-gray-300 text-xs mt-1">Parcel Receipt / Packing Slip</p>
             </div>
             <div class="text-right">
-              <div class="text-xs text-gray-400 mb-1">INVOICE</div>
+              <div class="text-xs text-gray-400 mb-1">PARCEL RECEIPT</div>
               <div class="text-2xl font-bold">#${order._id.slice(-8).toUpperCase()}</div>
               <div class="text-xs text-gray-300 mt-2">${orderDate}</div>
             </div>
@@ -137,7 +140,32 @@ export const generateProfessionalInvoice = (order) => {
                 `
                     : ""
                 }
+                ${
+                  senderNumber
+                    ? `
+                <div class="flex justify-between text-xs mt-1">
+                  <span class="text-gray-600">Sender:</span>
+                  <span class="font-semibold text-gray-900">${senderNumber}</span>
+                </div>
+                `
+                    : ""
+                }
               </div>
+            </div>
+          </div>
+
+          <div class="mb-6 grid grid-cols-3 gap-4">
+            <div class="rounded-lg border-2 border-green-300 bg-green-50 p-4">
+              <div class="text-xs font-bold uppercase text-green-700">Delivery Fee Paid</div>
+              <div class="mt-1 text-2xl font-extrabold text-green-800">${formatPrice(paidAmount)}</div>
+            </div>
+            <div class="rounded-lg border-2 border-orange-300 bg-orange-50 p-4">
+              <div class="text-xs font-bold uppercase text-orange-700">Collect COD</div>
+              <div class="mt-1 text-3xl font-extrabold text-orange-800">${formatPrice(dueAmount)}</div>
+            </div>
+            <div class="rounded-lg border-2 border-gray-300 bg-gray-50 p-4">
+              <div class="text-xs font-bold uppercase text-gray-700">Customer Phone</div>
+              <div class="mt-1 text-2xl font-extrabold text-gray-900">${(order.customer?.phone || order.shippingInfo?.phone) || "N/A"}</div>
             </div>
           </div>
 
@@ -204,7 +232,7 @@ export const generateProfessionalInvoice = (order) => {
               <div class="text-sm space-y-1.5">
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Method:</span>
-                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()}</span>
+                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()} + COD</span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Status:</span>
@@ -213,6 +241,10 @@ export const generateProfessionalInvoice = (order) => {
                 <div class="flex justify-between text-xs">
                   <span class="text-gray-600">Transaction:</span>
                   <span class="font-mono text-xs text-gray-900">${transactionId || order._id.slice(-8)}</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-gray-600">COD Due:</span>
+                  <span class="font-bold text-orange-700">${formatPrice(dueAmount)}</span>
                 </div>
               </div>
             </div>
@@ -239,6 +271,14 @@ export const generateProfessionalInvoice = (order) => {
                 <div class="flex justify-between">
                   <span class="text-gray-600">Shipping:</span>
                   <span class="${deliveryCharge === 0 ? "text-green-600 font-semibold" : "text-gray-900 font-medium"}">${deliveryCharge > 0 ? formatPrice(deliveryCharge) : "FREE"}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Delivery Paid:</span>
+                  <span class="text-green-700 font-bold">${formatPrice(paidAmount)}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">COD Due:</span>
+                  <span class="text-orange-700 font-bold">${formatPrice(dueAmount)}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-gray-600">Tax:</span>

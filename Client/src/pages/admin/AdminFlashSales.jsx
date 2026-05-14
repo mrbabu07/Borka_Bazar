@@ -42,7 +42,7 @@ const AdminFlashSales = () => {
 
       const token = await user.getIdToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/flash-sales`,
+        `${process.env.NEXT_PUBLIC_API_URL}/flash-sales`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -71,7 +71,7 @@ const AdminFlashSales = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/products`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`);
       if (!response.ok) {
         throw new Error("Failed to fetch products");
       }
@@ -96,8 +96,8 @@ const AdminFlashSales = () => {
 
       const token = await user.getIdToken();
       const url = editingSale
-        ? `${import.meta.env.VITE_API_URL}/flash-sales/${editingSale._id}`
-        : `${import.meta.env.VITE_API_URL}/flash-sales`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/flash-sales/${editingSale._id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/flash-sales`;
 
       const method = editingSale ? "PUT" : "POST";
 
@@ -153,7 +153,7 @@ const AdminFlashSales = () => {
 
       const token = await user.getIdToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/flash-sales/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/flash-sales/${id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },

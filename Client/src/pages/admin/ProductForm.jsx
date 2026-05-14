@@ -92,6 +92,9 @@ export default function ProductForm() {
       const product = response.data.data;
       setFormData({
         ...product,
+        title: product.title || product.name || "",
+        name: product.name || product.title || "",
+        image: product.image || product.images?.[0] || "",
         images: product.images || [],
         sizes: product.sizes || [],
         colors: product.colors || [],

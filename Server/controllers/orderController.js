@@ -1,9 +1,29 @@
-const Order = require('../models/Order');
 const Product = require('../models/Product');
-const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
+const { createRealtimeNotification } = require('./notificationController');
+
+const getOrderModel = (req) => req.app.locals.models.Order;
+const isValidObjectId = (id) => ObjectId.isValid(id);
+const getOrderIdentifier = (order) => order.orderCode || order._id?.toString?.()?.slice(-8) || 'order';
+
+const notifyAdmins = async (req, data) => {
+  await createRealtimeNotification(req.app.locals.models, {
+    audience: 'admin',
+    ...data,
+  });
+};
+
+const notifyOrderCustomer = async (req, order, data) => {
+  await createRealtimeNotification(req.app.locals.models, {
+    audience: 'user',
+    recipientUserId: order.firebaseUid || null,
+    recipientEmail: order.shippingInfo?.email || order.customer?.email || null,
+    ...data,
+  });
+};
 
 // Generate unique order code
-const generateOrderCode = async () => {
+const generateOrderCode = async (Order) => {
   let orderCode;
   let exists = true;
 
@@ -19,9 +39,48 @@ const generateOrderCode = async () => {
   return orderCode;
 };
 
+const calculateAdminDeliveryCharge = async (req, subtotal, area) => {
+  const DeliverySettings = req.app.locals.models.DeliverySettings;
+  const settings = await DeliverySettings.getSettings();
+  let deliveryCharge = Number(settings.standardDeliveryCharge) || 0;
+
+  if (area && Array.isArray(settings.deliveryAreas)) {
+    const areaSettings = settings.deliveryAreas.find(
+      (item) => item.enabled && item.name?.toLowerCase() === area.toLowerCase(),
+    );
+    if (areaSettings) {
+      deliveryCharge = Number(areaSettings.charge) || deliveryCharge;
+    }
+  }
+
+  if (
+    settings.freeDeliveryEnabled &&
+    subtotal >= (Number(settings.freeDeliveryThreshold) || 0)
+  ) {
+    deliveryCharge = 0;
+  }
+
+  return { deliveryCharge, settings };
+};
+
+const parseCleanupDays = (value) => {
+  const days = Number.parseInt(value, 10);
+  if (!Number.isFinite(days) || days < 30) {
+    return null;
+  }
+  return Math.min(days, 3650);
+};
+
+const getCleanupCutoffDate = (days) => {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  return cutoffDate;
+};
+
 // Create new order
 exports.createOrder = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const {
       products,
       orderItems,
@@ -37,7 +96,11 @@ exports.createOrder = async (req, res) => {
       totalPrice,
       paymentMethod,
       transactionId,
+      senderNumber,
+      receiverNumber,
       specialInstructions,
+      couponDiscount,
+      totalDiscount,
     } = req.body;
 
     console.log('📦 createOrder received:', {
@@ -52,10 +115,28 @@ exports.createOrder = async (req, res) => {
 
     // Use either new schema names or fallback to old schema names
     const items = orderItems || products;
-    // FIX: Use nullish coalescing (??) instead of || to handle 0 values correctly
-    const finalSubtotal = subtotal ?? 0;
-    const finalDeliveryCharge = (deliveryCharge ?? deliveryFee) ?? 0;
-    const finalTotal = totalPrice ?? total ?? (finalSubtotal + finalDeliveryCharge);
+    const calculatedItemSubtotal = Array.isArray(items)
+      ? items.reduce(
+          (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+          0,
+        )
+      : 0;
+    const submittedDeliveryCharge = (deliveryCharge ?? deliveryFee) ?? 0;
+    const rawSubtotal =
+      subtotal ??
+      (totalPrice !== undefined ? Number(totalPrice) - Number(submittedDeliveryCharge) : undefined) ??
+      (total !== undefined ? Number(total) - Number(submittedDeliveryCharge) : undefined) ??
+      calculatedItemSubtotal;
+    const discountAmount = Number(totalDiscount ?? couponDiscount ?? 0) || 0;
+    const finalSubtotal = Math.max(Number(rawSubtotal) || 0, 0);
+    const chargeableSubtotal = Math.max(finalSubtotal - discountAmount, 0);
+    const { deliveryCharge: finalDeliveryCharge, settings: deliverySettings } =
+      await calculateAdminDeliveryCharge(
+        req,
+        chargeableSubtotal,
+        shippingInfo?.area || shippingInfo?.city,
+      );
+    const finalTotal = chargeableSubtotal + finalDeliveryCharge;
     
     console.log('💰 Calculated values:', {
       finalSubtotal,
@@ -86,13 +167,52 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    if (finalDeliveryCharge > 0 && (!transactionId?.trim() || !senderNumber?.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID and sender number are required for delivery fee payment',
+      });
+    }
+
+    if (finalTotal < finalDeliveryCharge) {
+      return res.status(400).json({
+        success: false,
+        message: 'Total amount cannot be less than delivery fee',
+      });
+    }
+
+    if (transactionId?.trim()) {
+      const existingTransaction = await Order.findOne({
+        $or: [
+          { transactionId: transactionId.trim() },
+          { 'advancePayment.transactionId': transactionId.trim() },
+          { 'paymentInfo.transactionId': transactionId.trim() },
+          { 'payment.advance.transactionId': transactionId.trim() },
+        ],
+      });
+
+      if (existingTransaction) {
+        return res.status(400).json({
+          success: false,
+          message: 'Transaction ID already used',
+        });
+      }
+    }
+
+    const deliveryPaymentMethod = ['bKash', 'Nagad'].includes(paymentMethod)
+      ? paymentMethod
+      : 'bKash';
+    const initialDeliveryPaymentStatus =
+      finalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+    const initialOrderStatus = finalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+
     // Generate unique order code
-    const orderCode = await generateOrderCode();
+    const orderCode = await generateOrderCode(Order);
 
     // Resolve User ID securely bridging Firebase to Mongo DB
     let realUserId = null;
     if (req.user?.uid) {
-      if (mongoose.Types.ObjectId.isValid(req.user.uid)) {
+      if (isValidObjectId(req.user.uid)) {
         realUserId = req.user.uid;
       } else if (req.app?.locals?.models?.User) {
         const userDbRecord = await req.app.locals.models.User.findByFirebaseUid(req.user.uid);
@@ -100,7 +220,7 @@ exports.createOrder = async (req, res) => {
           realUserId = userDbRecord._id;
         }
       }
-    } else if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+    } else if (req.user?._id && isValidObjectId(req.user._id)) {
       realUserId = req.user._id;
     }
 
@@ -108,22 +228,34 @@ exports.createOrder = async (req, res) => {
     const orderData = {
       orderCode,
       user: realUserId,
+      firebaseUid: req.user?.uid || null,
       orderItems: items,
       shippingInfo: shipping,
       paymentInfo: {
-        method: paymentMethod || 'COD',
-        transactionId: transactionId || null,
-        status: paymentMethod === 'COD' ? 'Pending' : 'Pending',
+        method: deliveryPaymentMethod,
+        transactionId: transactionId?.trim() || null,
+        status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
       },
       advancePayment: {
-        method: paymentMethod === 'COD' ? 'bKash' : paymentMethod,
+        method: deliveryPaymentMethod,
         amount: finalDeliveryCharge,
-        status: 'Pending',
+        transactionId: transactionId?.trim() || null,
+        status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
       },
+      totalAmount: finalTotal,
+      deliveryFee: finalDeliveryCharge,
+      paidAmount: finalDeliveryCharge,
+      dueAmount: finalTotal - finalDeliveryCharge,
+      transactionId: transactionId?.trim() || null,
+      senderNumber: senderNumber?.trim() || '',
+      receiverNumber: receiverNumber?.trim() || '',
+      deliveryPaymentStatus: initialDeliveryPaymentStatus,
       totalPrice: finalTotal,
       subtotal: finalSubtotal,
+      couponDiscount: discountAmount,
+      totalDiscount: discountAmount,
       deliveryCharge: finalDeliveryCharge,
-      orderStatus: 'Pending',
+      orderStatus: initialOrderStatus,
       specialInstructions: specialInstructions || '',
 
       // Legacy fallback fields (To prevent crashing old UI mappings that haven't been updated)
@@ -136,22 +268,48 @@ exports.createOrder = async (req, res) => {
       products: items,
       pricing: {
         subtotal: finalSubtotal,
+        discount: discountAmount,
         deliveryFee: finalDeliveryCharge,
         total: finalTotal,
-        remainingAmount: paymentMethod === 'COD' ? finalTotal : 0,
+        remainingAmount: finalTotal - finalDeliveryCharge,
       },
       payment: {
-        advance: { status: 'Pending', method: paymentMethod || 'COD', amount: finalDeliveryCharge },
-        remaining: { status: 'Pending', method: 'COD', amount: finalSubtotal },
+        advance: {
+          status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+          method: deliveryPaymentMethod,
+          amount: finalDeliveryCharge,
+          transactionId: transactionId?.trim() || null,
+          senderNumber: senderNumber?.trim() || '',
+          receiverNumber: receiverNumber?.trim() || '',
+        },
+        remaining: { status: 'Pending', method: 'COD', amount: finalTotal - finalDeliveryCharge },
         paymentStatus: 'partial',
       },
       order: {
-        status: 'Pending',
+        status: initialOrderStatus,
       }
     };
 
-    const order = new Order(orderData);
-    await order.save();
+    const order = await Order.create(orderData);
+
+    await notifyAdmins(req, {
+      title: 'New order placed',
+      message: `Order #${getOrderIdentifier(order)} is waiting for delivery payment verification.`,
+      type: 'order_created',
+      link: '/admin/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Order placed successfully',
+      message:
+        finalDeliveryCharge > 0
+          ? `Your order #${getOrderIdentifier(order)} was placed. Delivery payment is pending admin verification.`
+          : `Your order #${getOrderIdentifier(order)} was placed with free delivery.`,
+      type: 'order_created',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
 
     res.status(201).json({
       success: true,
@@ -180,8 +338,9 @@ exports.createOrder = async (req, res) => {
 // Get all orders (Admin)
 exports.getAllOrders = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     console.log('📋 getAllOrders called');
-    const { status, paymentStatus, page = 1, limit = 10 } = req.query;
+    const { status, paymentStatus, deliveryPaymentStatus, page = 1, limit = 10 } = req.query;
 
     // Build filter gracefully considering both structures
     const filter = {};
@@ -191,14 +350,18 @@ exports.getAllOrders = async (req, res) => {
     if (paymentStatus) {
       filter.$or = [{ 'paymentInfo.status': paymentStatus }, { 'payment.status': paymentStatus }];
     }
+    if (deliveryPaymentStatus) {
+      filter.deliveryPaymentStatus = deliveryPaymentStatus;
+    }
 
     const skip = (page - 1) * limit;
 
     console.log('🔍 Fetching orders with filter:', filter);
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    const orders = await Order.findAll(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit: parseInt(limit),
+    });
 
     const total = await Order.countDocuments(filter);
 
@@ -224,16 +387,178 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
+// Get pending delivery fee payments (Admin)
+exports.getPendingDeliveryPayments = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const orders = await Order.findAll(
+      { deliveryPaymentStatus: 'pending' },
+      { sort: { createdAt: -1 } },
+    );
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    console.error('Get pending delivery payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending delivery payments',
+      error: error.message,
+    });
+  }
+};
+
+exports.confirmDeliveryPayment = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const { id } = req.params;
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.deliveryPaymentStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot confirm payment. Current status: ${order.deliveryPaymentStatus}`,
+      });
+    }
+
+    order.deliveryPaymentStatus = 'confirmed';
+    order.orderStatus = 'confirmed';
+    order.paymentInfo = {
+      ...(order.paymentInfo || {}),
+      status: 'Confirmed',
+    };
+    order.advancePayment = {
+      ...(order.advancePayment || {}),
+      status: 'Confirmed',
+      confirmedAt: new Date(),
+      confirmedBy: req.dbUser?._id,
+    };
+    order.payment = {
+      ...(order.payment || {}),
+      advance: {
+        ...(order.payment?.advance || {}),
+        status: 'Confirmed',
+        confirmedAt: new Date(),
+      },
+    };
+    order.order = {
+      ...(order.order || {}),
+      status: 'confirmed',
+    };
+    order.admin = {
+      ...(order.admin || {}),
+      confirmedBy: req.dbUser?._id,
+      confirmedAt: new Date(),
+    };
+
+    await Order.save(order);
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Delivery payment confirmed',
+      message: `Your delivery payment for order #${getOrderIdentifier(order)} has been confirmed.`,
+      type: 'payment_confirmed',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery payment confirmed successfully',
+      data: order,
+    });
+  } catch (error) {
+    console.error('Confirm delivery payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm delivery payment',
+      error: error.message,
+    });
+  }
+};
+
+exports.rejectDeliveryPayment = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const { id } = req.params;
+    const { reason } = req.body;
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.deliveryPaymentStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reject payment. Current status: ${order.deliveryPaymentStatus}`,
+      });
+    }
+
+    order.deliveryPaymentStatus = 'rejected';
+    order.paymentInfo = {
+      ...(order.paymentInfo || {}),
+      status: 'Rejected',
+    };
+    order.advancePayment = {
+      ...(order.advancePayment || {}),
+      status: 'Rejected',
+    };
+    order.payment = {
+      ...(order.payment || {}),
+      advance: {
+        ...(order.payment?.advance || {}),
+        status: 'Rejected',
+        rejectionReason: reason || 'Delivery payment rejected by admin',
+      },
+    };
+    order.admin = {
+      ...(order.admin || {}),
+      rejectedBy: req.dbUser?._id,
+      rejectedAt: new Date(),
+    };
+
+    await Order.save(order);
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Delivery payment rejected',
+      message: `Your delivery payment for order #${getOrderIdentifier(order)} was rejected. Please contact support or submit the correct payment.`,
+      type: 'payment_rejected',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery payment rejected successfully',
+      data: order,
+    });
+  } catch (error) {
+    console.error('Reject delivery payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject delivery payment',
+      error: error.message,
+    });
+  }
+};
+
 // Get user's own orders
 exports.getUserOrders = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { page = 1, limit = 10 } = req.query;
     const userEmail = req.user?.email;
     
     // Resolve User ID securely bridging Firebase to Mongo DB
     let realUserId = null;
     if (req.user?.uid) {
-      if (mongoose.Types.ObjectId.isValid(req.user.uid)) {
+      if (isValidObjectId(req.user.uid)) {
         realUserId = req.user.uid;
       } else if (req.app?.locals?.models?.User) {
         const userDbRecord = await req.app.locals.models.User.findByFirebaseUid(req.user.uid);
@@ -241,7 +566,7 @@ exports.getUserOrders = async (req, res) => {
           realUserId = userDbRecord._id;
         }
       }
-    } else if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+    } else if (req.user?._id && isValidObjectId(req.user._id)) {
       realUserId = req.user._id;
     }
 
@@ -261,20 +586,30 @@ exports.getUserOrders = async (req, res) => {
     }
 
     const skip = (page - 1) * limit;
+    const realUserObjectId = realUserId && isValidObjectId(realUserId)
+      ? new ObjectId(realUserId)
+      : realUserId;
     
-    // Look for user ID OR email matching shippingInfo.email OR customer.email
+    // Look for user ID, Firebase UID, or any legacy email field used by older checkout flows.
     const filter = {
       $or: [
-        realUserId ? { user: realUserId } : null,
+        realUserObjectId ? { user: realUserObjectId } : null,
+        req.user?.uid ? { firebaseUid: req.user.uid } : null,
+        req.user?.uid ? { userId: req.user.uid } : null,
         userEmail ? { 'shippingInfo.email': userEmail } : null,
         userEmail ? { 'customer.email': userEmail } : null,
+        userEmail ? { customerEmail: userEmail } : null,
+        userEmail ? { userEmail } : null,
+        userEmail ? { email: userEmail } : null,
+        userEmail ? { 'billingInfo.email': userEmail } : null,
       ].filter(Boolean)
     };
 
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    const orders = await Order.findAll(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit: parseInt(limit),
+    });
 
     const total = await Order.countDocuments(filter);
 
@@ -303,11 +638,10 @@ exports.getUserOrders = async (req, res) => {
 // Get single order
 exports.getOrderById = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
 
-    const order = await Order.findById(id)
-      .populate('admin.confirmedBy', 'name email')
-      .populate('admin.rejectedBy', 'name email');
+    const order = await Order.findById(id);
 
     if (!order) {
       return res.status(404).json({
@@ -334,6 +668,7 @@ exports.getOrderById = async (req, res) => {
 // Confirm advance payment (Admin)
 exports.confirmAdvancePayment = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { transactionId, adminId } = req.body;
 
@@ -413,7 +748,7 @@ exports.confirmAdvancePayment = async (req, res) => {
     order.admin.confirmedBy = actualAdminId;
     order.admin.confirmedAt = new Date();
 
-    await order.save();
+    await Order.save(order);
 
     console.log('✅ Advance payment confirmed successfully');
 
@@ -446,6 +781,7 @@ exports.confirmAdvancePayment = async (req, res) => {
 // Pay remaining amount (User)
 exports.payRemaining = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { method, transactionId } = req.body;
 
@@ -512,7 +848,15 @@ exports.payRemaining = async (req, res) => {
       order.payment.remaining.status = 'Pending';
     }
 
-    await order.save();
+    await Order.save(order);
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Remaining payment submitted',
+      message: `Your remaining payment for order #${getOrderIdentifier(order)} is pending admin confirmation.`,
+      type: 'payment_submitted',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode, method },
+    });
 
     res.status(200).json({
       success: true,
@@ -537,6 +881,7 @@ exports.payRemaining = async (req, res) => {
 // Confirm remaining payment (Admin)
 exports.confirmRemainingPayment = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { adminId } = req.body;
 
@@ -569,7 +914,15 @@ exports.confirmRemainingPayment = async (req, res) => {
       order.admin.confirmedBy = adminId;
     }
 
-    await order.save();
+    await Order.save(order);
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Remaining payment confirmed',
+      message: `Your remaining payment for order #${getOrderIdentifier(order)} has been confirmed.`,
+      type: 'payment_confirmed',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
 
     res.status(200).json({
       success: true,
@@ -594,6 +947,7 @@ exports.confirmRemainingPayment = async (req, res) => {
 // Reject advance payment (Admin)
 exports.rejectAdvancePayment = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { reason, adminId } = req.body;
 
@@ -621,7 +975,7 @@ exports.rejectAdvancePayment = async (req, res) => {
       order.admin.rejectedBy = adminId;
     }
 
-    await order.save();
+    await Order.save(order);
 
     res.status(200).json({
       success: true,
@@ -646,6 +1000,7 @@ exports.rejectAdvancePayment = async (req, res) => {
 // Confirm payment (Admin) - DEPRECATED - Use confirmAdvancePayment instead
 exports.confirmPayment = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { transactionId, adminId } = req.body;
 
@@ -694,7 +1049,7 @@ exports.confirmPayment = async (req, res) => {
       order.admin.confirmedBy = adminId;
     }
 
-    await order.save();
+    await Order.save(order);
 
     res.status(200).json({
       success: true,
@@ -720,6 +1075,7 @@ exports.confirmPayment = async (req, res) => {
 // Reject payment (Admin) - DEPRECATED - Use rejectAdvancePayment instead
 exports.rejectPayment = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { reason, adminId } = req.body;
 
@@ -747,7 +1103,7 @@ exports.rejectPayment = async (req, res) => {
       order.admin.rejectedBy = adminId;
     }
 
-    await order.save();
+    await Order.save(order);
 
     res.status(200).json({
       success: true,
@@ -772,10 +1128,24 @@ exports.rejectPayment = async (req, res) => {
 // Update order status (Admin)
 exports.updateOrderStatus = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+    const validStatuses = [
+      'pending',
+      'confirmed',
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'Pending',
+      'Confirmed',
+      'Processing',
+      'Shipped',
+      'Delivered',
+      'Cancelled',
+    ];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -796,6 +1166,10 @@ exports.updateOrderStatus = async (req, res) => {
     // Update both paths to ensure backward and UI compatibility
     order.orderStatus = status;
     order.specialInstructions = notes || order.specialInstructions;
+
+    if (status.toString().toLowerCase() === 'delivered' && !order.deliveredAt) {
+      order.deliveredAt = new Date();
+    }
     
     if (order.order) {
       order.order.status = status;
@@ -804,7 +1178,15 @@ exports.updateOrderStatus = async (req, res) => {
       order.order = { status, notes };
     }
 
-    await order.save();
+    await Order.save(order);
+
+    await notifyOrderCustomer(req, order, {
+      title: 'Order status updated',
+      message: `Your order #${getOrderIdentifier(order)} is now ${status}.`,
+      type: 'order_status',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode, status },
+    });
 
     res.status(200).json({
       success: true,
@@ -821,9 +1203,222 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+// Cancel order (User/Admin)
+exports.cancelOrder = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const { id } = req.params;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    const currentStatus = order.orderStatus || order.status || 'pending';
+    if (['shipped', 'delivered', 'cancelled'].includes(currentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel an order with status: ${currentStatus}`,
+      });
+    }
+
+    const User = req.app.locals.models.User;
+    const dbUser = req.user?.uid ? await User.findByFirebaseUid(req.user.uid) : null;
+    const isOwner =
+      dbUser?._id?.toString() === order.user?.toString() ||
+      req.user?.email === order.shippingInfo?.email ||
+      req.user?.email === order.customer?.email;
+
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only cancel your own orders',
+      });
+    }
+
+    const updatedOrder = await Order.updateById(id, {
+      $set: {
+        orderStatus: 'cancelled',
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      },
+    });
+
+    await notifyAdmins(req, {
+      title: 'Order cancelled',
+      message: `Order #${getOrderIdentifier(order)} was cancelled by the customer.`,
+      type: 'order_cancelled',
+      link: '/admin/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
+
+    await notifyOrderCustomer(req, updatedOrder, {
+      title: 'Order cancelled',
+      message: `Your order #${getOrderIdentifier(order)} has been cancelled.`,
+      type: 'order_cancelled',
+      link: '/orders',
+      metadata: { orderId: order._id, orderCode: order.orderCode },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      data: updatedOrder,
+    });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel order',
+      error: error.message,
+    });
+  }
+};
+
+// Preview delivered order cleanup (Admin)
+exports.previewDeliveredOrderCleanup = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const days = parseCleanupDays(req.query.days || 30);
+
+    if (!days) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cleanup retention must be at least 30 days',
+      });
+    }
+
+    const cutoffDate = getCleanupCutoffDate(days);
+    const [count, sampleOrders] = await Promise.all([
+      Order.countDeliveredBefore(cutoffDate),
+      Order.findDeliveredBefore(cutoffDate, {
+        sort: { deliveredAt: 1, updatedAt: 1, createdAt: 1 },
+        limit: 5,
+        projection: {
+          orderCode: 1,
+          orderStatus: 1,
+          deliveredAt: 1,
+          updatedAt: 1,
+          createdAt: 1,
+          totalAmount: 1,
+          totalPrice: 1,
+          shippingInfo: 1,
+          customer: 1,
+        },
+      }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        days,
+        cutoffDate,
+        count,
+        sampleOrders,
+      },
+    });
+  } catch (error) {
+    console.error('Preview delivered order cleanup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to preview delivered order cleanup',
+      error: error.message,
+    });
+  }
+};
+
+// Delete delivered orders older than retention period (Admin)
+exports.deleteDeliveredOrderCleanup = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const days = parseCleanupDays(req.body.days || req.query.days || 30);
+    const confirmText = req.body.confirmText || req.query.confirmText;
+
+    if (!days) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cleanup retention must be at least 30 days',
+      });
+    }
+
+    if (confirmText !== 'DELETE DELIVERED ORDERS') {
+      return res.status(400).json({
+        success: false,
+        message: 'Type DELETE DELIVERED ORDERS to confirm cleanup',
+      });
+    }
+
+    const cutoffDate = getCleanupCutoffDate(days);
+    const ordersToDelete = await Order.findDeliveredBefore(cutoffDate, {
+      projection: { _id: 1, orderCode: 1 },
+    });
+    const orderIds = ordersToDelete.map((order) => order._id);
+    const orderIdStrings = orderIds.map((id) => id.toString());
+
+    if (ordersToDelete.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No delivered orders matched the cleanup rule',
+        data: { deletedOrders: 0, deletedNotifications: 0, cutoffDate, days },
+      });
+    }
+
+    const deleteResult = await Order.deleteDeliveredBefore(cutoffDate);
+    let deletedNotifications = 0;
+
+    if (req.app.locals.models.AppNotification?.collection) {
+      const notificationResult =
+        await req.app.locals.models.AppNotification.collection.deleteMany({
+          $or: [
+            { 'metadata.orderId': { $in: orderIds } },
+            { 'metadata.orderId': { $in: orderIdStrings } },
+          ],
+        });
+      deletedNotifications = notificationResult.deletedCount || 0;
+    }
+
+    await notifyAdmins(req, {
+      title: 'Delivered orders cleaned up',
+      message: `${deleteResult.deletedCount || 0} delivered orders older than ${days} days were deleted.`,
+      type: 'order_cleanup',
+      link: '/admin/orders',
+      metadata: {
+        days,
+        cutoffDate,
+        deletedOrders: deleteResult.deletedCount || 0,
+        deletedNotifications,
+        deletedOrderCodes: ordersToDelete.map((order) => order.orderCode).filter(Boolean),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${deleteResult.deletedCount || 0} delivered orders deleted successfully`,
+      data: {
+        deletedOrders: deleteResult.deletedCount || 0,
+        deletedNotifications,
+        cutoffDate,
+        days,
+      },
+    });
+  } catch (error) {
+    console.error('Delete delivered order cleanup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete delivered orders',
+      error: error.message,
+    });
+  }
+};
+
 // Get order statistics (Admin)
 exports.getOrderStats = async (req, res) => {
   try {
+    const Order = getOrderModel(req);
     const stats = await Order.aggregate([
       {
         $group: {

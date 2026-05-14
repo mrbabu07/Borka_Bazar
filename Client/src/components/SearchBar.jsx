@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { searchProducts } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
 import VoiceSearch from "./VoiceSearch";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function SearchBar({
   placeholder = "Search products...",
@@ -35,7 +36,7 @@ export default function SearchBar({
     setLoading(true);
     try {
       const response = await searchProducts(searchQuery);
-      const products = response.data.data || [];
+      const products = getArrayData(response);
       setSuggestions(products.slice(0, 5)); // Limit to 5 suggestions
       setIsOpen(products.length > 0);
     } catch (error) {

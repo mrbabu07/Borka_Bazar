@@ -65,4 +65,51 @@ const getUserStatus = async (req, res) => {
   }
 };
 
-module.exports = { getOrCreateUser, getUserStatus };
+const updateUserProfile = async (req, res) => {
+  try {
+    const cleanText = (value, maxLength = 80) =>
+      typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+
+    const firstName = cleanText(req.body.firstName);
+    const lastName = cleanText(req.body.lastName);
+    const phone = cleanText(req.body.phone, 30);
+    const avatar = cleanText(req.body.avatar, 500);
+
+    if (phone && !/^[+\d\s().-]{6,30}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: "Please enter a valid phone number",
+      });
+    }
+
+    const User = req.app.locals.models.User;
+    let user = await User.findByFirebaseUid(req.user.uid);
+
+    if (!user) {
+      user = await User.create({
+        firebaseUid: req.user.uid,
+        firstName,
+        lastName,
+        phone,
+        avatar,
+        email: req.user.email,
+        role: "customer",
+      });
+    } else {
+      await User.updateProfile(req.user.uid, {
+        firstName,
+        lastName,
+        phone,
+        avatar,
+      });
+      user = await User.findByFirebaseUid(req.user.uid);
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+module.exports = { getOrCreateUser, getUserStatus, updateUserProfile };

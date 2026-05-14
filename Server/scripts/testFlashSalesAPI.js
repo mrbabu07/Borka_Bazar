@@ -1,146 +1,65 @@
-require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
-const mongoose = require("mongoose");
 const FlashSale = require("../models/FlashSale");
-
-const uri = process.env.MONGO_URI;
-
-// Define Product schema
-const productSchema = new mongoose.Schema({}, { strict: false });
-const Product =
-  mongoose.models.Product || mongoose.model("Product", productSchema);
+const { connectDb } = require("./db");
 
 async function testFlashSalesAPI() {
+  let client;
   try {
-    await mongoose.connect(uri);
-    console.log("✅ Connected to MongoDB\n");
-
-    console.log("🧪 Testing Flash Sales API Endpoints\n");
-    console.log("=".repeat(60));
-
-    // Test 1: Get all flash sales
-    console.log("\n1️⃣  Testing: GET /api/flash-sales (All sales)");
-    const allSales = await FlashSale.find();
-    console.log(`   ✅ Found ${allSales.length} flash sales`);
-
-    // Test 2: Get active flash sales
-    console.log("\n2️⃣  Testing: GET /api/flash-sales/active");
+    const connection = await connectDb();
+    client = connection.client;
+    const db = connection.db;
+    const flashSaleModel = new FlashSale(db);
     const now = new Date();
-    const activeSales = await FlashSale.find({
+
+    const allSales = await flashSaleModel.findAll();
+    const activeSales = await flashSaleModel.findAll({
       isActive: true,
       startTime: { $lte: now },
       endTime: { $gte: now },
       $expr: { $lt: ["$soldCount", "$totalStock"] },
-    }).populate("product");
-    console.log(`   ✅ Found ${activeSales.length} active sales`);
-    if (activeSales.length > 0) {
-      console.log(`   📦 Example: ${activeSales[0].title}`);
+    });
+    const upcomingSales = await flashSaleModel.findAll(
+      { isActive: true, startTime: { $gt: now } },
+      { sort: { startTime: 1 } },
+    );
+
+    console.log(`All flash sales: ${allSales.length}`);
+    console.log(`Active flash sales: ${activeSales.length}`);
+    console.log(`Upcoming flash sales: ${upcomingSales.length}`);
+
+    const product = await db.collection("products").findOne({});
+    if (!product) {
+      console.log("No products found, skipping create/update/delete test.");
+      return;
     }
 
-    // Test 3: Get upcoming flash sales
-    console.log("\n3️⃣  Testing: GET /api/flash-sales/upcoming");
-    const upcomingSales = await FlashSale.find({
+    const price = Number(product.price) || 999;
+    const created = await flashSaleModel.create({
+      title: "Test Flash Sale",
+      description: "Temporary test sale",
+      product: product._id,
+      originalPrice: price,
+      flashPrice: Math.round(price * 0.5),
+      discountPercentage: 50,
+      startTime: new Date(Date.now() + 60000),
+      endTime: new Date(Date.now() + 3600000),
+      totalStock: 10,
+      soldCount: 0,
+      maxPerUser: 2,
       isActive: true,
-      startTime: { $gt: now },
-    })
-      .populate("product")
-      .sort({ startTime: 1 });
-    console.log(`   ✅ Found ${upcomingSales.length} upcoming sales`);
-    if (upcomingSales.length > 0) {
-      const startsIn = Math.round((upcomingSales[0].startTime - now) / 60000);
-      console.log(`   ⏳ Next sale starts in ${startsIn} minutes`);
-    }
+    });
 
-    // Test 4: Get single flash sale by ID
-    if (allSales.length > 0) {
-      console.log("\n4️⃣  Testing: GET /api/flash-sales/:id");
-      const singleSale = await FlashSale.findById(allSales[0]._id).populate(
-        "product",
-      );
-      console.log(`   ✅ Retrieved: ${singleSale.title}`);
-      console.log(
-        `   💰 Price: ₹${singleSale.flashPrice} (${singleSale.discountPercentage}% off)`,
-      );
-      console.log(
-        `   📊 Stock: ${singleSale.soldCount}/${singleSale.totalStock}`,
-      );
-      console.log(`   🏷️  Status: ${singleSale.status}`);
-    }
+    const updated = await flashSaleModel.updateById(created._id, {
+      totalStock: 20,
+    });
+    const purchase = await flashSaleModel.recordPurchase(updated._id, 2);
+    await flashSaleModel.deleteById(purchase.sale._id);
 
-    // Test 5: Create flash sale (simulate)
-    console.log("\n5️⃣  Testing: POST /api/flash-sales (Create)");
-    const products = await Product.find().limit(1);
-    if (products.length > 0) {
-      const testSale = {
-        title: "Test Flash Sale - API Check",
-        description: "This is a test sale",
-        product: products[0]._id,
-        originalPrice: products[0].price || 999,
-        flashPrice: Math.round((products[0].price || 999) * 0.5),
-        discountPercentage: 50,
-        startTime: new Date(Date.now() + 60000), // 1 minute from now
-        endTime: new Date(Date.now() + 3600000), // 1 hour from now
-        totalStock: 10,
-        soldCount: 0,
-        maxPerUser: 2,
-        isActive: true,
-      };
-
-      const created = new FlashSale(testSale);
-      created.updateStatus();
-      await created.save();
-      console.log(`   ✅ Created test sale: ${created.title}`);
-      console.log(`   🆔 ID: ${created._id}`);
-
-      // Test 6: Update flash sale
-      console.log("\n6️⃣  Testing: PUT /api/flash-sales/:id (Update)");
-      created.totalStock = 20;
-      await created.save();
-      console.log(`   ✅ Updated stock to 20`);
-
-      // Test 7: Record purchase
-      console.log("\n7️⃣  Testing: POST /api/flash-sales/:id/purchase");
-      created.soldCount += 2;
-      created.updateStatus();
-      await created.save();
-      console.log(`   ✅ Recorded 2 purchases`);
-      console.log(
-        `   📊 New stock: ${created.soldCount}/${created.totalStock}`,
-      );
-
-      // Test 8: Delete flash sale
-      console.log("\n8️⃣  Testing: DELETE /api/flash-sales/:id");
-      await FlashSale.findByIdAndDelete(created._id);
-      console.log(`   ✅ Deleted test sale`);
-    } else {
-      console.log(
-        "   ⚠️  No products found - skipping create/update/delete tests",
-      );
-    }
-
-    // Summary
-    console.log("\n" + "=".repeat(60));
-    console.log("\n📊 API Endpoints Summary:");
-    console.log("   ✅ GET    /api/flash-sales/active");
-    console.log("   ✅ GET    /api/flash-sales/upcoming");
-    console.log("   ✅ GET    /api/flash-sales/:id");
-    console.log("   ✅ GET    /api/flash-sales (admin)");
-    console.log("   ✅ POST   /api/flash-sales (admin)");
-    console.log("   ✅ PUT    /api/flash-sales/:id (admin)");
-    console.log("   ✅ DELETE /api/flash-sales/:id (admin)");
-    console.log("   ✅ POST   /api/flash-sales/:id/purchase");
-
-    console.log("\n🌐 Frontend Integration:");
-    console.log("   📱 Public Page:  http://localhost:5173/flash-sales");
-    console.log("   🔧 Admin Panel:  http://localhost:5173/admin/flash-sales");
-    console.log("   🏠 Homepage:     http://localhost:5173 (banner)");
-
-    console.log("\n✅ All API endpoints are functional!\n");
-
-    process.exit(0);
+    console.log("Create/update/purchase/delete flow passed.");
   } catch (error) {
-    console.error("\n❌ Error:", error.message);
-    console.error(error);
-    process.exit(1);
+    console.error("Flash sale test failed:", error.message);
+    process.exitCode = 1;
+  } finally {
+    if (client) await client.close();
   }
 }
 

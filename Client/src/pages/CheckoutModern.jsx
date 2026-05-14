@@ -9,6 +9,9 @@ import AddressStep from '../components/checkout/steps/AddressStep';
 import ReviewStep from '../components/checkout/steps/ReviewStep';
 import PaymentStep from '../components/checkout/steps/PaymentStep';
 import ConfirmationStep from '../components/checkout/steps/ConfirmationStep';
+import { createOrder } from '../services/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export default function CheckoutModern() {
   const navigate = useNavigate();
@@ -19,6 +22,7 @@ export default function CheckoutModern() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [deliverySettings, setDeliverySettings] = useState(null);
 
   // Address data
   const [address, setAddress] = useState({
@@ -35,14 +39,42 @@ export default function CheckoutModern() {
   const [paymentData, setPaymentData] = useState({
     method: 'bKash',
     transactionId: '',
+    senderNumber: '',
     screenshot: null,
   });
 
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    async function fetchDeliverySettings() {
+      try {
+        const response = await fetch(
+          `${API_URL}/delivery-settings?t=${Date.now()}`,
+          { cache: 'no-cache' },
+        );
+        const data = await response.json();
+        if (data.success) setDeliverySettings(data.data);
+      } catch (error) {
+        setDeliverySettings({
+          freeDeliveryThreshold: 2000,
+          standardDeliveryCharge: 100,
+          freeDeliveryEnabled: true,
+        });
+      }
+    }
+
+    fetchDeliverySettings();
+  }, []);
+
   // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = 200;
+  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
+  const standardDeliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
+  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
+  const deliveryFee =
+    freeDeliveryEnabled && subtotal >= freeDeliveryThreshold
+      ? 0
+      : standardDeliveryCharge;
   const total = subtotal + deliveryFee;
 
   // Validate address
@@ -61,8 +93,11 @@ export default function CheckoutModern() {
   // Validate payment
   const validatePayment = () => {
     const newErrors = {};
-    if (!paymentData.transactionId.trim()) {
+    if (deliveryFee > 0 && !paymentData.transactionId.trim()) {
       newErrors.transactionId = 'Transaction ID required';
+    }
+    if (deliveryFee > 0 && !paymentData.senderNumber.trim()) {
+      newErrors.senderNumber = 'Sender number required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -107,19 +142,12 @@ export default function CheckoutModern() {
         deliveryFee,
         paymentMethod: paymentData.method,
         transactionId: paymentData.transactionId,
+        senderNumber: paymentData.senderNumber,
+        receiverNumber: process.env.NEXT_PUBLIC_BKASH_PAYMENT_NUMBER || '01878305319',
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create order');
-      }
+      const response = await createOrder(orderPayload);
+      const result = response.data;
 
       setOrderData(result.data);
       clearCart();

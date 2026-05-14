@@ -95,7 +95,7 @@ const Support = () => {
       setLoading(true);
       const token = await user.getIdToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/my-tickets`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/my-tickets`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -124,7 +124,7 @@ const Support = () => {
     try {
       const token = await user.getIdToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets`,
         {
           method: "POST",
           headers: {
@@ -160,7 +160,7 @@ const Support = () => {
     try {
       const token = await user.getIdToken();
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/support/tickets/${selectedTicket._id}/messages`,
+        `${process.env.NEXT_PUBLIC_API_URL}/support/tickets/${selectedTicket._id}/messages`,
         {
           method: "POST",
           headers: {

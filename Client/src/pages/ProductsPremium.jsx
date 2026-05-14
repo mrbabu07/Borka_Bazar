@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { getProducts, getCategories } from "../services/api";
 import ProductCardPremium from "../components/ProductCardPremium";
 import { ProductCardSkeleton } from "../components/Skeleton";
+import { getArrayData } from "../utils/apiConfig";
 
 export default function ProductsPremium() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,7 +40,7 @@ export default function ProductsPremium() {
         getCategories(),
       ]);
 
-      let filteredProducts = productsRes.data.data;
+      let filteredProducts = getArrayData(productsRes);
 
       // Extract unique fabrics from products
       const uniqueFabrics = [...new Set(
@@ -113,7 +114,7 @@ export default function ProductsPremium() {
       }
 
       setProducts(filteredProducts);
-      setCategories(categoriesRes.data.data || []);
+      setCategories(getArrayData(categoriesRes));
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -152,14 +153,14 @@ export default function ProductsPremium() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-950 transition-colors dark:bg-gray-950 dark:text-gray-100">
       {/* Page Header */}
-      <div className="bg-gray-50 border-b border-gray-100 py-12">
+      <div className="border-b border-gray-100 bg-gray-50 py-12 dark:border-gray-800 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="font-display text-3xl md:text-4xl text-black text-center mb-4">
+          <h1 className="font-display text-3xl md:text-4xl text-black text-center mb-4 dark:text-white">
             Shop Collection
           </h1>
-          <p className="text-gray-500 text-center max-w-2xl mx-auto">
+          <p className="text-gray-500 text-center max-w-2xl mx-auto dark:text-gray-400">
             Discover our complete range of elegant modest fashion
           </p>
         </div>
@@ -170,13 +171,13 @@ export default function ProductsPremium() {
           {/* Sidebar Filters - Desktop */}
           <aside className="hidden lg:block lg:col-span-1 space-y-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm tracking-widest uppercase font-medium text-black">
+              <h2 className="text-sm tracking-widest uppercase font-medium text-black dark:text-white">
                 Filters
               </h2>
               {activeFiltersCount > 0 && (
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-gray-500 hover:text-black transition-colors"
+                  className="text-xs text-gray-500 hover:text-black transition-colors dark:text-gray-400 dark:hover:text-white"
                 >
                   Clear All ({activeFiltersCount})
                 </button>
@@ -185,7 +186,7 @@ export default function ProductsPremium() {
 
             {/* Category Filter */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Category
               </h3>
               <div className="space-y-2">
@@ -197,7 +198,7 @@ export default function ProductsPremium() {
                     onChange={() => handleFilterChange("category", "")}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                  <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                     All Categories
                   </span>
                 </label>
@@ -210,7 +211,7 @@ export default function ProductsPremium() {
                       onChange={() => handleFilterChange("category", cat.slug)}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                    <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                       {cat.name}
                     </span>
                   </label>
@@ -220,7 +221,7 @@ export default function ProductsPremium() {
 
             {/* Price Range */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Price Range
               </h3>
               <div className="space-y-3">
@@ -229,21 +230,21 @@ export default function ProductsPremium() {
                   placeholder="Min Price"
                   value={filters.minPrice}
                   onChange={(e) => handleFilterChange("minPrice", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300"
                 />
                 <input
                   type="number"
                   placeholder="Max Price"
                   value={filters.maxPrice}
                   onChange={(e) => handleFilterChange("maxPrice", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300"
                 />
               </div>
             </div>
 
             {/* Search by Name */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Search Name
               </h3>
               <input
@@ -251,13 +252,13 @@ export default function ProductsPremium() {
                 placeholder="Search product name..."
                 value={filters.name}
                 onChange={(e) => handleFilterChange("name", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300"
               />
             </div>
 
             {/* Fabric Filter */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Fabric
               </h3>
               <div className="space-y-2">
@@ -269,7 +270,7 @@ export default function ProductsPremium() {
                     onChange={() => handleFilterChange("fabric", "")}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                  <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                     All Fabrics
                   </span>
                 </label>
@@ -282,7 +283,7 @@ export default function ProductsPremium() {
                       onChange={() => handleFilterChange("fabric", fabric)}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                    <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                       {fabric}
                     </span>
                   </label>
@@ -292,7 +293,7 @@ export default function ProductsPremium() {
 
             {/* Size Filter */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Size
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -304,8 +305,8 @@ export default function ProductsPremium() {
                     }
                     className={`px-4 py-2 border text-sm transition-all ${
                       filters.size === size
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 text-gray-700 hover:border-black"
+                        ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                        : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                     }`}
                   >
                     {size}
@@ -316,7 +317,7 @@ export default function ProductsPremium() {
 
             {/* Color Filter */}
             <div>
-              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                 Color
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -328,8 +329,8 @@ export default function ProductsPremium() {
                     }
                     className={`px-4 py-2 border text-sm transition-all ${
                       filters.color === color
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 text-gray-700 hover:border-black"
+                        ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                        : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                     }`}
                   >
                     {color}
@@ -343,7 +344,7 @@ export default function ProductsPremium() {
           <div className="lg:hidden mb-6">
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className="w-full py-3 border border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-all"
+              className="w-full py-3 border border-black text-black text-sm tracking-widest uppercase font-medium hover:bg-black hover:text-white transition-all dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-gray-950"
             >
               Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
             </button>
@@ -352,14 +353,14 @@ export default function ProductsPremium() {
           {/* Products Grid */}
           <div className="lg:col-span-3">
             {/* Sort & Results Count */}
-            <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {loading ? "Loading..." : `${products.length} Products`}
               </p>
               <select
                 value={filters.sort}
                 onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                className="px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300"
               >
                 <option value="newest">Newest First</option>
                 <option value="price-low">Price: Low to High</option>
@@ -376,7 +377,7 @@ export default function ProductsPremium() {
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-gray-500 mb-4">No products found</p>
+                <p className="text-gray-500 mb-4 dark:text-gray-400">No products found</p>
                 <button
                   onClick={clearFilters}
                   className="text-sm text-gold-600 hover:text-gold-700 transition-colors"
@@ -402,13 +403,13 @@ export default function ProductsPremium() {
             className="absolute inset-0 bg-black/50"
             onClick={() => setFiltersOpen(false)}
           />
-          <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white overflow-y-auto">
+          <div className="absolute inset-y-0 right-0 w-full max-w-sm overflow-y-auto bg-white text-gray-950 dark:bg-gray-900 dark:text-gray-100">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-medium text-black">Filters</h2>
+                <h2 className="text-lg font-medium text-black dark:text-white">Filters</h2>
                 <button
                   onClick={() => setFiltersOpen(false)}
-                  className="p-2 hover:bg-gray-100 transition-colors"
+                  className="p-2 hover:bg-gray-100 transition-colors dark:hover:bg-gray-800"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -420,7 +421,7 @@ export default function ProductsPremium() {
               <div className="space-y-8">
                 {/* Category Filter */}
                 <div>
-                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                     Category
                   </h3>
                   <div className="space-y-2">
@@ -432,7 +433,7 @@ export default function ProductsPremium() {
                         onChange={() => handleFilterChange("category", "")}
                         className="w-4 h-4"
                       />
-                      <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                      <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                         All Categories
                       </span>
                     </label>
@@ -445,7 +446,7 @@ export default function ProductsPremium() {
                           onChange={() => handleFilterChange("category", cat.slug)}
                           className="w-4 h-4"
                         />
-                        <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                        <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                           {cat.name}
                         </span>
                       </label>
@@ -455,7 +456,7 @@ export default function ProductsPremium() {
 
                 {/* Price Range */}
                 <div>
-                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                     Price Range
                   </h3>
                   <div className="space-y-3">
@@ -464,21 +465,21 @@ export default function ProductsPremium() {
                       placeholder="Min Price"
                       value={filters.minPrice}
                       onChange={(e) => handleFilterChange("minPrice", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                      className="w-full px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:border-gray-300"
                     />
                     <input
                       type="number"
                       placeholder="Max Price"
                       value={filters.maxPrice}
                       onChange={(e) => handleFilterChange("maxPrice", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 text-sm focus:border-black focus:outline-none transition-colors"
+                      className="w-full px-4 py-2 border border-gray-300 bg-white text-sm text-gray-900 focus:border-black focus:outline-none transition-colors placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:focus:border-gray-300"
                     />
                   </div>
                 </div>
 
                 {/* Fabric Filter */}
                 <div>
-                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                     Fabric
                   </h3>
                   <div className="space-y-2">
@@ -490,7 +491,7 @@ export default function ProductsPremium() {
                         onChange={() => handleFilterChange("fabric", "")}
                         className="w-4 h-4"
                       />
-                      <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                      <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                         All Fabrics
                       </span>
                     </label>
@@ -503,7 +504,7 @@ export default function ProductsPremium() {
                           onChange={() => handleFilterChange("fabric", fabric)}
                           className="w-4 h-4"
                         />
-                        <span className="text-sm text-gray-700 group-hover:text-black transition-colors">
+                        <span className="text-sm text-gray-700 group-hover:text-black transition-colors dark:text-gray-300 dark:group-hover:text-white">
                           {fabric}
                         </span>
                       </label>
@@ -513,7 +514,7 @@ export default function ProductsPremium() {
 
                 {/* Size Filter */}
                 <div>
-                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                     Size
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -525,8 +526,8 @@ export default function ProductsPremium() {
                         }
                         className={`px-4 py-2 border text-sm transition-all ${
                           filters.size === size
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 text-gray-700 hover:border-black"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {size}
@@ -537,7 +538,7 @@ export default function ProductsPremium() {
 
                 {/* Color Filter */}
                 <div>
-                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-black mb-4 uppercase tracking-wide dark:text-white">
                     Color
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -549,8 +550,8 @@ export default function ProductsPremium() {
                         }
                         className={`px-4 py-2 border text-sm transition-all ${
                           filters.color === color
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 text-gray-700 hover:border-black"
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
+                            : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
                         {color}
@@ -563,13 +564,13 @@ export default function ProductsPremium() {
               <div className="mt-8 flex gap-4">
                 <button
                   onClick={clearFilters}
-                  className="flex-1 py-3 border border-gray-300 text-sm tracking-widest uppercase font-medium hover:border-black transition-colors"
+                  className="flex-1 py-3 border border-gray-300 text-sm tracking-widest uppercase font-medium hover:border-black transition-colors dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-300"
                 >
                   Clear
                 </button>
                 <button
                   onClick={() => setFiltersOpen(false)}
-                  className="flex-1 py-3 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors"
+                  className="flex-1 py-3 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors dark:bg-white dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white"
                 >
                   Apply
                 </button>

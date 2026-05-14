@@ -1,151 +1,175 @@
-const mongoose = require('mongoose');
+const { ObjectId } = require("mongodb");
 
-const orderSchema = new mongoose.Schema(
-  {
-    orderCode: {
-      type: String,
-      unique: true,
-      required: true,
-      index: true,
-    },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    orderItems: [
-      {
-        productId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Product',
-          required: true,
-        },
-        title: String,
-        price: Number,
-        quantity: {
-          type: Number,
-          required: true,
-          min: 1,
-        },
-        image: String,
-        size: String,
-        color: String,
-      },
-    ],
-    shippingInfo: {
-      name: { type: String, required: true, trim: true },
-      phone: { type: String, required: true, trim: true },
-      email: { type: String, trim: true },
-      address: { type: String, required: true, trim: true },
-      city: { type: String, trim: true },
-      area: { type: String, trim: true },
-      zipCode: { type: String, trim: true },
-    },
-    paymentInfo: {
-      method: {
-        type: String,
-        enum: ['COD', 'bKash', 'Nagad', 'rocket'],
-        default: 'COD',
-      },
-      transactionId: {
-        type: String,
-        sparse: true,
-        trim: true,
-      },
-      status: {
-        type: String,
-        enum: ['Pending', 'Confirmed', 'Paid', 'Failed', 'Rejected'],
-        default: 'Pending',
-      },
-    },
-    advancePayment: {
-      method: {
-        type: String,
-        enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer'],
-        default: 'bKash',
-      },
-      amount: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-      transactionId: {
-        type: String,
-        sparse: true,
-        trim: true,
-      },
-      status: {
-        type: String,
-        enum: ['Pending', 'Confirmed', 'Paid', 'Failed', 'Rejected'],
-        default: 'Pending',
-      },
-      paidAt: Date,
-      confirmedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-      confirmedAt: Date,
-    },
-    totalPrice: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    subtotal: {
-      type: Number,
-      required: true,
-    },
-    deliveryCharge: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    orderStatus: {
-      type: String,
-      enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-      default: 'Pending',
-    },
-    specialInstructions: String,
-    
-    // Keeping backward compatibility fields optional 
-    customer: {
-      name: String,
-      phone: String,
-      email: String,
-      address: String,
-    },
-    products: [mongoose.Schema.Types.Mixed],
-    pricing: {
-      subtotal: Number,
-      deliveryFee: Number,
-      total: Number,
-      remainingAmount: Number,
-    },
-    payment: mongoose.Schema.Types.Mixed,
-    order: {
-      status: String,
-      notes: String,
-    },
-    admin: {
-      confirmedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-      rejectedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    },
-  },
-  {
-    timestamps: true,
+class Order {
+  constructor(db) {
+    this.collection = db.collection("orders");
+    this.createIndexes();
   }
-);
 
-// Indexes for faster queries
-orderSchema.index({ 'shippingInfo.email': 1 });
-orderSchema.index({ 'shippingInfo.phone': 1 });
-orderSchema.index({ orderCode: 1 });
-orderSchema.index({ user: 1 });
-orderSchema.index({ orderStatus: 1 });
+  async createIndexes() {
+    try {
+      const existingIndexes = await this.collection.indexes();
+      const hasOrderCodeIndex = existingIndexes.some(
+        (index) => index.name === "orderCode_1",
+      );
 
-module.exports = mongoose.model('Order', orderSchema);
+      if (!hasOrderCodeIndex) {
+        await this.collection.createIndex({ orderCode: 1 });
+      }
+
+      await this.collection.createIndex({ user: 1 });
+      await this.collection.createIndex({ "shippingInfo.email": 1 });
+      await this.collection.createIndex({ "shippingInfo.phone": 1 });
+      await this.collection.createIndex({ orderStatus: 1 });
+      await this.collection.createIndex({ deliveredAt: -1 });
+      await this.collection.createIndex({ deliveryPaymentStatus: 1, createdAt: -1 });
+      await this.collection.createIndex({ transactionId: 1 }, { sparse: true });
+      await this.collection.createIndex({ "advancePayment.transactionId": 1 }, { sparse: true });
+    } catch (error) {
+      console.error("Error creating Order indexes:", error);
+    }
+  }
+
+  toObjectId(id) {
+    if (!id) return null;
+    if (id instanceof ObjectId) return id;
+    return ObjectId.isValid(id) ? new ObjectId(id) : null;
+  }
+
+  normalizeOrder(orderData) {
+    const now = new Date();
+    return {
+      ...orderData,
+      user: this.toObjectId(orderData.user) || orderData.user || null,
+      orderItems: (orderData.orderItems || []).map((item) => ({
+        ...item,
+        productId: this.toObjectId(item.productId) || item.productId,
+      })),
+      createdAt: orderData.createdAt || now,
+      updatedAt: now,
+    };
+  }
+
+  async create(orderData) {
+    const order = this.normalizeOrder(orderData);
+    const result = await this.collection.insertOne(order);
+    return { ...order, _id: result.insertedId };
+  }
+
+  async findOne(filter = {}) {
+    return this.collection.findOne(filter);
+  }
+
+  async findById(id) {
+    const _id = this.toObjectId(id);
+    if (!_id) return null;
+    return this.collection.findOne({ _id });
+  }
+
+  async findAll(filter = {}, options = {}) {
+    const {
+      sort = { createdAt: -1 },
+      skip = 0,
+      limit = 0,
+      projection,
+    } = options;
+
+    let cursor = this.collection.find(filter, projection ? { projection } : {});
+
+    if (sort) cursor = cursor.sort(sort);
+    if (skip) cursor = cursor.skip(Number(skip));
+    if (limit) cursor = cursor.limit(Number(limit));
+
+    return cursor.toArray();
+  }
+
+  async countDocuments(filter = {}) {
+    return this.collection.countDocuments(filter);
+  }
+
+  getDeliveredBeforeFilter(cutoffDate) {
+    const deliveredStatus = /^delivered$/i;
+
+    return {
+      $and: [
+        {
+          $or: [
+            { orderStatus: deliveredStatus },
+            { status: deliveredStatus },
+            { "order.status": deliveredStatus },
+          ],
+        },
+        {
+          $or: [
+            { deliveredAt: { $lte: cutoffDate } },
+            {
+              deliveredAt: { $exists: false },
+              updatedAt: { $lte: cutoffDate },
+            },
+            {
+              deliveredAt: { $exists: false },
+              updatedAt: { $exists: false },
+              createdAt: { $lte: cutoffDate },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  async findDeliveredBefore(cutoffDate, options = {}) {
+    return this.findAll(this.getDeliveredBeforeFilter(cutoffDate), options);
+  }
+
+  async countDeliveredBefore(cutoffDate) {
+    return this.countDocuments(this.getDeliveredBeforeFilter(cutoffDate));
+  }
+
+  async deleteDeliveredBefore(cutoffDate) {
+    return this.collection.deleteMany(this.getDeliveredBeforeFilter(cutoffDate));
+  }
+
+  async save(order) {
+    if (!order?._id) {
+      return this.create(order);
+    }
+
+    const _id = this.toObjectId(order._id);
+    if (!_id) {
+      throw new Error("Invalid order id");
+    }
+
+    const { _id: ignoredId, ...orderData } = order;
+    const updatedOrder = {
+      ...orderData,
+      updatedAt: new Date(),
+    };
+
+    await this.collection.updateOne({ _id }, { $set: updatedOrder });
+    return this.findById(_id);
+  }
+
+  async updateById(id, update) {
+    const _id = this.toObjectId(id);
+    if (!_id) return null;
+
+    await this.collection.updateOne(
+      { _id },
+      {
+        ...update,
+        $set: {
+          ...(update.$set || {}),
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return this.findById(_id);
+  }
+
+  async aggregate(pipeline = []) {
+    return this.collection.aggregate(pipeline).toArray();
+  }
+}
+
+module.exports = Order;

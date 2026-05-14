@@ -1,3 +1,65 @@
+const { ObjectId } = require("mongodb");
+
+const normalizeBoolean = (value, fallback = false) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true";
+  return fallback;
+};
+
+const normalizeNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const normalizeArray = (value) => (Array.isArray(value) ? value : []);
+
+const normalizeProductPayload = (body = {}, existingProduct = {}) => {
+  const title = (body.title || body.name || existingProduct.title || existingProduct.name || "").trim();
+  const images = normalizeArray(body.images).filter(Boolean);
+  const image = body.image || images[0] || existingProduct.image || existingProduct.images?.[0] || "";
+  const availableSizes = normalizeArray(body.availableSizes)
+    .filter((item) => item && item.size)
+    .map((item) => ({
+      size: String(item.size).trim(),
+      stock: Math.max(normalizeNumber(item.stock, 0), 0),
+    }));
+  const explicitStock = normalizeNumber(body.stock, NaN);
+  const stock = Number.isFinite(explicitStock)
+    ? Math.max(explicitStock, 0)
+    : availableSizes.reduce((sum, item) => sum + Number(item.stock || 0), 0);
+  const price = normalizeNumber(body.price, NaN);
+  const originalPrice = body.originalPrice
+    ? normalizeNumber(body.originalPrice, price)
+    : price;
+
+  return {
+    title,
+    name: title,
+    price,
+    originalPrice,
+    image,
+    images,
+    categoryId: body.categoryId || existingProduct.categoryId || "",
+    stock,
+    description: body.description || "",
+    sizes: normalizeArray(body.sizes).map(String),
+    colors: normalizeArray(body.colors),
+    sizeChart: body.sizeChart || "",
+    variants: normalizeArray(body.variants),
+    fabric: body.fabric || "",
+    style: body.style || "",
+    occasion: body.occasion || "",
+    sleeveType: body.sleeveType || "",
+    color: body.color || "",
+    availableSizes,
+    attributes: body.attributes || {},
+    isFeatured: normalizeBoolean(body.isFeatured, false),
+    isActive: body.isActive === undefined ? true : normalizeBoolean(body.isActive, true),
+    views: existingProduct.views || 0,
+    updatedAt: new Date(),
+  };
+};
+
 const getAllProducts = async (req, res) => {
   try {
     const Product = req.app.locals.models.Product;
@@ -179,70 +241,21 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const Product = req.app.locals.models.Product;
-    const {
-      name,
-      price,
-      description,
-      images,
-      categoryId,
-      fabric,
-      color,
-      style,
-      sleeveType,
-      occasion,
-      availableSizes,
-      attributes,
-      isFeatured,
-      isActive,
-    } = req.body;
+    const productData = normalizeProductPayload(req.body);
 
     // Validate required fields
-    if (!name || !price || !categoryId) {
+    if (!productData.title || !Number.isFinite(productData.price) || !productData.categoryId) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: name, price, categoryId",
+        error: "Missing required fields: title/name, price, categoryId",
       });
     }
 
-    // Validate images array (imgBB URLs)
-    if (images && !Array.isArray(images)) {
-      return res.status(400).json({
-        success: false,
-        error: "Images must be an array of URLs",
-      });
-    }
-
-    // Validate availableSizes array
-    if (availableSizes && !Array.isArray(availableSizes)) {
-      return res.status(400).json({
-        success: false,
-        error: "availableSizes must be an array",
-      });
-    }
-
-    const productId = await Product.create({
-      name,
-      price: parseFloat(price),
-      description: description || "",
-      images: images || [],
-      categoryId,
-      fabric: fabric || "",
-      color: color || "",
-      style: style || "",
-      sleeveType: sleeveType || "",
-      occasion: occasion || "",
-      availableSizes: availableSizes || [],
-      attributes: attributes || {},
-      isFeatured: isFeatured === true,
-      isActive: isActive !== false,
-      views: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const product = await Product.create(productData);
 
     res.status(201).json({
       success: true,
-      data: { id: productId },
+      data: product,
       message: "Product created successfully",
     });
   } catch (error) {
@@ -267,37 +280,22 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Validate required fields
-    const { name, price, categoryId } = req.body;
-    if (!name || !price || !categoryId) {
-      return res.status(400).json({
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({
         success: false,
-        error: "Missing required fields: name, price, categoryId",
+        error: "Product not found",
       });
     }
 
-    // Sanitize data - exclude immutable fields
-    const { _id, __v, createdAt, views, ...bodyData } = req.body;
-    const updateData = {
-      ...bodyData,
-      price: parseFloat(req.body.price),
-      updatedAt: new Date(),
-    };
+    const updateData = normalizeProductPayload(req.body, existingProduct);
 
-    // Ensure arrays are properly formatted
-    if (req.body.images && Array.isArray(req.body.images)) {
-      updateData.images = req.body.images;
-    }
-    if (req.body.availableSizes && Array.isArray(req.body.availableSizes)) {
-      updateData.availableSizes = req.body.availableSizes;
-    }
-
-    // Ensure booleans
-    if (typeof req.body.isFeatured !== "undefined") {
-      updateData.isFeatured = req.body.isFeatured === true;
-    }
-    if (typeof req.body.isActive !== "undefined") {
-      updateData.isActive = req.body.isActive !== false;
+    // Validate required fields
+    if (!updateData.title || !Number.isFinite(updateData.price) || !updateData.categoryId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: title/name, price, categoryId",
+      });
     }
 
     const result = await Product.update(id, updateData);
@@ -325,16 +323,97 @@ const deleteProduct = async (req, res) => {
     const Product = req.app.locals.models.Product;
     const { id } = req.params;
 
-    // Soft delete - set isActive to false instead of deleting
-    const result = await Product.update(id, { isActive: false });
+    if (!id || typeof id !== "string" || id.length !== 24) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid product ID format",
+      });
+    }
 
-    if (result.matchedCount === 0) {
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
       return res
         .status(404)
         .json({ success: false, error: "Product not found" });
     }
 
-    res.json({ success: true, message: "Product deleted (soft delete)" });
+    const productObjectId = new ObjectId(id);
+    const result = await Product.delete(id);
+
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found" });
+    }
+
+    const cleanupResults = {};
+    const cleanupTasks = [
+      ["reviews", req.app.locals.db.collection("reviews").deleteMany({
+        $or: [{ productId: productObjectId }, { productId: id }],
+      })],
+      ["wishlists", req.app.locals.db.collection("wishlists").updateMany(
+        {},
+        {
+          $pull: {
+            products: productObjectId,
+            productIds: productObjectId,
+            items: { productId: productObjectId },
+          },
+        },
+      )],
+      ["flashsales", req.app.locals.db.collection("flashsales").updateMany(
+        {},
+        {
+          $pull: {
+            products: productObjectId,
+            productIds: productObjectId,
+            targetProducts: productObjectId,
+          },
+        },
+      )],
+      ["offers", req.app.locals.db.collection("offers").updateMany(
+        {},
+        {
+          $pull: {
+            products: productObjectId,
+            productIds: productObjectId,
+            targetProducts: productObjectId,
+          },
+        },
+      )],
+      ["appnotifications", req.app.locals.db.collection("appnotifications").deleteMany({
+        $or: [
+          { "metadata.productId": productObjectId },
+          { "metadata.productId": id },
+        ],
+      })],
+    ];
+
+    await Promise.all(
+      cleanupTasks.map(async ([name, task]) => {
+        try {
+          const cleanup = await task;
+          cleanupResults[name] = {
+            deletedCount: cleanup.deletedCount || 0,
+            modifiedCount: cleanup.modifiedCount || 0,
+          };
+        } catch (cleanupError) {
+          cleanupResults[name] = { error: cleanupError.message };
+        }
+      }),
+    );
+
+    res.json({
+      success: true,
+      message: "Product permanently deleted from database",
+      data: {
+        deletedProduct: {
+          id,
+          title: existingProduct.title || existingProduct.name,
+        },
+        cleanup: cleanupResults,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

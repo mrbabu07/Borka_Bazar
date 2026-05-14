@@ -24,8 +24,8 @@ const FlashSales = () => {
   const fetchFlashSales = async () => {
     try {
       const [activeRes, upcomingRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/flash-sales/active`),
-        fetch(`${import.meta.env.VITE_API_URL}/flash-sales/upcoming`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/flash-sales/active`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/flash-sales/upcoming`),
       ]);
 
       if (activeRes.ok) {

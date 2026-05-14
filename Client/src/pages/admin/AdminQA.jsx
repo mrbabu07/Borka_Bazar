@@ -19,7 +19,7 @@ export default function AdminQA() {
     try {
       // Fetch all products and their questions
       const productsResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/products`,
+        `${process.env.NEXT_PUBLIC_API_URL}/products`,
       );
       const products = productsResponse.data.data;
 
@@ -28,7 +28,7 @@ export default function AdminQA() {
       for (const product of products) {
         try {
           const questionsResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/products/${product._id}/questions`,
+            `${process.env.NEXT_PUBLIC_API_URL}/products/${product._id}/questions`,
           );
           const productQuestions = questionsResponse.data.data.map((q) => ({
             ...q,
@@ -67,7 +67,7 @@ export default function AdminQA() {
       const token = await currentUser.getIdToken();
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/questions/${questionId}/answers`,
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/${questionId}/answers`,
         { answer: answerText },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -96,7 +96,7 @@ export default function AdminQA() {
       const token = await currentUser.getIdToken();
 
       const response = await axios.delete(
-        `${import.meta.env.VITE_API_URL}/questions/${questionId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/${questionId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
