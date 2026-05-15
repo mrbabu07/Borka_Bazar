@@ -60,14 +60,20 @@ export default function NavbarPremium() {
   return (
     <>
       {/* Top Bar - Minimal & Elegant */}
-      <div className="bg-black dark:bg-gray-900 text-white text-xs py-2 transition-colors duration-300">
+      <div className="bg-black py-2 text-xs text-white transition-colors duration-300 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <p className="hidden sm:block tracking-wide">
+          <div className="flex items-center justify-between gap-3">
+            <p className="hidden tracking-wide md:block">
               Free Shipping on Orders Over ৳2000
             </p>
-            <div className="flex items-center gap-6 ml-auto">
-              <a href="tel:01878305319" className="hover:text-gold-500 transition-colors tracking-wide">
+            <Link
+              to="/"
+              className="min-w-0 flex-1 truncate font-display text-sm font-bold tracking-[0.18em] text-white transition-colors hover:text-gold-400 md:hidden"
+            >
+              BORKA BAZAR
+            </Link>
+            <div className="flex shrink-0 items-center gap-3 sm:gap-6">
+              <a href="tel:01878305319" className="hidden tracking-wide transition-colors hover:text-gold-500 sm:inline">
                 01878305319
               </a>
               <div className="flex items-center gap-3">
@@ -102,14 +108,14 @@ export default function NavbarPremium() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex min-w-0 items-center justify-between gap-2 py-3 sm:h-20 sm:py-0">
             {/* Logo - Elegant Typography */}
-            <Link to="/" className="flex items-center group">
-              <div className="text-center">
-                <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black dark:text-white group-hover:text-gold-500 transition-colors">
+            <Link to="/" className="group flex min-w-0 shrink items-center">
+              <div className="min-w-0 text-left sm:text-center">
+                <h1 className="truncate font-display text-lg font-bold tracking-tight text-black transition-colors group-hover:text-gold-500 dark:text-white sm:text-2xl md:text-3xl">
                   BORKA BAZAR
                 </h1>
-                <p className="text-[10px] tracking-[0.3em] text-gray-500 dark:text-gray-400 uppercase">
+                <p className="truncate text-[9px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 sm:text-[10px] sm:tracking-[0.3em]">
                   Modest Fashion
                 </p>
               </div>
@@ -135,9 +141,11 @@ export default function NavbarPremium() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3 lg:gap-4">
               {/* Theme Toggle */}
-              <ThemeToggle />
+              <div className="hidden sm:block">
+                <ThemeToggle />
+              </div>
 
               {/* Search Icon - Desktop */}
               <button 
@@ -151,12 +159,14 @@ export default function NavbarPremium() {
 
               {/* Wishlist */}
               {user && (
-                <NotificationBell />
+                <div className="hidden min-[380px]:block">
+                  <NotificationBell />
+                </div>
               )}
 
               {/* Wishlist */}
               {user && (
-                <Link to="/wishlist" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-gold-500 transition-colors">
+                <Link to="/wishlist" className="relative hidden p-2 text-gray-700 transition-colors hover:text-gold-500 dark:text-gray-300 sm:block">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
@@ -253,7 +263,8 @@ export default function NavbarPremium() {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2"
+                className="rounded-lg p-2 text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800 lg:hidden"
+                aria-label="Toggle menu"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
@@ -271,7 +282,7 @@ export default function NavbarPremium() {
             <SearchBar
               placeholder="Search for modest fashion..."
               onSearch={handleSearch}
-              className="w-full h-12 px-4 pr-12 border border-gray-200 rounded-none bg-white text-gray-900 focus:outline-none focus:border-black transition-colors"
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 pr-12 text-sm text-gray-900 transition-colors focus:border-black focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white"
               showSuggestions={true}
             />
           </div>
@@ -279,16 +290,49 @@ export default function NavbarPremium() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-100 py-4">
+          <div className="border-t border-gray-100 bg-white py-4 dark:border-gray-800 dark:bg-gray-900 lg:hidden">
             <div className="space-y-1 px-4">
+              <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950">
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  {user && <NotificationBell />}
+                </div>
+                <div className="flex items-center gap-2">
+                  {user && (
+                    <Link
+                      to="/wishlist"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="relative rounded-lg p-2 text-gray-700 transition-colors hover:bg-white hover:text-gold-500 dark:text-gray-300 dark:hover:bg-gray-900"
+                      title="Wishlist"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      {wishlistCount > 0 && (
+                        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] font-semibold text-white dark:bg-white dark:text-black">
+                          {wishlistCount > 9 ? "9+" : wishlistCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  <a
+                    href="tel:01878305319"
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-800 dark:border-gray-700 dark:text-gray-100"
+                  >
+                    Call
+                  </a>
+                </div>
+              </div>
               {navLinks.map((link) => (
                 <NavLink
                   key={link.path}
                   to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-3 text-sm tracking-wide uppercase font-medium transition-colors ${
-                      isActive ? "text-black" : "text-gray-600"
+                    `block rounded-lg px-3 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                      isActive
+                        ? "bg-gray-100 text-black dark:bg-gray-800 dark:text-white"
+                        : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                     }`
                   }
                 >

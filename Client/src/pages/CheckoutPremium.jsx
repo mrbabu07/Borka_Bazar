@@ -16,6 +16,7 @@ import {
   normalizeAddress,
   toAddressPayload,
 } from "../utils/bangladeshAddress";
+import { calculateCheckoutPricing } from "../utils/checkoutPricing";
 
 const PAYMENT_ACCOUNTS = {
   bKash: {
@@ -133,18 +134,19 @@ export default function CheckoutPremium() {
   }, [user]);
 
   // Use delivery settings or BDT defaults
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
-  const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge ?? 100;
-  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
-  
-  const chargeableSubtotal = Math.max(cartTotal - couponDiscount, 0);
-  const deliveryCharge =
-    freeDeliveryEnabled && chargeableSubtotal >= freeDeliveryThreshold
-      ? 0
-      : deliveryChargeAmount;
-  
-  const finalTotal = chargeableSubtotal + deliveryCharge;
-  const dueAmount = Math.max(finalTotal - deliveryCharge, 0);
+  const {
+    freeDeliveryThreshold,
+    freeDeliveryEnabled,
+    chargeableSubtotal,
+    deliveryCharge,
+    finalTotal,
+    dueAmount,
+    amountNeededForFreeDelivery,
+  } = calculateCheckoutPricing({
+    cartTotal,
+    couponDiscount,
+    deliverySettings,
+  });
   const selectedPaymentAccount = PAYMENT_ACCOUNTS[paymentInfo.method];
 
   // Redirect to cart if empty
@@ -902,7 +904,7 @@ export default function CheckoutPremium() {
                 </div>
                 {freeDeliveryEnabled && chargeableSubtotal < freeDeliveryThreshold && (
                   <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                    Add ৳{(freeDeliveryThreshold - chargeableSubtotal).toLocaleString()} more for free delivery
+                    Add ৳{amountNeededForFreeDelivery.toLocaleString()} more for free delivery
                   </div>
                 )}
               </div>

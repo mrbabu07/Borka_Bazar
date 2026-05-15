@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test:e2e": "node e2e-test.js"
+  },
   "dependencies": {
     "axios": "^1.15.2"
   }

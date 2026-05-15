@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const { ObjectId } = require('mongodb');
 const { createRealtimeNotification } = require('./notificationController');
+const { calculateOrderPricing } = require('../utils/orderPricing');
 
 const getOrderModel = (req) => req.app.locals.models.Order;
 const isValidObjectId = (id) => ObjectId.isValid(id);
@@ -115,32 +116,34 @@ exports.createOrder = async (req, res) => {
 
     // Use either new schema names or fallback to old schema names
     const items = orderItems || products;
-    const calculatedItemSubtotal = Array.isArray(items)
-      ? items.reduce(
-          (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
-          0,
-        )
-      : 0;
-    const submittedDeliveryCharge = (deliveryCharge ?? deliveryFee) ?? 0;
-    const rawSubtotal =
-      subtotal ??
-      (totalPrice !== undefined ? Number(totalPrice) - Number(submittedDeliveryCharge) : undefined) ??
-      (total !== undefined ? Number(total) - Number(submittedDeliveryCharge) : undefined) ??
-      calculatedItemSubtotal;
-    const discountAmount = Number(totalDiscount ?? couponDiscount ?? 0) || 0;
-    const finalSubtotal = Math.max(Number(rawSubtotal) || 0, 0);
-    const chargeableSubtotal = Math.max(finalSubtotal - discountAmount, 0);
-    const { deliveryCharge: finalDeliveryCharge, settings: deliverySettings } =
-      await calculateAdminDeliveryCharge(
-        req,
-        chargeableSubtotal,
-        shippingInfo?.area || shippingInfo?.city,
-      );
-    const finalTotal = chargeableSubtotal + finalDeliveryCharge;
+    const { settings: deliverySettings } = await calculateAdminDeliveryCharge(
+      req,
+      0,
+      shippingInfo?.area || shippingInfo?.city,
+    );
+    const pricing = calculateOrderPricing({
+      items,
+      subtotal,
+      totalPrice,
+      total,
+      deliveryCharge,
+      deliveryFee,
+      couponDiscount,
+      totalDiscount,
+      deliverySettings,
+      area: shippingInfo?.area || shippingInfo?.city,
+    });
+    const {
+      discountAmount,
+      finalSubtotal,
+      chargeableSubtotal,
+      finalTotal,
+    } = pricing;
+    const calculatedFinalDeliveryCharge = pricing.finalDeliveryCharge;
     
     console.log('💰 Calculated values:', {
       finalSubtotal,
-      finalDeliveryCharge,
+      finalDeliveryCharge: calculatedFinalDeliveryCharge,
       finalTotal,
     });
     
@@ -167,14 +170,14 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    if (finalDeliveryCharge > 0 && (!transactionId?.trim() || !senderNumber?.trim())) {
+    if (calculatedFinalDeliveryCharge > 0 && (!transactionId?.trim() || !senderNumber?.trim())) {
       return res.status(400).json({
         success: false,
         message: 'Transaction ID and sender number are required for delivery fee payment',
       });
     }
 
-    if (finalTotal < finalDeliveryCharge) {
+    if (finalTotal < calculatedFinalDeliveryCharge) {
       return res.status(400).json({
         success: false,
         message: 'Total amount cannot be less than delivery fee',
@@ -203,8 +206,9 @@ exports.createOrder = async (req, res) => {
       ? paymentMethod
       : 'bKash';
     const initialDeliveryPaymentStatus =
-      finalDeliveryCharge > 0 ? 'pending' : 'confirmed';
-    const initialOrderStatus = finalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+      calculatedFinalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+    const initialOrderStatus =
+      calculatedFinalDeliveryCharge > 0 ? 'pending' : 'confirmed';
 
     // Generate unique order code
     const orderCode = await generateOrderCode(Order);
@@ -234,18 +238,18 @@ exports.createOrder = async (req, res) => {
       paymentInfo: {
         method: deliveryPaymentMethod,
         transactionId: transactionId?.trim() || null,
-        status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+        status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
       },
       advancePayment: {
         method: deliveryPaymentMethod,
-        amount: finalDeliveryCharge,
+        amount: calculatedFinalDeliveryCharge,
         transactionId: transactionId?.trim() || null,
-        status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+        status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
       },
       totalAmount: finalTotal,
-      deliveryFee: finalDeliveryCharge,
-      paidAmount: finalDeliveryCharge,
-      dueAmount: finalTotal - finalDeliveryCharge,
+      deliveryFee: calculatedFinalDeliveryCharge,
+      paidAmount: calculatedFinalDeliveryCharge,
+      dueAmount: finalTotal - calculatedFinalDeliveryCharge,
       transactionId: transactionId?.trim() || null,
       senderNumber: senderNumber?.trim() || '',
       receiverNumber: receiverNumber?.trim() || '',
@@ -254,7 +258,7 @@ exports.createOrder = async (req, res) => {
       subtotal: finalSubtotal,
       couponDiscount: discountAmount,
       totalDiscount: discountAmount,
-      deliveryCharge: finalDeliveryCharge,
+      deliveryCharge: calculatedFinalDeliveryCharge,
       orderStatus: initialOrderStatus,
       specialInstructions: specialInstructions || '',
 
@@ -269,20 +273,20 @@ exports.createOrder = async (req, res) => {
       pricing: {
         subtotal: finalSubtotal,
         discount: discountAmount,
-        deliveryFee: finalDeliveryCharge,
+        deliveryFee: calculatedFinalDeliveryCharge,
         total: finalTotal,
-        remainingAmount: finalTotal - finalDeliveryCharge,
+        remainingAmount: finalTotal - calculatedFinalDeliveryCharge,
       },
       payment: {
         advance: {
-          status: finalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+          status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
           method: deliveryPaymentMethod,
-          amount: finalDeliveryCharge,
+          amount: calculatedFinalDeliveryCharge,
           transactionId: transactionId?.trim() || null,
           senderNumber: senderNumber?.trim() || '',
           receiverNumber: receiverNumber?.trim() || '',
         },
-        remaining: { status: 'Pending', method: 'COD', amount: finalTotal - finalDeliveryCharge },
+        remaining: { status: 'Pending', method: 'COD', amount: finalTotal - calculatedFinalDeliveryCharge },
         paymentStatus: 'partial',
       },
       order: {
@@ -303,7 +307,7 @@ exports.createOrder = async (req, res) => {
     await notifyOrderCustomer(req, order, {
       title: 'Order placed successfully',
       message:
-        finalDeliveryCharge > 0
+        calculatedFinalDeliveryCharge > 0
           ? `Your order #${getOrderIdentifier(order)} was placed. Delivery payment is pending admin verification.`
           : `Your order #${getOrderIdentifier(order)} was placed with free delivery.`,
       type: 'order_created',

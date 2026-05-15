@@ -12,6 +12,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "test": "jest --runInBand",
+    "check:env": "node scripts/validateEnv.js",
     "seed": "node scripts/seed.js",
     "seed:all": "node scripts/seedAll.js",
     "seed:flash": "node scripts/seedFlashSales.js",
@@ -30,6 +32,7 @@
     "make:admin": "node scripts/makeAdmin.js"
   },
   "devDependencies": {
+    "jest": "^30.4.2",
     "nodemon": "^3.1.11"
   }
 }
