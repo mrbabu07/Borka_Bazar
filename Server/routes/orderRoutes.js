@@ -16,6 +16,8 @@ const {
   confirmRemainingPayment,
   updateOrderStatus,
   cancelOrder,
+  getCompletedOrderCleanupCandidates,
+  deleteSingleCompletedOrder,
   previewDeliveredOrderCleanup,
   deleteDeliveredOrderCleanup,
   getOrderStats,
@@ -35,8 +37,10 @@ router.post('/:id/cancel', verifyToken, cancelOrder);
 // Admin routes (must come before /:id to avoid matching)
 router.get('/', verifyToken, verifyAdmin, getAllOrders);
 router.get('/admin/pending-delivery-payments', verifyToken, verifyAdmin, getPendingDeliveryPayments);
+router.get('/admin/order-cleanup-candidates', verifyToken, verifyAdmin, getCompletedOrderCleanupCandidates);
 router.get('/admin/cleanup-delivered-preview', verifyToken, verifyAdmin, previewDeliveredOrderCleanup);
 router.delete('/admin/cleanup-delivered', verifyToken, verifyAdmin, deleteDeliveredOrderCleanup);
+router.delete('/:id/admin-delete', verifyToken, verifyAdmin, deleteSingleCompletedOrder);
 router.patch('/:id/confirm-delivery-payment', verifyToken, verifyAdmin, confirmDeliveryPayment);
 router.patch('/:id/reject-delivery-payment', verifyToken, verifyAdmin, rejectDeliveryPayment);
 router.patch('/:id/confirm-payment', verifyToken, verifyAdmin, confirmPayment);

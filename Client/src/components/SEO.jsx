@@ -14,7 +14,7 @@ export default function SEO({
   const currentUrl = `${siteUrl}${location.pathname}`;
 
   const defaultTitle = "Borka Bazar - Elegant Modest Fashion";
-  const defaultDescription = "Discover elegant and modest fashion at Borka Bazar. Shop premium quality burkas, abayas, and hijabs with free delivery across Bangladesh.";
+  const defaultDescription = "Discover elegant and modest fashion at Borka Bazar. Shop premium quality burkas, abayas, and hijabs with delivery across Bangladesh.";
   const defaultKeywords = "burka, abaya, hijab, modest fashion, islamic clothing, bangladesh, online shopping";
   const defaultImage = `${siteUrl}/og-image.jpg`;
 

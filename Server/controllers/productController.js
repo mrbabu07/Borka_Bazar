@@ -12,6 +12,13 @@ const normalizeNumber = (value, fallback = 0) => {
 };
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : []);
+const normalizeSku = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 
 const normalizeProductPayload = (body = {}, existingProduct = {}) => {
   const title = (body.title || body.name || existingProduct.title || existingProduct.name || "").trim();
@@ -35,6 +42,7 @@ const normalizeProductPayload = (body = {}, existingProduct = {}) => {
   return {
     title,
     name: title,
+    sku: normalizeSku(body.sku || existingProduct.sku),
     price,
     originalPrice,
     image,
@@ -259,6 +267,13 @@ const createProduct = async (req, res) => {
       message: "Product created successfully",
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: "SKU already exists. Please use a different SKU.",
+      });
+    }
+
     console.error("Error creating product:", error);
     res.status(500).json({ success: false, error: error.message });
   }
@@ -310,6 +325,13 @@ const updateProduct = async (req, res) => {
     console.log("✅ Product updated successfully");
     res.json({ success: true, message: "Product updated successfully" });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: "SKU already exists. Please use a different SKU.",
+      });
+    }
+
     console.error("💥 Product Update Error:", error);
     res.status(500).json({
       success: false,
@@ -428,14 +450,20 @@ const searchProducts = async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Search in name, description, fabric, and style
+    // Search in name, SKU, description, fabric, style, and variant SKU.
     const products = await Product.findAll({ isActive: { $ne: false } });
+    const normalizedQuery = q.toLowerCase();
     const searchResults = products.filter(
       (product) =>
-        product.name?.toLowerCase().includes(q.toLowerCase()) ||
-        product.description?.toLowerCase().includes(q.toLowerCase()) ||
-        product.fabric?.toLowerCase().includes(q.toLowerCase()) ||
-        product.style?.toLowerCase().includes(q.toLowerCase()),
+        product.name?.toLowerCase().includes(normalizedQuery) ||
+        product.title?.toLowerCase().includes(normalizedQuery) ||
+        product.sku?.toLowerCase().includes(normalizedQuery) ||
+        product.variants?.some((variant) =>
+          variant.sku?.toLowerCase().includes(normalizedQuery),
+        ) ||
+        product.description?.toLowerCase().includes(normalizedQuery) ||
+        product.fabric?.toLowerCase().includes(normalizedQuery) ||
+        product.style?.toLowerCase().includes(normalizedQuery),
     );
 
     res.json({ success: true, data: searchResults });

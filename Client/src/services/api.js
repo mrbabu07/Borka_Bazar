@@ -81,6 +81,12 @@ export const deleteDeliveredOrderCleanup = (days = 30, confirmText) =>
   api.delete("/orders/admin/cleanup-delivered", {
     data: { days, confirmText },
   });
+export const getOrderCleanupCandidates = (params = {}) =>
+  api.get("/orders/admin/order-cleanup-candidates", { params });
+export const deleteSingleCompletedOrder = (id, confirmText) =>
+  api.delete(`/orders/${id}/admin-delete`, {
+    data: { confirmText },
+  });
 
 // User
 export const getCurrentUser = () => api.get("/user/me");

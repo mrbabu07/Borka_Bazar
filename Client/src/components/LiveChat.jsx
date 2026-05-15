@@ -17,6 +17,7 @@ export default function LiveChat() {
     scrollToBottom();
   }, [messages]);
 
+
   useEffect(() => {
     // Load welcome message
     if (isOpen && messages.length === 0) {
@@ -71,7 +72,7 @@ export default function LiveChat() {
     } else if (lowerMessage.includes("size") || lowerMessage.includes("fit")) {
       return "Please check our size guide on each product page. If you need specific measurements, I can help you with that!";
     } else if (lowerMessage.includes("delivery") || lowerMessage.includes("shipping")) {
-      return "We offer free delivery on orders over ৳2000. Standard delivery takes 3-5 business days. Express delivery is also available.";
+      return "Standard delivery takes 3-5 business days. Express delivery is also available.";
     } else if (lowerMessage.includes("payment")) {
       return "We accept Cash on Delivery (COD), bKash, Nagad, and all major credit/debit cards. Which payment method would you prefer?";
     } else if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {

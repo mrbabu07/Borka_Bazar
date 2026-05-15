@@ -220,7 +220,7 @@ export default function SearchBar({
                           : "text-gray-500 dark:text-gray-400"
                       }`}
                     >
-                      ৳{product.price?.toFixed(2)}
+                      {product.sku ? `${product.sku} • ` : ""}৳{product.price?.toLocaleString()}
                     </p>
                   </div>
 

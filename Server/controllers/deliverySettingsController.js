@@ -23,11 +23,9 @@ exports.updateDeliverySettings = async (req, res) => {
   try {
     const DeliverySettings = getDeliverySettingsModel(req);
     const allowedFields = [
-      "freeDeliveryThreshold",
       "standardDeliveryCharge",
       "expressDeliveryCharge",
       "expressDeliveryEnabled",
-      "freeDeliveryEnabled",
       "deliveryAreas",
       "estimatedDeliveryDays",
     ];
@@ -75,23 +73,12 @@ exports.calculateDeliveryCharge = async (req, res) => {
       }
     }
 
-    // Free delivery is an admin rule and should override standard/area charges.
-    if (
-      settings.freeDeliveryEnabled &&
-      orderSubtotal >= settings.freeDeliveryThreshold
-    ) {
-      deliveryCharge = 0;
-    }
-
     res.json({
       success: true,
       data: {
         deliveryCharge,
-        isFree: deliveryCharge === 0,
-        amountNeededForFreeDelivery:
-          orderSubtotal < settings.freeDeliveryThreshold
-            ? settings.freeDeliveryThreshold - orderSubtotal
-            : 0,
+        isFree: false,
+        amountNeededForFreeDelivery: 0,
       },
     });
   } catch (error) {

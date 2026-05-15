@@ -44,9 +44,22 @@ export default function AdminProducts() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    (product.title || product.name || "").toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredProducts = products.filter((product) => {
+    const search = searchTerm.toLowerCase();
+    return [
+      product.title,
+      product.name,
+      product.sku,
+      product.description,
+      product.fabric,
+      product.style,
+      ...(product.variants || []).map((variant) => variant.sku),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(search);
+  });
 
   if (loading) return <Loading />;
 
@@ -149,7 +162,7 @@ export default function AdminProducts() {
             </svg>
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search products by name, SKU, fabric, style..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -211,6 +224,9 @@ export default function AdminProducts() {
                           <div>
                             <p className="font-medium text-gray-900">
                               {product.title || product.name}
+                            </p>
+                            <p className="mt-1 inline-flex rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wide text-gray-700">
+                              SKU: {product.sku || "Generating"}
                             </p>
                             <p className="text-sm text-gray-500 truncate max-w-xs">
                               {product.description}

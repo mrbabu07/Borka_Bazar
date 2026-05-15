@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useToast } from "../../context/ToastContext";
-import { useCurrency } from "../../hooks/useCurrency";
 import Loading from "../../components/Loading";
 import { getCurrentUserToken } from "../../utils/auth";
 
@@ -8,7 +7,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function AdminDeliverySettings() {
   const { success, error } = useToast();
-  const { formatPrice } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(null);
@@ -95,98 +93,11 @@ export default function AdminDeliverySettings() {
           🚚 Delivery Settings
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Configure delivery charges, free delivery threshold, and delivery
-          areas
+          Configure delivery charges, express delivery, and delivery areas
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* Free Delivery Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Free Delivery
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Set minimum order value for free delivery
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings?.freeDeliveryEnabled}
-                onChange={(e) =>
-                  handleChange("freeDeliveryEnabled", e.target.checked)
-                }
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-            </label>
-          </div>
-
-          {settings?.freeDeliveryEnabled && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Free Delivery Threshold (BDT)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                    ৳
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={settings?.freeDeliveryThreshold || 0}
-                    onChange={(e) =>
-                      handleChange(
-                        "freeDeliveryThreshold",
-                        parseFloat(e.target.value) || 0,
-                      )
-                    }
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    placeholder="2000"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Orders above ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()} will get free delivery
-                </p>
-              </div>
-
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="w-6 h-6 text-green-600 dark:text-green-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-green-900 dark:text-green-100">
-                      💡 Customer Experience
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                      Customers will see "FREE delivery on orders over{" "}
-                      ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()}" and a
-                      progress bar showing how much more they need to add.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Standard Delivery Charge */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -402,19 +313,6 @@ export default function AdminDeliverySettings() {
                   ৳{(settings?.standardDeliveryCharge || 0).toLocaleString()}
                 </span>
               </div>
-              {settings?.freeDeliveryEnabled && (
-                <div className="text-xs text-green-600 dark:text-green-400">
-                  ✨ FREE on orders over ৳{(settings?.freeDeliveryThreshold || 0).toLocaleString()}
-                </div>
-              )}
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-200">
-                🚚 Almost there for FREE delivery!
-                <br />
-                Add ৳{Math.max(0, (settings?.freeDeliveryThreshold || 0) - 800).toLocaleString()}{" "}
-                more to get free delivery
-              </p>
             </div>
           </div>
         </div>

@@ -39,13 +39,6 @@ function calculateOrderPricing({
     }
   }
 
-  if (
-    deliverySettings.freeDeliveryEnabled &&
-    chargeableSubtotal >= (Number(deliverySettings.freeDeliveryThreshold) || 0)
-  ) {
-    finalDeliveryCharge = 0;
-  }
-
   return {
     calculatedItemSubtotal,
     discountAmount,

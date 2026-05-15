@@ -27,6 +27,7 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminProducts from "../pages/admin/AdminProducts";
 import AdminCategories from "../pages/admin/AdminCategories";
 import AdminOrders from "../pages/admin/AdminOrders";
+import AdminOrderCleanup from "../pages/admin/AdminOrderCleanup";
 import AdminInventory from "../pages/admin/AdminInventory";
 import ProductForm from "../pages/admin/ProductForm";
 import AdminCoupons from "../pages/admin/AdminCoupons";
@@ -179,6 +180,14 @@ const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <AdminOrders />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "/admin/order-cleanup",
+        element: (
+          <AdminRoute>
+            <AdminOrderCleanup />
           </AdminRoute>
         ),
       },

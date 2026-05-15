@@ -29,9 +29,7 @@ export default function CartPremium() {
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
         setDeliverySettings({
-          freeDeliveryThreshold: 2000,
           standardDeliveryCharge: 100,
-          freeDeliveryEnabled: true,
         });
       }
     };
@@ -39,16 +37,8 @@ export default function CartPremium() {
   }, []);
 
   // Use delivery settings or BDT defaults (values stored as BDT in DB)
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
   const deliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
-  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
-
-  // Aliases used in JSX (same values, no conversion needed)
-  const freeDeliveryThresholdBDT = freeDeliveryThreshold;
-  const deliveryChargeBDT = deliveryCharge;
-
-  const calculatedDeliveryCharge =
-    freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold ? 0 : deliveryCharge;
+  const calculatedDeliveryCharge = deliveryCharge;
 
   const finalTotal = cartTotal + calculatedDeliveryCharge;
 
@@ -236,11 +226,6 @@ export default function CartPremium() {
                     {calculatedDeliveryCharge === 0 ? 'Free' : `৳${calculatedDeliveryCharge.toLocaleString()}`}
                   </span>
                 </div>
-                {freeDeliveryEnabled && cartTotal < freeDeliveryThresholdBDT && (
-                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded dark:bg-amber-950/40 dark:text-amber-300">
-                    Add ৳{(freeDeliveryThresholdBDT - cartTotal).toLocaleString()} more for free shipping
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-between text-lg mb-8">
@@ -277,10 +262,7 @@ export default function CartPremium() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
                   <span>
-                    {freeDeliveryEnabled 
-                      ? `Free Shipping Over ৳${freeDeliveryThresholdBDT.toLocaleString()}`
-                      : 'Standard Shipping Available'
-                    }
+                    Standard Shipping Available
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">

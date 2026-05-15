@@ -250,7 +250,7 @@ export default function LoyaltyDashboard() {
   const benefitItems = useMemo(
     () => [
       {
-        title: "Free Shipping",
+        title: "Delivery Perks",
         helper: loyalty?.benefits?.freeShipping ? "Unlocked" : "Locked",
         active: Boolean(loyalty?.benefits?.freeShipping),
         icon: Gift,

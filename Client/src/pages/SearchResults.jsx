@@ -26,7 +26,12 @@ export default function SearchResults() {
       // Simple client-side search
       let filtered = allProducts.filter(
         (product) =>
-          product.title.toLowerCase().includes(query.toLowerCase()) ||
+          product.title?.toLowerCase().includes(query.toLowerCase()) ||
+          product.name?.toLowerCase().includes(query.toLowerCase()) ||
+          product.sku?.toLowerCase().includes(query.toLowerCase()) ||
+          product.variants?.some((variant) =>
+            variant.sku?.toLowerCase().includes(query.toLowerCase()),
+          ) ||
           product.description?.toLowerCase().includes(query.toLowerCase()) ||
           product.fabric?.toLowerCase().includes(query.toLowerCase()) ||
           product.category?.name?.toLowerCase().includes(query.toLowerCase()),

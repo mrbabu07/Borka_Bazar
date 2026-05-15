@@ -152,6 +152,12 @@ export default function ProductCardPremium({ product }) {
             {displayTitle}
           </h3>
 
+          {product.sku && (
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
+              SKU {product.sku}
+            </p>
+          )}
+
           {/* Fabric/Style Info */}
           {(product.fabric || product.style) && (
             <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -214,6 +220,11 @@ export default function ProductCardPremium({ product }) {
                 <h2 className="font-display mb-2 text-2xl text-black dark:text-white md:text-3xl">
                   {displayTitle}
                 </h2>
+                {product.sku && (
+                  <p className="mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                    SKU {product.sku}
+                  </p>
+                )}
                 <p className="text-2xl font-semibold text-black dark:text-white">
                   {formatPrice(product.price)}
                 </p>

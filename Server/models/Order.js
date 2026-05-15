@@ -117,6 +117,43 @@ class Order {
     };
   }
 
+  getCompletedBeforeFilter(cutoffDate) {
+    const deliveredStatus = /^delivered$/i;
+    const cancelledStatus = /^cancell?ed$/i;
+
+    return {
+      $and: [
+        {
+          $or: [
+            { orderStatus: deliveredStatus },
+            { status: deliveredStatus },
+            { "order.status": deliveredStatus },
+            { orderStatus: cancelledStatus },
+            { status: cancelledStatus },
+            { "order.status": cancelledStatus },
+          ],
+        },
+        {
+          $or: [
+            { deliveredAt: { $lte: cutoffDate } },
+            { cancelledAt: { $lte: cutoffDate } },
+            {
+              deliveredAt: { $exists: false },
+              cancelledAt: { $exists: false },
+              createdAt: { $lte: cutoffDate },
+            },
+            {
+              deliveredAt: { $exists: false },
+              cancelledAt: { $exists: false },
+              createdAt: { $exists: false },
+              updatedAt: { $lte: cutoffDate },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
   async findDeliveredBefore(cutoffDate, options = {}) {
     return this.findAll(this.getDeliveredBeforeFilter(cutoffDate), options);
   }
@@ -127,6 +164,20 @@ class Order {
 
   async deleteDeliveredBefore(cutoffDate) {
     return this.collection.deleteMany(this.getDeliveredBeforeFilter(cutoffDate));
+  }
+
+  async findCompletedBefore(cutoffDate, options = {}) {
+    return this.findAll(this.getCompletedBeforeFilter(cutoffDate), options);
+  }
+
+  async countCompletedBefore(cutoffDate) {
+    return this.countDocuments(this.getCompletedBeforeFilter(cutoffDate));
+  }
+
+  async deleteById(id) {
+    const _id = this.toObjectId(id);
+    if (!_id) return { deletedCount: 0 };
+    return this.collection.deleteOne({ _id });
   }
 
   async save(order) {

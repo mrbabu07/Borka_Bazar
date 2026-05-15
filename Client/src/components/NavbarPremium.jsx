@@ -64,7 +64,7 @@ export default function NavbarPremium() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
             <p className="hidden tracking-wide md:block">
-              Free Shipping on Orders Over ৳2000
+              Fast Delivery Across Bangladesh
             </p>
             <Link
               to="/"

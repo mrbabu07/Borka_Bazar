@@ -91,9 +91,7 @@ export default function CheckoutPremium() {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 2000,
           standardDeliveryCharge: 100,
-          freeDeliveryEnabled: true,
         });
       }
     };
@@ -135,19 +133,30 @@ export default function CheckoutPremium() {
 
   // Use delivery settings or BDT defaults
   const {
-    freeDeliveryThreshold,
-    freeDeliveryEnabled,
-    chargeableSubtotal,
     deliveryCharge,
+    requiresDeliveryFeePayment: calculatedRequiresDeliveryFeePayment,
     finalTotal,
     dueAmount,
-    amountNeededForFreeDelivery,
   } = calculateCheckoutPricing({
     cartTotal,
     couponDiscount,
     deliverySettings,
   });
-  const selectedPaymentAccount = PAYMENT_ACCOUNTS[paymentInfo.method];
+  const deliverySettingsReady = Boolean(deliverySettings);
+  const requiresDeliveryFeePayment =
+    !deliverySettingsReady || calculatedRequiresDeliveryFeePayment;
+  const selectedPaymentAccount =
+    PAYMENT_ACCOUNTS[paymentInfo.method] || PAYMENT_ACCOUNTS.bKash;
+
+  useEffect(() => {
+    setPaymentInfo((current) => {
+      if (requiresDeliveryFeePayment && !PAYMENT_ACCOUNTS[current.method]) {
+        return { method: "bKash", transactionId: "", senderNumber: "" };
+      }
+
+      return current;
+    });
+  }, [requiresDeliveryFeePayment]);
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -239,6 +248,11 @@ export default function CheckoutPremium() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!deliverySettingsReady) {
+      toast.error("Delivery settings are still loading. Please try again.");
+      return;
+    }
+
     // Validation
     if (
       !formData.fullName ||
@@ -254,18 +268,18 @@ export default function CheckoutPremium() {
       return;
     }
 
-    if (deliveryCharge > 0 && !paymentInfo.transactionId.trim()) {
+    if (requiresDeliveryFeePayment && !paymentInfo.transactionId.trim()) {
       toast.error(`Please enter your ${selectedPaymentAccount.label} transaction ID`);
       return;
     }
 
-    if (deliveryCharge > 0 && !paymentInfo.senderNumber.trim()) {
+    if (requiresDeliveryFeePayment && !paymentInfo.senderNumber.trim()) {
       toast.error(`Please enter the ${selectedPaymentAccount.label} sender number`);
       return;
     }
 
     if (
-      deliveryCharge > 0 &&
+      requiresDeliveryFeePayment &&
       !/^(\+?88)?01[3-9]\d{8}$/.test(paymentInfo.senderNumber.trim())
     ) {
       toast.error("Please enter a valid Bangladeshi sender number");
@@ -332,9 +346,15 @@ export default function CheckoutPremium() {
         customerEmail: shippingInfo.email,
         customerAddress: shippingInfo.address,
         paymentMethod: paymentInfo.method,
-        transactionId: paymentInfo.transactionId.trim(),
-        senderNumber: paymentInfo.senderNumber.trim(),
-        receiverNumber: selectedPaymentAccount.number,
+        transactionId: requiresDeliveryFeePayment
+          ? paymentInfo.transactionId.trim()
+          : "",
+        senderNumber: requiresDeliveryFeePayment
+          ? paymentInfo.senderNumber.trim()
+          : "",
+        receiverNumber: requiresDeliveryFeePayment
+          ? selectedPaymentAccount.number
+          : "",
         specialInstructions: formData.notes || "",
         couponCode: couponApplied ? couponCode : null,
         couponDiscount: couponDiscount,
@@ -392,16 +412,20 @@ export default function CheckoutPremium() {
               subtotal: confirmationSubtotal,
               remainingAmount: dueAmount,
             },
-            paymentMethod: "Hybrid bKash + COD",
+            paymentMethod: `Hybrid ${paymentInfo.method} + COD`,
           },
         });
       }
     } catch (error) {
-      console.error("Order creation failed:", error);
       const apiMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Failed to place order";
+      console.warn("Order creation failed:", {
+        status: error.response?.status,
+        message: apiMessage,
+        details: error.response?.data?.details,
+      });
       toast.error(apiMessage);
     } finally {
       setLoading(false);
@@ -723,7 +747,8 @@ export default function CheckoutPremium() {
                         </button>
                       </div>
                       <p className="text-xs text-pink-700 mt-1">
-                        Send only the delivery fee. Product amount stays cash on delivery.
+                        Send only the delivery fee before placing the order.
+                        Product amount stays cash on delivery.
                       </p>
                     </div>
                     <p className="text-2xl font-bold text-pink-700">
@@ -735,14 +760,14 @@ export default function CheckoutPremium() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                      {selectedPaymentAccount.label} Transaction ID {deliveryCharge > 0 && <span className="text-red-500">*</span>}
+                      {selectedPaymentAccount.label} Transaction ID {requiresDeliveryFeePayment && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="text"
                       name="transactionId"
                       value={paymentInfo.transactionId}
                       onChange={handlePaymentChange}
-                      required={deliveryCharge > 0}
+                      required={requiresDeliveryFeePayment}
                       className={fieldClass}
                       placeholder={`${selectedPaymentAccount.label} transaction ID`}
                     />
@@ -750,14 +775,14 @@ export default function CheckoutPremium() {
 
                   <div>
                     <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                      Your {selectedPaymentAccount.label} Sender Number {deliveryCharge > 0 && <span className="text-red-500">*</span>}
+                      Your {selectedPaymentAccount.label} Sender Number {requiresDeliveryFeePayment && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="tel"
                       name="senderNumber"
                       value={paymentInfo.senderNumber}
                       onChange={handlePaymentChange}
-                      required={deliveryCharge > 0}
+                      required={requiresDeliveryFeePayment}
                       className={fieldClass}
                       placeholder="01XXXXXXXXX"
                     />
@@ -769,10 +794,14 @@ export default function CheckoutPremium() {
               <div className="lg:hidden">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !deliverySettingsReady}
                   className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Processing..." : "Place Order"}
+                  {loading
+                    ? "Processing..."
+                    : deliverySettingsReady
+                      ? "Place Order"
+                      : "Loading Delivery..."}
                 </button>
               </div>
             </form>
@@ -895,18 +924,17 @@ export default function CheckoutPremium() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm rounded-lg bg-pink-50 border border-pink-200 px-3 py-2">
-                  <span className="font-semibold text-pink-800">Pay Now</span>
+                  <span className="font-semibold text-pink-800">
+                    Pay Before Order
+                  </span>
                   <span className="font-bold text-pink-700">৳{deliveryCharge.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm rounded-lg bg-orange-50 border border-orange-200 px-3 py-2">
-                  <span className="font-semibold text-orange-800">Pay on Delivery</span>
+                  <span className="font-semibold text-orange-800">
+                    Product COD
+                  </span>
                   <span className="font-bold text-orange-700">৳{dueAmount.toLocaleString()}</span>
                 </div>
-                {freeDeliveryEnabled && chargeableSubtotal < freeDeliveryThreshold && (
-                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                    Add ৳{amountNeededForFreeDelivery.toLocaleString()} more for free delivery
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-between text-lg mb-8">
@@ -921,10 +949,14 @@ export default function CheckoutPremium() {
                 <button
                   type="submit"
                   onClick={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || !deliverySettingsReady}
                   className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Processing..." : "Place Order"}
+                  {loading
+                    ? "Processing..."
+                    : deliverySettingsReady
+                      ? "Place Order"
+                      : "Loading Delivery..."}
                 </button>
               </div>
 

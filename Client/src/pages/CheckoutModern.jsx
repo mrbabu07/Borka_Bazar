@@ -56,9 +56,7 @@ export default function CheckoutModern() {
         if (data.success) setDeliverySettings(data.data);
       } catch (error) {
         setDeliverySettings({
-          freeDeliveryThreshold: 2000,
           standardDeliveryCharge: 100,
-          freeDeliveryEnabled: true,
         });
       }
     }
@@ -68,13 +66,8 @@ export default function CheckoutModern() {
 
   // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
   const standardDeliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
-  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
-  const deliveryFee =
-    freeDeliveryEnabled && subtotal >= freeDeliveryThreshold
-      ? 0
-      : standardDeliveryCharge;
+  const deliveryFee = standardDeliveryCharge;
   const total = subtotal + deliveryFee;
 
   // Validate address

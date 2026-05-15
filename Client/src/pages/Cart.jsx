@@ -40,9 +40,7 @@ export default function Cart() {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 2000, // ৳2,000 BDT
           standardDeliveryCharge: 100, // ৳100 BDT
-          freeDeliveryEnabled: true,
         });
       }
     };
@@ -50,9 +48,7 @@ export default function Cart() {
   }, []);
 
   // Use delivery settings or BDT defaults
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
   const deliveryCharge = deliverySettings?.standardDeliveryCharge ?? 100;
-  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
 
   const handleCheckout = () => {
     if (!user) {
@@ -457,19 +453,9 @@ export default function Cart() {
               <div className="flex justify-between text-gray-600">
                 <span className="flex items-center gap-2">
                   Delivery Charge
-                  {freeDeliveryEnabled &&
-                    cartTotal >= freeDeliveryThreshold && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                        FREE
-                      </span>
-                    )}
                 </span>
-                <span
-                  className={`font-medium ${freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold ? "line-through text-gray-400" : ""}`}
-                >
-                  {freeDeliveryEnabled && cartTotal >= freeDeliveryThreshold
-                    ? formatPrice(0)
-                    : formatPrice(deliveryCharge)}
+                <span className="font-medium">
+                  {formatPrice(deliveryCharge)}
                 </span>
               </div>
 
@@ -503,42 +489,12 @@ export default function Cart() {
                 </div>
               </div>
 
-              {freeDeliveryEnabled && cartTotal < freeDeliveryThreshold && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">🚚</span>
-                    <p className="text-sm font-semibold text-amber-800">
-                      Almost there for FREE delivery!
-                    </p>
-                  </div>
-                  <p className="text-xs text-amber-700">
-                    Add{" "}
-                    <span className="font-bold">
-                      {formatPrice(freeDeliveryThreshold - cartTotal)}
-                    </span>{" "}
-                    more to get free delivery
-                  </p>
-                  <div className="mt-2 bg-amber-200 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-amber-400 to-orange-400 h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${Math.min((cartTotal / freeDeliveryThreshold) * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
               <div className="border-t border-gray-200 pt-4">
                 <div className="flex justify-between">
                   <span className="text-lg font-bold text-gray-900">Total</span>
                   <span className="text-2xl font-bold text-primary-500">
                     {formatPrice(
-                      cartTotal +
-                        (freeDeliveryEnabled &&
-                        cartTotal >= freeDeliveryThreshold
-                          ? 0
-                          : deliveryCharge),
+                      cartTotal + deliveryCharge,
                     )}
                   </span>
                 </div>

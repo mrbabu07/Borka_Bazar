@@ -355,7 +355,7 @@ class EmailService {
               <li style="margin: 10px 0;">Browse our latest products</li>
               <li style="margin: 10px 0;">Check out flash sales for amazing deals</li>
               <li style="margin: 10px 0;">Earn loyalty points on every purchase</li>
-              <li style="margin: 10px 0;">Get free delivery on orders over ৳5,500</li>
+              <li style="margin: 10px 0;">Fast delivery across Bangladesh</li>
             </ul>
           </div>
           

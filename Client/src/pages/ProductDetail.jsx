@@ -674,7 +674,7 @@ export default function ProductDetail() {
                 </svg>
               </div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Free Shipping
+                Fast Delivery
               </p>
             </div>
             <div className="text-center p-4">

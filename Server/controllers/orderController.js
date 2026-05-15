@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const { ObjectId } = require('mongodb');
 const { createRealtimeNotification } = require('./notificationController');
 const { calculateOrderPricing } = require('../utils/orderPricing');
+const { getCompletedOrderDeleteEligibility } = require('../utils/orderDeletion');
 
 const getOrderModel = (req) => req.app.locals.models.Order;
 const isValidObjectId = (id) => ObjectId.isValid(id);
@@ -54,13 +55,6 @@ const calculateAdminDeliveryCharge = async (req, subtotal, area) => {
     }
   }
 
-  if (
-    settings.freeDeliveryEnabled &&
-    subtotal >= (Number(settings.freeDeliveryThreshold) || 0)
-  ) {
-    deliveryCharge = 0;
-  }
-
   return { deliveryCharge, settings };
 };
 
@@ -77,6 +71,7 @@ const getCleanupCutoffDate = (days) => {
   cutoffDate.setDate(cutoffDate.getDate() - days);
   return cutoffDate;
 };
+
 
 // Create new order
 exports.createOrder = async (req, res) => {
@@ -160,6 +155,12 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields (name, phone, items, or total)',
+        details: {
+          hasName: Boolean(shipping.name),
+          hasPhone: Boolean(shipping.phone),
+          hasItems: Boolean(items),
+          finalTotal,
+        },
       });
     }
 
@@ -170,10 +171,30 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    if (
+      calculatedFinalDeliveryCharge > 0 &&
+      !['bKash', 'Nagad'].includes(paymentMethod)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please pay the delivery fee with bKash or Nagad before placing this order',
+        details: {
+          paymentMethod,
+          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+          chargeableSubtotal,
+        },
+      });
+    }
+
     if (calculatedFinalDeliveryCharge > 0 && (!transactionId?.trim() || !senderNumber?.trim())) {
       return res.status(400).json({
         success: false,
         message: 'Transaction ID and sender number are required for delivery fee payment',
+        details: {
+          hasTransactionId: Boolean(transactionId?.trim()),
+          hasSenderNumber: Boolean(senderNumber?.trim()),
+          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+        },
       });
     }
 
@@ -181,6 +202,10 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Total amount cannot be less than delivery fee',
+        details: {
+          finalTotal,
+          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+        },
       });
     }
 
@@ -198,13 +223,15 @@ exports.createOrder = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Transaction ID already used',
+          details: {
+            transactionId: transactionId.trim(),
+          },
         });
       }
     }
 
-    const deliveryPaymentMethod = ['bKash', 'Nagad'].includes(paymentMethod)
-      ? paymentMethod
-      : 'bKash';
+    const deliveryPaymentMethod =
+      calculatedFinalDeliveryCharge > 0 ? paymentMethod : 'COD';
     const initialDeliveryPaymentStatus =
       calculatedFinalDeliveryCharge > 0 ? 'pending' : 'confirmed';
     const initialOrderStatus =
@@ -309,7 +336,7 @@ exports.createOrder = async (req, res) => {
       message:
         calculatedFinalDeliveryCharge > 0
           ? `Your order #${getOrderIdentifier(order)} was placed. Delivery payment is pending admin verification.`
-          : `Your order #${getOrderIdentifier(order)} was placed with free delivery.`,
+          : `Your order #${getOrderIdentifier(order)} was placed successfully.`,
       type: 'order_created',
       link: '/orders',
       metadata: { orderId: order._id, orderCode: order.orderCode },
@@ -1174,6 +1201,13 @@ exports.updateOrderStatus = async (req, res) => {
     if (status.toString().toLowerCase() === 'delivered' && !order.deliveredAt) {
       order.deliveredAt = new Date();
     }
+
+    if (
+      ['cancelled', 'canceled'].includes(status.toString().toLowerCase()) &&
+      !order.cancelledAt
+    ) {
+      order.cancelledAt = new Date();
+    }
     
     if (order.order) {
       order.order.status = status;
@@ -1414,6 +1448,152 @@ exports.deleteDeliveredOrderCleanup = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete delivered orders',
+      error: error.message,
+    });
+  }
+};
+
+// List single-order cleanup candidates (Admin)
+exports.getCompletedOrderCleanupCandidates = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const days = parseCleanupDays(req.query.days || 30);
+    const page = Math.max(Number.parseInt(req.query.page || '1', 10), 1);
+    const limit = Math.min(
+      Math.max(Number.parseInt(req.query.limit || '20', 10), 1),
+      100,
+    );
+
+    if (!days) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cleanup retention must be at least 30 days',
+      });
+    }
+
+    const cutoffDate = getCleanupCutoffDate(days);
+    const [total, orders] = await Promise.all([
+      Order.countCompletedBefore(cutoffDate),
+      Order.findCompletedBefore(cutoffDate, {
+        sort: { deliveredAt: 1, cancelledAt: 1, updatedAt: 1, createdAt: 1 },
+        skip: (page - 1) * limit,
+        limit,
+        projection: {
+          orderCode: 1,
+          orderStatus: 1,
+          status: 1,
+          deliveredAt: 1,
+          cancelledAt: 1,
+          updatedAt: 1,
+          createdAt: 1,
+          totalAmount: 1,
+          totalPrice: 1,
+          shippingInfo: 1,
+          customer: 1,
+        },
+      }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        cutoffDate,
+        days,
+      },
+    });
+  } catch (error) {
+    console.error('Get completed order cleanup candidates error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load cleanup candidates',
+      error: error.message,
+    });
+  }
+};
+
+// Delete a single cancelled or delivered order older than 30 days (Admin)
+exports.deleteSingleCompletedOrder = async (req, res) => {
+  try {
+    const Order = getOrderModel(req);
+    const { id } = req.params;
+    const confirmText = req.body.confirmText || req.query.confirmText;
+
+    if (confirmText !== 'DELETE ORDER') {
+      return res.status(400).json({
+        success: false,
+        message: 'Type DELETE ORDER to confirm',
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    const cutoffDate = getCleanupCutoffDate(30);
+    const eligibility = getCompletedOrderDeleteEligibility(order, cutoffDate);
+
+    if (!eligibility.allowed) {
+      return res.status(400).json({
+        success: false,
+        message: eligibility.reason,
+        data: { cutoffDate },
+      });
+    }
+
+    const deleteResult = await Order.deleteById(id);
+    let deletedNotifications = 0;
+
+    if (req.app.locals.models.AppNotification?.collection) {
+      const notificationResult =
+        await req.app.locals.models.AppNotification.collection.deleteMany({
+          $or: [
+            { 'metadata.orderId': order._id },
+            { 'metadata.orderId': order._id.toString() },
+          ],
+        });
+      deletedNotifications = notificationResult.deletedCount || 0;
+    }
+
+    await notifyAdmins(req, {
+      title: 'Order deleted',
+      message: `Order #${getOrderIdentifier(order)} was deleted after ${eligibility.status}.`,
+      type: 'order_cleanup',
+      link: '/admin/orders',
+      metadata: {
+        orderId: order._id,
+        orderCode: order.orderCode,
+        deletedNotifications,
+        status: eligibility.status,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Order #${getOrderIdentifier(order)} deleted successfully`,
+      data: {
+        deletedOrders: deleteResult.deletedCount || 0,
+        deletedNotifications,
+        orderId: order._id,
+        orderCode: order.orderCode,
+      },
+    });
+  } catch (error) {
+    console.error('Delete single order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete order',
       error: error.message,
     });
   }

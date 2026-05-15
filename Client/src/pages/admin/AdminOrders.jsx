@@ -42,6 +42,7 @@ const orderStatuses = [
   "processing",
   "shipped",
   "delivered",
+  "cancelled",
 ];
 
 const filters = [
@@ -51,6 +52,7 @@ const filters = [
   { value: "rejected_payment", label: "Payment Rejected" },
   { value: "processing", label: "Processing" },
   { value: "delivered", label: "Delivered" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 const paymentBadge = {
@@ -223,6 +225,8 @@ export default function AdminOrders() {
         if (activeFilter === "processing")
           return ["confirmed", "processing", "shipped"].includes(orderStatus);
         if (activeFilter === "delivered") return orderStatus === "delivered";
+        if (activeFilter === "cancelled")
+          return orderStatus === "cancelled" || orderStatus === "canceled";
         return true;
       })
       .filter((order) => {

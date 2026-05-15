@@ -3,10 +3,83 @@ const { ObjectId } = require("mongodb");
 class Product {
   constructor(db) {
     this.collection = db.collection("products");
+    this.createIndexes();
+  }
+
+  async createIndexes() {
+    try {
+      await this.collection.createIndex({ sku: 1 }, { unique: true, sparse: true });
+      await this.collection.createIndex({ title: "text", name: "text", sku: "text" });
+    } catch (error) {
+      console.error("Error creating Product indexes:", error);
+    }
+  }
+
+  normalizeSku(value) {
+    return String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  getSkuPrefix(productData = {}) {
+    const source =
+      productData.title ||
+      productData.name ||
+      productData.categoryId ||
+      "PRODUCT";
+    const words = String(source)
+      .toUpperCase()
+      .replace(/[^A-Z0-9 ]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+    const prefix = words
+      .slice(0, 2)
+      .map((word) => word.slice(0, 4))
+      .join("-");
+
+    return prefix || "PRD";
+  }
+
+  generateSku(productData = {}, id = new ObjectId()) {
+    const manualSku = this.normalizeSku(productData.sku);
+    if (manualSku) return manualSku;
+
+    return `BB-${this.getSkuPrefix(productData)}-${id.toString().slice(-6).toUpperCase()}`;
+  }
+
+  async ensureSku(product) {
+    if (!product || product.sku) return product;
+
+    const sku = this.generateSku(product, product._id);
+    await this.collection.updateOne(
+      { _id: product._id },
+      { $set: { sku, updatedAt: new Date() } },
+    );
+
+    return { ...product, sku };
+  }
+
+  async ensureMissingSkus(limit = 100) {
+    const products = await this.collection
+      .find({
+        $or: [{ sku: { $exists: false } }, { sku: "" }, { sku: null }],
+      })
+      .limit(limit)
+      .toArray();
+
+    await Promise.all(products.map((product) => this.ensureSku(product)));
   }
 
   async findAll(filter = {}) {
+    await this.ensureMissingSkus();
     return await this.collection.find(filter).toArray();
+  }
+
+  async findOne(filter = {}) {
+    return await this.collection.findOne(filter);
   }
 
   async findWithFilters(filters = {}) {
@@ -31,6 +104,8 @@ class Product {
 
     // Build MongoDB query
     const query = {};
+
+    await this.ensureMissingSkus();
 
     // Only show active products by default
     query.isActive = { $ne: false };
@@ -86,6 +161,9 @@ class Product {
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+        { sku: { $regex: search, $options: "i" } },
+        { "variants.sku": { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
         { fabric: { $regex: search, $options: "i" } },
         { style: { $regex: search, $options: "i" } },
@@ -266,7 +344,8 @@ class Product {
       if (!id || typeof id !== "string" || id.length !== 24) {
         return null;
       }
-      return await this.collection.findOne({ _id: new ObjectId(id) });
+      const product = await this.collection.findOne({ _id: new ObjectId(id) });
+      return await this.ensureSku(product);
     } catch (error) {
       // Handle invalid ObjectId format
       console.error("Invalid ObjectId format:", id, error.message);
@@ -335,12 +414,16 @@ class Product {
 
   async create(productData) {
     const now = new Date();
+    const _id = new ObjectId();
+    const sku = this.generateSku(productData, _id);
     const result = await this.collection.insertOne({
+      _id,
       ...productData,
+      sku,
       createdAt: productData.createdAt || now,
       updatedAt: productData.updatedAt || now,
     });
-    return { ...productData, _id: result.insertedId };
+    return { ...productData, sku, _id: result.insertedId };
   }
 
   async update(id, productData) {
@@ -363,6 +446,7 @@ class Product {
       const { _id, __v, createdAt, ...safeData } = productData;
       const updateData = {
         ...safeData,
+        sku: this.generateSku(safeData, objectId),
         updatedAt: new Date(),
       };
 

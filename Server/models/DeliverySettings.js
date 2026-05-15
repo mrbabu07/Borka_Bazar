@@ -1,9 +1,9 @@
 const DEFAULT_SETTINGS = {
-  freeDeliveryThreshold: 2000,
   standardDeliveryCharge: 100,
   expressDeliveryCharge: 200,
   expressDeliveryEnabled: false,
-  freeDeliveryEnabled: true,
+  freeDeliveryEnabled: false,
+  freeDeliveryThreshold: 0,
   deliveryAreas: [],
   estimatedDeliveryDays: {
     min: 2,

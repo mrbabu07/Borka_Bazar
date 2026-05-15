@@ -24,6 +24,7 @@ export default function ProductForm() {
 
   const [formData, setFormData] = useState({
     title: "",
+    sku: "",
     price: "",
     originalPrice: "",
     image: "",
@@ -94,6 +95,7 @@ export default function ProductForm() {
         ...product,
         title: product.title || product.name || "",
         name: product.name || product.title || "",
+        sku: product.sku || "",
         image: product.image || product.images?.[0] || "",
         images: product.images || [],
         sizes: product.sizes || [],
@@ -214,6 +216,7 @@ export default function ProductForm() {
       // Only send fields that the backend expects
       const data = {
         name: formData.title, // Backend expects 'name' not 'title'
+        sku: formData.sku,
         price: parseFloat(formData.price),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : parseFloat(formData.price),
         image: formData.image,
@@ -481,6 +484,28 @@ export default function ProductForm() {
                   placeholder="Enter product title"
                   className="input-field"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product SKU
+                </label>
+                <input
+                  type="text"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      sku: event.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="Auto generated after product is saved"
+                  className="input-field font-mono uppercase tracking-wide"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty to auto-generate a professional SKU. Example:
+                  BB-PREMI-AB12CD
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

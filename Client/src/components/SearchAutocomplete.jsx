@@ -93,6 +93,7 @@ export default function SearchAutocomplete({
         type: "product",
         id: product._id,
         title: product.title,
+        sku: product.sku,
         price: product.price,
         image: product.images?.[0],
         category: product.category,
@@ -412,7 +413,8 @@ export default function SearchAutocomplete({
                       </p>
                       {suggestion.type === "product" && (
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          ${suggestion.price} • {suggestion.category}
+                          {suggestion.sku ? `${suggestion.sku} • ` : ""}
+                          ৳{Number(suggestion.price || 0).toLocaleString()}
                         </p>
                       )}
                       {suggestion.type === "category" && (

@@ -1,328 +1,589 @@
-// Minimized Professional E-commerce Invoice Template (One Page)
-// Using Tailwind CSS for styling
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
-export const generateProfessionalInvoice = (order) => {
-  const orderDate = new Date(order.createdAt).toLocaleDateString("en-US", {
+const getOrderId = (order) =>
+  order.orderCode || order._id?.toString?.()?.slice(-8)?.toUpperCase() || "ORDER";
+
+const formatDate = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+};
 
-  // Support both new and legacy schema field names
-  const subtotal = order.subtotal || order.pricing?.subtotal || 0;
-  const deliveryCharge = order.deliveryFee ?? order.deliveryCharge ?? order.pricing?.deliveryFee ?? 0;
-  const paidAmount = order.paidAmount ?? deliveryCharge;
-  const tax = order.tax || 0;
-  const total = order.totalAmount ?? order.totalPrice ?? order.pricing?.total ?? order.total ?? (subtotal + deliveryCharge);
-  const dueAmount = order.dueAmount ?? order.pricing?.remainingAmount ?? Math.max(total - paidAmount, 0);
-  const paymentMethod = order.paymentInfo?.method || order.payment?.advance?.method || order.paymentMethod || 'N/A';
-  const paymentStatus = order.deliveryPaymentStatus || order.paymentInfo?.status || order.payment?.paymentStatus || 'Pending';
-  const transactionId = order.paymentInfo?.transactionId || order.payment?.advance?.transactionId || order.transactionId;
-  const senderNumber = order.senderNumber || order.payment?.advance?.senderNumber;
-  const orderStatus = (order.orderStatus || order.order?.status || order.status || 'pending').toLowerCase();
+const formatPrice = (value) => {
+  const amount = Number(value || 0);
+  return `৳${Math.round(amount).toLocaleString()}`;
+};
+
+const renderColor = (color) => {
+  if (!color) return "";
+  if (typeof color === "string") return color;
+  if (typeof color === "object" && color.name) return color.name;
+  return "Unknown";
+};
+
+const getStatusClass = (status) => {
+  const normalized = status.toLowerCase();
+  if (normalized === "delivered") return "success";
+  if (normalized === "shipped") return "info";
+  if (normalized === "processing" || normalized === "confirmed") return "blue";
+  if (normalized === "cancelled" || normalized === "canceled") return "danger";
+  return "warning";
+};
+
+const joinAddress = (shipping = {}, customer = {}) =>
+  [
+    customer.address || shipping.address,
+    shipping.area,
+    shipping.union,
+    shipping.upazila,
+    shipping.district || shipping.city,
+    shipping.division,
+    shipping.zipCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+export const generateProfessionalInvoice = (order) => {
+  const customer = order.customer || {};
+  const shipping = order.shippingInfo || {};
   const items = order.orderItems || order.products || [];
+  const orderId = getOrderId(order);
+  const orderStatus = (order.orderStatus || order.order?.status || order.status || "pending")
+    .toString()
+    .toLowerCase();
 
-  // Fixed to BDT only - no currency conversion
-  const BDT_SYMBOL = "৳";
+  const subtotal = order.subtotal || order.pricing?.subtotal || 0;
+  const deliveryCharge =
+    order.deliveryFee ?? order.deliveryCharge ?? order.pricing?.deliveryFee ?? 0;
+  const paidAmount = order.paidAmount ?? deliveryCharge;
+  const discount = order.couponDiscount ?? order.totalDiscount ?? order.pricing?.discount ?? 0;
+  const total =
+    order.totalAmount ??
+    order.totalPrice ??
+    order.pricing?.total ??
+    order.total ??
+    subtotal + deliveryCharge - discount;
+  const dueAmount =
+    order.dueAmount ?? order.pricing?.remainingAmount ?? Math.max(total - paidAmount, 0);
 
-  // Format price in BDT (prices already stored in BDT in database)
-  const formatPrice = (price) => {
-    if (!price && price !== 0) return `৳0`;
-    return `৳${Math.round(price).toLocaleString()}`;
-  };
+  const paymentMethod =
+    order.paymentInfo?.method ||
+    order.advancePayment?.method ||
+    order.payment?.advance?.method ||
+    order.paymentMethod ||
+    "N/A";
+  const paymentStatus =
+    order.deliveryPaymentStatus ||
+    order.paymentInfo?.status ||
+    order.advancePayment?.status ||
+    order.payment?.paymentStatus ||
+    "Pending";
+  const transactionId =
+    order.paymentInfo?.transactionId ||
+    order.advancePayment?.transactionId ||
+    order.payment?.advance?.transactionId ||
+    order.transactionId;
+  const senderNumber =
+    order.senderNumber || order.advancePayment?.senderNumber || order.payment?.advance?.senderNumber;
+  const receiverNumber =
+    order.receiverNumber || order.advancePayment?.receiverNumber || order.payment?.advance?.receiverNumber;
 
-  // Utility function to safely render color
-  const renderColor = (color) => {
-    if (!color) return null;
-    if (typeof color === "string") return color;
-    if (typeof color === "object" && color.name) return color.name;
-    return "Unknown";
-  };
+  const customerName = customer.name || shipping.name || "Customer";
+  const customerPhone = customer.phone || shipping.phone || "N/A";
+  const customerEmail = customer.email || shipping.email || "N/A";
+  const fullAddress = joinAddress(shipping, customer) || "N/A";
+
+  const rows = items
+    .map((item, index) => {
+      const quantity = Number(item.quantity || 1);
+      const price = Number(item.price || 0);
+      const size = item.size || item.selectedSize || item.variant?.size;
+      const color = renderColor(item.color || item.selectedColor || item.variant?.color);
+      const productId = item.productId || item._id;
+      const image = item.image || item.selectedImage;
+
+      return `
+        <tr>
+          <td class="item-index">${index + 1}</td>
+          <td>
+            <div class="item-cell">
+              ${
+                image
+                  ? `<img class="item-image" src="${escapeHtml(image)}" alt="${escapeHtml(item.title || "Product")}" />`
+                  : `<div class="item-image placeholder">No image</div>`
+              }
+              <div>
+                <div class="item-title">${escapeHtml(item.title || "Product")}</div>
+                <div class="item-meta">
+                  ${size ? `<span>Size: ${escapeHtml(size)}</span>` : ""}
+                  ${color ? `<span>Color: ${escapeHtml(color)}</span>` : ""}
+                  ${productId ? `<span>SKU: ${escapeHtml(String(productId).slice(-8))}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="numeric">${quantity}</td>
+          <td class="numeric">${formatPrice(price)}</td>
+          <td class="numeric strong">${formatPrice(price * quantity)}</td>
+        </tr>
+      `;
+    })
+    .join("");
 
   return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Invoice #${order._id.slice(-8).toUpperCase()}</title>
-      <script src="https://cdn.tailwindcss.com"></script>
-      <style>
-        @media print {
-          body { margin: 0; padding: 0; }
-          .no-print { display: none; }
-        }
-      </style>
-    </head>
-    <body class="bg-gray-50 p-4">
-      <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-        
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-6">
-          <div class="flex justify-between items-start">
-            <div>
-              <h1 class="text-3xl font-bold mb-1" style="font-family: 'Playfair Display', serif;">Borka Bazar</h1>
-              <p class="text-gray-300 text-sm">Premium Modest Fashion</p>
-              <p class="text-gray-300 text-xs mt-1">Parcel Receipt / Packing Slip</p>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-gray-400 mb-1">PARCEL RECEIPT</div>
-              <div class="text-2xl font-bold">#${order._id.slice(-8).toUpperCase()}</div>
-              <div class="text-xs text-gray-300 mt-2">${orderDate}</div>
-            </div>
-          </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Receipt #${escapeHtml(orderId)}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #eef1f5;
+      color: #111827;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
+    }
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      padding: 26px 32px;
+      color: #fff;
+      background: #111827;
+    }
+    .brand {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.3px;
+    }
+    .tagline {
+      margin-top: 6px;
+      color: #cbd5e1;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .receipt-title {
+      text-align: right;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .receipt-code {
+      margin-top: 5px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .receipt-date {
+      margin-top: 6px;
+      color: #d1d5db;
+      font-size: 12px;
+    }
+    .content { padding: 26px 32px 20px; }
+    .summary-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .metric.cod { background: #fff7ed; border-color: #fed7aa; }
+    .metric.paid { background: #ecfdf5; border-color: #bbf7d0; }
+    .metric .label {
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .metric .value {
+      margin-top: 5px;
+      font-size: 24px;
+      font-weight: 900;
+      color: #111827;
+    }
+    .metric.cod .value { color: #c2410c; }
+    .metric.paid .value { color: #047857; }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .panel {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 118px;
+    }
+    .panel-title {
+      margin-bottom: 8px;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+    }
+    .person {
+      font-size: 15px;
+      font-weight: 850;
+      color: #0f172a;
+    }
+    .muted { color: #64748b; }
+    .small { font-size: 11px; }
+    .line { margin-top: 4px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+    }
+    .status.success { background: #dcfce7; color: #166534; }
+    .status.info { background: #f3e8ff; color: #6b21a8; }
+    .status.blue { background: #dbeafe; color: #1d4ed8; }
+    .status.danger { background: #fee2e2; color: #991b1b; }
+    .status.warning { background: #fef3c7; color: #92400e; }
+    .kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+    .kv:last-child { border-bottom: 0; }
+    .kv span:first-child { color: #64748b; }
+    .kv span:last-child { font-weight: 750; text-align: right; }
+    .section-title {
+      margin: 18px 0 10px;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    thead { background: #f8fafc; }
+    th {
+      padding: 10px;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    td {
+      padding: 10px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    .item-index {
+      width: 32px;
+      color: #64748b;
+      font-weight: 800;
+      text-align: center;
+    }
+    .item-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .item-image {
+      width: 48px;
+      height: 56px;
+      object-fit: cover;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+    .item-image.placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 9px;
+      text-align: center;
+    }
+    .item-title {
+      font-size: 12px;
+      font-weight: 850;
+      color: #0f172a;
+    }
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .item-meta span {
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 2px 7px;
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .numeric { text-align: right; white-space: nowrap; }
+    .strong { font-weight: 900; }
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .notes {
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      background: #fffbeb;
+      padding: 12px;
+      color: #78350f;
+      min-height: 78px;
+    }
+    .totals {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 6px 0;
+      color: #475569;
+    }
+    .total-row strong { color: #111827; }
+    .total-row.grand {
+      margin-top: 6px;
+      border-top: 2px solid #cbd5e1;
+      padding-top: 12px;
+      color: #111827;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .footer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      padding: 18px 32px 24px;
+      border-top: 1px solid #e5e7eb;
+      color: #64748b;
+      font-size: 11px;
+    }
+    .signature {
+      min-width: 170px;
+      padding-top: 28px;
+      border-top: 1px solid #94a3b8;
+      text-align: center;
+      color: #334155;
+      font-weight: 800;
+    }
+    .print-actions {
+      width: 210mm;
+      margin: 14px auto;
+      text-align: center;
+    }
+    .print-actions button {
+      border: 0;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      padding: 11px 22px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+    @media print {
+      body { background: #fff; }
+      .sheet {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        box-shadow: none;
+      }
+      .print-actions { display: none; }
+      .header, .metric, .panel, .totals, .notes {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      a[href]::after { content: ""; }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <header class="header">
+      <div>
+        <div class="brand">Borka Bazar</div>
+        <div class="tagline">Premium Modest Fashion</div>
+      </div>
+      <div>
+        <div class="receipt-title">Parcel Receipt</div>
+        <div class="receipt-code">#${escapeHtml(orderId)}</div>
+        <div class="receipt-date">${escapeHtml(formatDate(order.createdAt))}</div>
+      </div>
+    </header>
+
+    <section class="content">
+      <div class="summary-strip">
+        <div class="metric paid">
+          <div class="label">Delivery Paid</div>
+          <div class="value">${formatPrice(paidAmount)}</div>
+        </div>
+        <div class="metric cod">
+          <div class="label">Collect COD</div>
+          <div class="value">${formatPrice(dueAmount)}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Customer Phone</div>
+          <div class="value small">${escapeHtml(customerPhone)}</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-title">Customer</div>
+          <div class="person">${escapeHtml(customerName)}</div>
+          <div class="line">${escapeHtml(customerPhone)}</div>
+          <div class="line muted small">${escapeHtml(customerEmail)}</div>
         </div>
 
-        <div class="px-8 py-6">
-          <!-- Addresses & Status Row -->
-          <div class="grid grid-cols-3 gap-4 mb-6">
-            <!-- Bill To -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Bill To</div>
-              ${
-                order.customer || order.shippingInfo
-                  ? `
-                <div class="text-sm space-y-1">
-                  <div class="font-semibold text-gray-900">${(order.customer?.name || order.shippingInfo?.name) || "N/A"}</div>
-                  <div class="text-gray-600">${(order.customer?.phone || order.shippingInfo?.phone) || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${(order.customer?.email || order.shippingInfo?.email) || "N/A"}</div>
-                </div>
-              `
-                  : `<div class="text-xs text-gray-500">No information</div>`
-              }
-            </div>
+        <div class="panel">
+          <div class="panel-title">Delivery Address</div>
+          <div class="person">${escapeHtml(customerName)}</div>
+          <div class="line muted">${escapeHtml(fullAddress)}</div>
+        </div>
 
-            <!-- Ship To -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Ship To</div>
-              ${
-                order.customer || order.shippingInfo
-                  ? `
-                <div class="text-sm space-y-1">
-                  <div class="font-semibold text-gray-900">${(order.customer?.name || order.shippingInfo?.name) || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${(order.customer?.address || order.shippingInfo?.address) || "N/A"}</div>
-                  <div class="text-gray-600 text-xs">${(order.shippingInfo?.city || "N/A")} ${order.shippingInfo?.zipCode || ""}</div>
-                </div>
-              `
-                  : `<div class="text-xs text-gray-500">No information</div>`
-              }
-            </div>
+        <div class="panel">
+          <div class="panel-title">Order Details</div>
+          <div class="kv"><span>Status</span><span><span class="status ${getStatusClass(orderStatus)}">${escapeHtml(orderStatus)}</span></span></div>
+          <div class="kv"><span>Payment</span><span>${escapeHtml(paymentMethod.toUpperCase())}</span></div>
+          <div class="kv"><span>Payment Status</span><span>${escapeHtml(paymentStatus.toString().toUpperCase())}</span></div>
+          <div class="kv"><span>Items</span><span>${items.length}</span></div>
+        </div>
+      </div>
 
-            <!-- Order Info -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Order Info</div>
-              <div class="text-sm space-y-1">
-                <div class="flex justify-between">
-                  <span class="text-gray-600 text-xs">Status:</span>
-                  <span class="px-2 py-0.5 rounded text-xs font-semibold ${
-                    orderStatus === "delivered"
-                      ? "bg-green-100 text-green-800"
-                      : orderStatus === "shipped"
-                        ? "bg-purple-100 text-purple-800"
-                        : orderStatus === "processing"
-                          ? "bg-blue-100 text-blue-800"
-                          : orderStatus === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                  }">${orderStatus.toUpperCase()}</span>
-                </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-gray-600">Payment:</span>
-                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()}</span>
-                </div>
-                ${
-                  transactionId
-                    ? `
-                <div class="flex justify-between text-xs mt-2 pt-2 border-t border-gray-200">
-                  <span class="text-gray-600">Transaction ID:</span>
-                  <span class="font-mono font-bold text-green-700">${transactionId}</span>
-                </div>
-                `
-                    : ""
-                }
-                ${
-                  senderNumber
-                    ? `
-                <div class="flex justify-between text-xs mt-1">
-                  <span class="text-gray-600">Sender:</span>
-                  <span class="font-semibold text-gray-900">${senderNumber}</span>
-                </div>
-                `
-                    : ""
-                }
-              </div>
-            </div>
-          </div>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-title">Payment Verification</div>
+          <div class="kv"><span>Transaction</span><span>${escapeHtml(transactionId || "N/A")}</span></div>
+          <div class="kv"><span>Sender</span><span>${escapeHtml(senderNumber || "N/A")}</span></div>
+          <div class="kv"><span>Receiver</span><span>${escapeHtml(receiverNumber || "N/A")}</span></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Parcel Instruction</div>
+          <div class="line"><strong>Collect:</strong> ${formatPrice(dueAmount)}</div>
+          <div class="line muted small">Confirm size/color before packing. Call customer if address is unclear.</div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Store Contact</div>
+          <div class="line">+880 1521-721946</div>
+          <div class="line muted small">mdjahedulislamjaved@gmail.com</div>
+          <div class="line muted small">Dhaka, Bangladesh</div>
+        </div>
+      </div>
 
-          <div class="mb-6 grid grid-cols-3 gap-4">
-            <div class="rounded-lg border-2 border-green-300 bg-green-50 p-4">
-              <div class="text-xs font-bold uppercase text-green-700">Delivery Fee Paid</div>
-              <div class="mt-1 text-2xl font-extrabold text-green-800">${formatPrice(paidAmount)}</div>
-            </div>
-            <div class="rounded-lg border-2 border-orange-300 bg-orange-50 p-4">
-              <div class="text-xs font-bold uppercase text-orange-700">Collect COD</div>
-              <div class="mt-1 text-3xl font-extrabold text-orange-800">${formatPrice(dueAmount)}</div>
-            </div>
-            <div class="rounded-lg border-2 border-gray-300 bg-gray-50 p-4">
-              <div class="text-xs font-bold uppercase text-gray-700">Customer Phone</div>
-              <div class="mt-1 text-2xl font-extrabold text-gray-900">${(order.customer?.phone || order.shippingInfo?.phone) || "N/A"}</div>
-            </div>
-          </div>
-
-          <!-- Products Table -->
-          <div class="mb-6">
-            <div class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Order Items</div>
-            <div class="border border-gray-200 rounded-lg overflow-hidden">
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th class="text-left py-2 px-3 text-xs font-semibold text-gray-600 uppercase">Product</th>
-                    <th class="text-center py-2 px-3 text-xs font-semibold text-gray-600 uppercase w-16">Qty</th>
-                    <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 uppercase w-24">Price</th>
-                    <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 uppercase w-24">Total</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                  ${
-                    items.length > 0
-                      ? items
-                          .map(
-                            (item) => `
-                    <tr class="hover:bg-gray-50">
-                      <td class="py-3 px-3">
-                        <div class="flex items-center gap-3">
-                          ${
-                            item.image
-                              ? `<img src="${item.image}" alt="${item.title}" class="w-12 h-12 object-cover rounded border border-gray-200" />`
-                              : '<div class="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-xs text-gray-400">No img</div>'
-                          }
-                          <div class="flex-1">
-                            <div class="font-medium text-gray-900 text-sm">${item.title || "Product"}</div>
-                            <div class="flex gap-1 mt-1 flex-wrap">
-                              ${(item.size || item.selectedSize || item.variant?.size) ? `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">Size: ${item.size || item.selectedSize || item.variant?.size}</span>` : ""}
-                              ${(item.color || item.selectedColor || item.variant?.color) ? `<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">Color: ${renderColor(item.color || item.selectedColor || item.variant?.color)}</span>` : ""}
-                              ${(item.productId || item._id) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">ID: ${String(item.productId || item._id).slice(-6)}</span>` : ""}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="py-3 px-3 text-center font-semibold text-gray-900">${item.quantity || 1}</td>
-                      <td class="py-3 px-3 text-right text-gray-900">${formatPrice(item.price || 0)}</td>
-                      <td class="py-3 px-3 text-right font-semibold text-gray-900">${formatPrice((item.price || 0) * (item.quantity || 1))}</td>
-                    </tr>
-                  `
-                          )
-                          .join("")
-                      : `
-                    <tr>
-                      <td colspan="4" class="py-8 text-center text-gray-500 text-sm">No items in this order</td>
-                    </tr>
-                  `
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Summary and Additional Info -->
-          <div class="grid grid-cols-3 gap-6">
-            <!-- Payment Details -->
-            <div>
-              <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Payment Details</div>
-              <div class="text-sm space-y-1.5">
-                <div class="flex justify-between text-xs">
-                  <span class="text-gray-600">Method:</span>
-                  <span class="font-semibold text-gray-900">${paymentMethod.toUpperCase()} + COD</span>
-                </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-gray-600">Status:</span>
-                  <span class="font-semibold ${paymentStatus === 'Paid' || paymentStatus === 'full' ? 'text-green-600' : 'text-yellow-600'}">${paymentStatus === 'full' ? 'PAID' : paymentStatus.toUpperCase()}</span>
-                </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-gray-600">Transaction:</span>
-                  <span class="font-mono text-xs text-gray-900">${transactionId || order._id.slice(-8)}</span>
-                </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-gray-600">COD Due:</span>
-                  <span class="font-bold text-orange-700">${formatPrice(dueAmount)}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Company Info -->
-            <div>
-              <div class="text-xs font-bold text-gray-600 mb-2 uppercase">Contact Us</div>
-              <div class="text-xs text-gray-600 space-y-1">
-                <div>📞 +880 1521-721946</div>
-                <div>📧 mdjahedulislamjaved@gmail.com</div>
-                <div>🌐 www.borkabazar.com</div>
-                <div class="text-gray-500">Dhaka, Bangladesh</div>
-              </div>
-            </div>
-
-            <!-- Order Summary -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div class="text-xs font-bold text-gray-600 mb-3 uppercase">Summary</div>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Subtotal:</span>
-                  <span class="text-gray-900 font-medium">${formatPrice(subtotal)}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Shipping:</span>
-                  <span class="${deliveryCharge === 0 ? "text-green-600 font-semibold" : "text-gray-900 font-medium"}">${deliveryCharge > 0 ? formatPrice(deliveryCharge) : "FREE"}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Delivery Paid:</span>
-                  <span class="text-green-700 font-bold">${formatPrice(paidAmount)}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">COD Due:</span>
-                  <span class="text-orange-700 font-bold">${formatPrice(dueAmount)}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Tax:</span>
-                  <span class="text-gray-900 font-medium">${formatPrice(tax)}</span>
-                </div>
-                <div class="border-t border-gray-300 pt-2 flex justify-between text-base">
-                  <span class="font-bold text-gray-900">Total:</span>
-                  <span class="font-bold text-blue-600">${formatPrice(total)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
+      <div class="section-title">Order Items</div>
+      <table>
+        <thead>
+          <tr>
+            <th class="item-index">#</th>
+            <th>Product</th>
+            <th class="numeric">Qty</th>
+            <th class="numeric">Price</th>
+            <th class="numeric">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
           ${
-            order.specialInstructions
-              ? `
-            <!-- Special Instructions -->
-            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div class="text-xs font-bold text-yellow-800 mb-1 uppercase">Special Instructions</div>
-              <div class="text-sm text-yellow-900">${order.specialInstructions}</div>
-            </div>
-          `
-              : ""
+            rows ||
+            `<tr><td colspan="5" style="padding: 28px; text-align: center; color: #64748b;">No items in this order</td></tr>`
           }
-        </div>
+        </tbody>
+      </table>
 
-        <!-- Footer -->
-        <div class="bg-gray-50 px-8 py-4 border-t border-gray-200">
-          <div class="text-center text-xs text-gray-500">
-            <div class="mb-1">This is a computer-generated invoice. No signature required.</div>
-            <div>Thank you for shopping with Borka Bazar!</div>
-            <div class="mt-2 text-gray-400">Generated: ${new Date().toLocaleString()} | Invoice #${order._id.slice(-8).toUpperCase()}</div>
+      <div class="bottom-grid">
+        <div>
+          <div class="section-title">Special Notes</div>
+          <div class="notes">
+            ${escapeHtml(order.specialInstructions || "No special instructions.")}
           </div>
         </div>
-
+        <div>
+          <div class="section-title">Payment Summary</div>
+          <div class="totals">
+            <div class="total-row"><span>Subtotal</span><strong>${formatPrice(subtotal)}</strong></div>
+            <div class="total-row"><span>Discount</span><strong>${formatPrice(discount)}</strong></div>
+            <div class="total-row"><span>Delivery Charge</span><strong>${formatPrice(deliveryCharge)}</strong></div>
+            <div class="total-row"><span>Delivery Paid</span><strong>${formatPrice(paidAmount)}</strong></div>
+            <div class="total-row"><span>COD Due</span><strong>${formatPrice(dueAmount)}</strong></div>
+            <div class="total-row grand"><span>Total</span><span>${formatPrice(total)}</span></div>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <!-- Print Button (No Print) -->
-      <div class="max-w-4xl mx-auto mt-4 text-center no-print">
-        <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
-          Print Invoice
-        </button>
+    <footer class="footer">
+      <div>
+        <strong>Thank you for shopping with Borka Bazar.</strong><br />
+        Generated ${escapeHtml(formatDate(new Date()))}. This receipt is computer generated for parcel processing.
       </div>
-    </body>
-    </html>
+      <div class="signature">Packed By</div>
+    </footer>
+  </main>
+
+  <div class="print-actions">
+    <button onclick="window.print()">Print Receipt</button>
+  </div>
+</body>
+</html>
   `;
 };

@@ -67,9 +67,7 @@ export default function Checkout() {
         console.error("Error fetching delivery settings:", err);
         // Use defaults if fetch fails
         setDeliverySettings({
-          freeDeliveryThreshold: 2000,  // ৳2,000 BDT default
           standardDeliveryCharge: 100,  // ৳100 BDT default
-          freeDeliveryEnabled: true,
         });
       }
     };
@@ -77,9 +75,7 @@ export default function Checkout() {
   }, []);
 
   // Use delivery settings or BDT defaults
-  const freeDeliveryThreshold = deliverySettings?.freeDeliveryThreshold ?? 2000;
   const deliveryChargeAmount = deliverySettings?.standardDeliveryCharge ?? 100;
-  const freeDeliveryEnabled = deliverySettings?.freeDeliveryEnabled !== false;
 
   // Validate cart items have product IDs
   useEffect(() => {
@@ -99,17 +95,12 @@ export default function Checkout() {
   const totalDiscount = couponDiscount + pointsDiscount;
 
   // Calculate delivery charge based on settings
-  const deliveryCharge =
-    freeDeliveryEnabled && subtotal - totalDiscount >= freeDeliveryThreshold
-      ? 0
-      : deliveryChargeAmount;
+  const deliveryCharge = deliveryChargeAmount;
   const finalTotal = subtotal - totalDiscount + deliveryCharge;
 
   // Debug logging
   console.log('💰 Delivery Charge Calculation:', {
-    freeDeliveryThreshold,
     deliveryChargeAmount,
-    freeDeliveryEnabled,
     subtotal,
     totalDiscount,
     deliveryCharge,
@@ -1731,17 +1722,6 @@ export default function Checkout() {
                     {formatPrice(deliveryCharge)}
                   </span>
                 </div>
-
-                {freeDeliveryEnabled &&
-                  cartTotal < freeDeliveryThreshold &&
-                  !appliedCoupon && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                      <p className="text-xs text-amber-700">
-                        💡 Add {formatPrice(freeDeliveryThreshold - cartTotal)}{" "}
-                        more to get FREE delivery!
-                      </p>
-                    </div>
-                  )}
 
                 <div className="border-t pt-3 flex justify-between text-lg font-bold">
                   <span>Total</span>
