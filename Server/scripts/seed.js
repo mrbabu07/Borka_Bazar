@@ -1,5 +1,6 @@
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const { CORE_CATEGORIES } = require("../utils/coreCategories");
 
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, {
@@ -15,6 +16,7 @@ const categories = [
   { name: "Women's", slug: "womens" },
   { name: "Electronics", slug: "electronics" },
   { name: "Baby", slug: "baby" },
+  ...CORE_CATEGORIES,
 ];
 
 async function seed() {

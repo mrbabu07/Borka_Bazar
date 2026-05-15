@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS = {
   expressDeliveryEnabled: false,
   freeDeliveryEnabled: false,
   freeDeliveryThreshold: 0,
+  paymentOption: "delivery_fee_first",
   deliveryAreas: [],
   estimatedDeliveryDays: {
     min: 2,
@@ -26,9 +27,18 @@ class DeliverySettings {
   }
 
   normalize(settings = {}) {
+    const paymentOption = [
+      "delivery_fee_first",
+      "cod",
+      "full_payment",
+    ].includes(settings.paymentOption)
+      ? settings.paymentOption
+      : DEFAULT_SETTINGS.paymentOption;
+
     return {
       ...DEFAULT_SETTINGS,
       ...settings,
+      paymentOption,
       estimatedDeliveryDays: {
         ...DEFAULT_SETTINGS.estimatedDeliveryDays,
         ...(settings.estimatedDeliveryDays || {}),

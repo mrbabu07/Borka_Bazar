@@ -5,6 +5,27 @@ import { getCurrentUserToken } from "../../utils/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
+const paymentOptions = [
+  {
+    value: "delivery_fee_first",
+    title: "Delivery Fee First + Product COD",
+    description:
+      "Customer pays only the delivery charge by bKash/Nagad before order. Product amount remains cash on delivery.",
+  },
+  {
+    value: "cod",
+    title: "Full Cash On Delivery",
+    description:
+      "Customer pays nothing before order. Full product and delivery total is collected on delivery.",
+  },
+  {
+    value: "full_payment",
+    title: "Full Payment Before Order",
+    description:
+      "Customer pays the full order total by bKash/Nagad before placing the order.",
+  },
+];
+
 export default function AdminDeliverySettings() {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
@@ -93,11 +114,53 @@ export default function AdminDeliverySettings() {
           🚚 Delivery Settings
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Configure delivery charges, express delivery, and delivery areas
+          Configure delivery charges, payment collection, and delivery timing
         </p>
       </div>
 
       <div className="space-y-6">
+        {/* Payment Collection Policy */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Checkout Payment Option
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+            Choose how customers pay during checkout. This updates the checkout page immediately.
+          </p>
+
+          <div className="grid gap-3">
+            {paymentOptions.map((option) => (
+              <label
+                key={option.value}
+                className={`cursor-pointer rounded-lg border-2 p-4 transition ${
+                  (settings?.paymentOption || "delivery_fee_first") === option.value
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
+                    : "border-gray-200 bg-white hover:border-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-700"
+                }`}
+              >
+                <div className="flex gap-3">
+                  <input
+                    type="radio"
+                    name="paymentOption"
+                    value={option.value}
+                    checked={(settings?.paymentOption || "delivery_fee_first") === option.value}
+                    onChange={(e) => handleChange("paymentOption", e.target.value)}
+                    className="mt-1 h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {option.title}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      {option.description}
+                    </p>
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Standard Delivery Charge */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -311,6 +374,20 @@ export default function AdminDeliverySettings() {
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
                   ৳{(settings?.standardDeliveryCharge || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Payment at Checkout
+                </span>
+                <span className="text-right font-semibold text-gray-900 dark:text-white">
+                  {paymentOptions.find(
+                    (option) =>
+                      option.value ===
+                      (settings?.paymentOption || "delivery_fee_first"),
+                  )?.title || "Delivery Fee First + Product COD"}
                 </span>
               </div>
             </div>

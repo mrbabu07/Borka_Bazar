@@ -9,6 +9,7 @@ export default function CategoryPage() {
   const location = useLocation();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [currentCategoryDetails, setCurrentCategoryDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("newest");
 
@@ -27,7 +28,10 @@ export default function CategoryPage() {
       path === "mens" ||
       path === "womens" ||
       path === "electronics" ||
-      path === "baby"
+      path === "baby" ||
+      path === "hijab" ||
+      path === "niqab" ||
+      path === "nikab"
     ) {
       return path;
     }
@@ -63,6 +67,24 @@ export default function CategoryPage() {
       image:
         "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1200&h=400&fit=crop",
     },
+    hijab: {
+      name: "Hijab",
+      description: "Hijabs and scarves for everyday wear and occasion styling",
+      image:
+        "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=1200&h=400&fit=crop",
+    },
+    niqab: {
+      name: "Niqab",
+      description: "Face veils and niqab styles for comfortable modest coverage",
+      image:
+        "https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=1200&h=400&fit=crop",
+    },
+    nikab: {
+      name: "Niqab",
+      description: "Face veils and niqab styles for comfortable modest coverage",
+      image:
+        "https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=1200&h=400&fit=crop",
+    },
   };
 
   // Get current page info
@@ -85,6 +107,16 @@ export default function CategoryPage() {
       };
     }
 
+    if (currentCategoryDetails) {
+      return {
+        name: currentCategoryDetails.name || "Products",
+        description: currentCategoryDetails.description || "Browse our collection",
+        image:
+          currentCategoryDetails.image ||
+          "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop",
+      };
+    }
+
     return (
       categoryInfo[currentCategorySlug] || {
         name: "Products",
@@ -99,6 +131,7 @@ export default function CategoryPage() {
 
   const fetchCategories = async () => {
     setLoading(true);
+    setCurrentCategoryDetails(null);
     try {
       const response = await getCategories();
       setCategories(response.data.data || []);
@@ -124,6 +157,9 @@ export default function CategoryPage() {
 
           if (matchedCategory) {
             categoryId = matchedCategory._id;
+            setCurrentCategoryDetails(matchedCategory);
+          } else {
+            setCurrentCategoryDetails(null);
           }
         } catch (catError) {
           console.error("Failed to fetch categories:", catError);

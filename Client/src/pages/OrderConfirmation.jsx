@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../hooks/useCurrency';
 import { getOrderById } from '../services/api';
 import toast from 'react-hot-toast';
+import useSocialLinks from '../hooks/useSocialLinks';
 
 export default function OrderConfirmation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
+  const socialLinks = useSocialLinks();
   const [copied, setCopied] = useState(false);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -267,8 +269,9 @@ export default function OrderConfirmation() {
         <div className="bg-gray-50 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Need Help?</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {socialLinks.whatsapp.enabled && (
             <a
-              href="https://api.whatsapp.com/message/OSBDQIJSDBKUP1?autoload=1&app_absent=0"
+              href={socialLinks.whatsapp.url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition"
@@ -281,6 +284,7 @@ export default function OrderConfirmation() {
                 <p className="text-sm text-gray-600">Chat with us</p>
               </div>
             </a>
+            )}
             <a
               href="mailto:info@borkabazar.com"
               className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"

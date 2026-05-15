@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import useSocialLinks from "../hooks/useSocialLinks";
 
 export default function Contact() {
+  const socialLinks = useSocialLinks();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -235,15 +237,16 @@ export default function Contact() {
             <div className="mt-8">
               <h3 className="font-semibold text-gray-900 mb-4">Follow Us</h3>
               <div className="flex gap-4">
+                {socialLinks.facebook.enabled && (
                 <a
-                  href="https://www.facebook.com/anamulhaque.joy.188?rdid=GvkM4bROFIYCRxEl&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FBQeH3fwk%2F"
+                  href={socialLinks.facebook.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
                   title="Facebook"
                   onClick={(e) => {
                     e.preventDefault();
-                    window.open("https://www.facebook.com/anamulhaque.joy.188?rdid=GvkM4bROFIYCRxEl&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FBQeH3fwk%2F", "_blank", "noopener,noreferrer");
+                    window.open(socialLinks.facebook.url, "_blank", "noopener,noreferrer");
                   }}
                 >
                   <svg
@@ -254,15 +257,17 @@ export default function Contact() {
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                 </a>
+                )}
+                {socialLinks.tiktok.enabled && (
                 <a
-                  href="https://www.tiktok.com/@anamulhaquejoy359?_r=1&_t=ZS-95KcW5yHJPZfb"
+                  href={socialLinks.tiktok.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
                   title="TikTok"
                   onClick={(e) => {
                     e.preventDefault();
-                    window.open("https://www.tiktok.com/@anamulhaquejoy359?_r=1&_t=ZS-95KcW5yHJPZfb", "_blank", "noopener,noreferrer");
+                    window.open(socialLinks.tiktok.url, "_blank", "noopener,noreferrer");
                   }}
                 >
                   <svg
@@ -273,15 +278,17 @@ export default function Contact() {
                     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.1 1.82 2.89 2.89 0 0 1 5.1-1.82V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.96-.1z"/>
                   </svg>
                 </a>
+                )}
+                {socialLinks.whatsapp.enabled && (
                 <a
-                  href="https://api.whatsapp.com/message/OSBDQIJSDBKUP1?autoload=1&app_absent=0"
+                  href={socialLinks.whatsapp.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center text-white hover:bg-green-600 transition-colors"
                   title="WhatsApp"
                   onClick={(e) => {
                     e.preventDefault();
-                    window.open("https://api.whatsapp.com/message/OSBDQIJSDBKUP1?autoload=1&app_absent=0", "_blank", "noopener,noreferrer");
+                    window.open(socialLinks.whatsapp.url, "_blank", "noopener,noreferrer");
                   }}
                 >
                   <svg
@@ -292,6 +299,26 @@ export default function Contact() {
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
                   </svg>
                 </a>
+                )}
+                {socialLinks.instagram.enabled && (
+                  <a
+                    href={socialLinks.instagram.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 bg-pink-600 rounded-xl flex items-center justify-center text-white hover:bg-pink-700 transition-colors"
+                    title="Instagram"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(socialLinks.instagram.url, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect width="18" height="18" x="3" y="3" rx="5" ry="5" strokeWidth="2" />
+                      <circle cx="12" cy="12" r="4" strokeWidth="2" />
+                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </a>
+                )}
               </div>
             </div>
           </div>

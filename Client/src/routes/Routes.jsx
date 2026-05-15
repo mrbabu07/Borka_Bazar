@@ -40,6 +40,7 @@ import AdminSupport from "../pages/admin/AdminSupport";
 import AdminQA from "../pages/admin/AdminQA";
 import AdminFlashSales from "../pages/admin/AdminFlashSales";
 import AdminDeliverySettings from "../pages/admin/AdminDeliverySettings";
+import AdminSocialSettings from "../pages/admin/AdminSocialSettings";
 import OfferForm from "../pages/admin/OfferForm";
 import Returns from "../pages/Returns";
 import Support from "../pages/Support";
@@ -284,6 +285,14 @@ const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <AdminDeliverySettings />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "/admin/social-settings",
+        element: (
+          <AdminRoute>
+            <AdminSocialSettings />
           </AdminRoute>
         ),
       },

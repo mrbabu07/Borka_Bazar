@@ -26,6 +26,7 @@ exports.updateDeliverySettings = async (req, res) => {
       "standardDeliveryCharge",
       "expressDeliveryCharge",
       "expressDeliveryEnabled",
+      "paymentOption",
       "deliveryAreas",
       "estimatedDeliveryDays",
     ];

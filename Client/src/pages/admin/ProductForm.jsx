@@ -47,6 +47,17 @@ export default function ProductForm() {
 
   const availableSizes = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
 
+  const getSizeStockRows = (sizes = formData.availableSizes) =>
+    sizes
+      .filter((item) => item?.size)
+      .map((item) => ({
+        size: String(item.size).trim(),
+        stock: Math.max(parseInt(item.stock, 10) || 0, 0),
+      }));
+
+  const getSizeStockTotal = (sizes = formData.availableSizes) =>
+    getSizeStockRows(sizes).reduce((sum, item) => sum + item.stock, 0);
+
   const availableFabrics = [
     "Aroya Premium",
     "Zoom Embroidery",
@@ -56,6 +67,26 @@ export default function ProductForm() {
     "Nida Premium",
     "Japran Silk",
     "Elix Georgette",
+  ];
+
+  const availableStyles = [
+    "Overhead",
+    "Front Open",
+    "Pullover",
+    "Two Piece",
+    "Khimar",
+    "Instant Hijab",
+    "Layered Niqab",
+  ];
+
+  const availableOccasions = [
+    "Casual",
+    "Formal",
+    "Party",
+    "Daily Wear",
+    "Prayer",
+    "Office",
+    "Wedding",
   ];
 
   const availableColors = [
@@ -122,10 +153,22 @@ export default function ProductForm() {
   };
 
   const handleSizeToggle = (size) => {
-    const newSizes = formData.sizes.includes(size)
+    const isSelected = formData.sizes.includes(size);
+    const newSizes = isSelected
       ? formData.sizes.filter((s) => s !== size)
       : [...formData.sizes, size];
-    setFormData({ ...formData, sizes: newSizes });
+    const nextAvailableSizes = isSelected
+      ? formData.availableSizes.filter((item) => item.size !== size)
+      : formData.availableSizes.some((item) => item.size === size)
+        ? formData.availableSizes
+        : [...formData.availableSizes, { size, stock: 0 }];
+
+    setFormData({
+      ...formData,
+      sizes: newSizes,
+      availableSizes: nextAvailableSizes,
+      stock: getSizeStockTotal(nextAvailableSizes) || formData.stock,
+    });
   };
 
   const handleColorToggle = (color) => {
@@ -205,14 +248,72 @@ export default function ProductForm() {
     setFormData({ ...formData, image: url });
   };
 
+  const handleSizeStockChange = (index, field, value) => {
+    const nextAvailableSizes = [...formData.availableSizes];
+    nextAvailableSizes[index] = {
+      ...nextAvailableSizes[index],
+      [field]: field === "stock" ? Math.max(parseInt(value, 10) || 0, 0) : value,
+    };
+    const rows = getSizeStockRows(nextAvailableSizes);
+
+    setFormData({
+      ...formData,
+      availableSizes: nextAvailableSizes,
+      sizes: rows.map((item) => item.size),
+      stock: getSizeStockTotal(nextAvailableSizes),
+    });
+  };
+
+  const handleRemoveSizeStock = (index) => {
+    const nextAvailableSizes = formData.availableSizes.filter((_, i) => i !== index);
+    const rows = getSizeStockRows(nextAvailableSizes);
+
+    setFormData({
+      ...formData,
+      availableSizes: nextAvailableSizes,
+      sizes: rows.map((item) => item.size),
+      stock: getSizeStockTotal(nextAvailableSizes) || "",
+    });
+  };
+
+  const handleAddSizeStock = () => {
+    setFormData({
+      ...formData,
+      availableSizes: [...formData.availableSizes, { size: "", stock: 0 }],
+    });
+  };
+
   const handleVariantsChange = (variants) => {
-    setFormData({ ...formData, variants });
+    const stockBySize = variants.reduce((acc, variant) => {
+      if (!variant.size) return acc;
+      acc[variant.size] = (acc[variant.size] || 0) + (parseInt(variant.stock, 10) || 0);
+      return acc;
+    }, {});
+    const variantSizeRows = Object.entries(stockBySize).map(([size, stock]) => ({
+      size,
+      stock,
+    }));
+
+    setFormData({
+      ...formData,
+      variants,
+      ...(variantSizeRows.length > 0
+        ? {
+            availableSizes: variantSizeRows,
+            sizes: variantSizeRows.map((item) => item.size),
+            stock: getSizeStockTotal(variantSizeRows),
+          }
+        : {}),
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const sizeStockRows = getSizeStockRows();
+      const totalSizeStock = getSizeStockTotal(sizeStockRows);
+
       // Only send fields that the backend expects
       const data = {
         name: formData.title, // Backend expects 'name' not 'title'
@@ -222,9 +323,9 @@ export default function ProductForm() {
         image: formData.image,
         images: formData.images,
         categoryId: formData.categoryId,
-        stock: parseInt(formData.stock),
+        stock: sizeStockRows.length > 0 ? totalSizeStock : parseInt(formData.stock),
         description: formData.description,
-        sizes: formData.sizes,
+        sizes: sizeStockRows.length > 0 ? sizeStockRows.map((item) => item.size) : formData.sizes,
         colors: formData.colors,
         sizeChart: formData.sizeChart,
         variants: formData.variants,
@@ -234,7 +335,7 @@ export default function ProductForm() {
         occasion: formData.occasion || "",
         sleeveType: formData.sleeveType || "",
         color: formData.color || "",
-        availableSizes: formData.availableSizes || [],
+        availableSizes: sizeStockRows,
       };
       
       if (isEdit) {
@@ -255,7 +356,7 @@ export default function ProductForm() {
   if (loading && isEdit) return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-12">
+    <div className="admin-product-form min-h-screen bg-gray-100 dark:bg-gray-950 pb-12">
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6">
@@ -591,11 +692,22 @@ export default function ProductForm() {
             </div>
           </div>
 
-          {/* Sizes Section (Optional) */}
+          {/* Size Wise Stock */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-2">Sizes (Optional)</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Select available sizes for this product
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Size Wise Stock</h2>
+                <p className="text-sm text-gray-500">
+                  Keep one product and manage separate stock for every size.
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
+                <span className="font-medium text-gray-600">Total stock: </span>
+                <span className="font-bold text-gray-900">{getSizeStockTotal()}</span>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Quick select sizes
             </p>
             <div className="flex flex-wrap gap-2">
               {availableSizes.map((size) => (
@@ -612,6 +724,61 @@ export default function ProductForm() {
                   {size}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {formData.availableSizes.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800">
+                  No size stock added. Select sizes above or add a custom size.
+                </div>
+              ) : (
+                formData.availableSizes.map((sizeItem, index) => (
+                  <div
+                    key={`${sizeItem.size || "size"}-${index}`}
+                    className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-[1fr_160px_44px] sm:items-center dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    <input
+                      type="text"
+                      value={sizeItem.size}
+                      onChange={(e) =>
+                        handleSizeStockChange(index, "size", e.target.value)
+                      }
+                      placeholder="Size, e.g. 42 or XL"
+                      className="input-field"
+                    />
+                    <input
+                      type="number"
+                      value={sizeItem.stock}
+                      onChange={(e) =>
+                        handleSizeStockChange(index, "stock", e.target.value)
+                      }
+                      placeholder="Stock"
+                      min="0"
+                      className="input-field"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSizeStock(index)}
+                      className="flex h-11 w-11 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                      title="Remove size stock"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+              <button
+                type="button"
+                onClick={handleAddSizeStock}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Custom Size
+              </button>
             </div>
           </div>
 
@@ -678,6 +845,10 @@ export default function ProductForm() {
             <ProductVariantManager
               variants={formData.variants}
               onChange={handleVariantsChange}
+              sizeOptions={availableSizes}
+              colorOptions={availableColors}
+              basePrice={formData.price}
+              productSku={formData.sku}
             />
           </div>
 
@@ -692,55 +863,64 @@ export default function ProductForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Fabric
                 </label>
-                <select
+                <input
+                  list="fabric-options"
                   name="fabric"
                   value={formData.fabric}
                   onChange={handleChange}
                   className="input-field"
-                >
-                  <option value="">Select fabric</option>
+                  placeholder="Choose or write fabric"
+                />
+                <datalist id="fabric-options">
                   {availableFabrics.map((fabric) => (
                     <option key={fabric} value={fabric}>
                       {fabric}
                     </option>
                   ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Choose from premium fabric options</p>
+                </datalist>
+                <p className="text-xs text-gray-500 mt-1">
+                  Choose from suggestions or type a new fabric name.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Style
                 </label>
-                <select
+                <input
+                  list="style-options"
                   name="style"
                   value={formData.style}
                   onChange={handleChange}
                   className="input-field"
-                >
-                  <option value="">Select style</option>
-                  <option value="Overhead">Overhead</option>
-                  <option value="Front Open">Front Open</option>
-                  <option value="Pullover">Pullover</option>
-                  <option value="Two Piece">Two Piece</option>
-                </select>
+                  placeholder="Choose or write style"
+                />
+                <datalist id="style-options">
+                  {availableStyles.map((style) => (
+                    <option key={style} value={style}>
+                      {style}
+                    </option>
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Occasion
                 </label>
-                <select
+                <input
+                  list="occasion-options"
                   name="occasion"
                   value={formData.occasion}
                   onChange={handleChange}
                   className="input-field"
-                >
-                  <option value="">Select occasion</option>
-                  <option value="Casual">Casual</option>
-                  <option value="Formal">Formal</option>
-                  <option value="Party">Party</option>
-                  <option value="Daily Wear">Daily Wear</option>
-                  <option value="Prayer">Prayer</option>
-                </select>
+                  placeholder="Choose or write occasion"
+                />
+                <datalist id="occasion-options">
+                  {availableOccasions.map((occasion) => (
+                    <option key={occasion} value={occasion}>
+                      {occasion}
+                    </option>
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -770,71 +950,6 @@ export default function ProductForm() {
               </div>
             </div>
 
-            {/* Available Sizes with Stock */}
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Size-Based Stock (For Burka Products)
-              </h3>
-              <p className="text-xs text-gray-500 mb-3">
-                Add sizes with individual stock quantities. Leave empty to use general stock field above.
-              </p>
-              <div className="space-y-3">
-                {formData.availableSizes.map((sizeItem, index) => (
-                  <div key={index} className="flex gap-3 items-center">
-                    <input
-                      type="text"
-                      value={sizeItem.size}
-                      onChange={(e) => {
-                        const newSizes = [...formData.availableSizes];
-                        newSizes[index].size = e.target.value;
-                        setFormData({ ...formData, availableSizes: newSizes });
-                      }}
-                      placeholder="Size (e.g., M, L, XL)"
-                      className="input-field flex-1"
-                    />
-                    <input
-                      type="number"
-                      value={sizeItem.stock}
-                      onChange={(e) => {
-                        const newSizes = [...formData.availableSizes];
-                        newSizes[index].stock = parseInt(e.target.value) || 0;
-                        setFormData({ ...formData, availableSizes: newSizes });
-                      }}
-                      placeholder="Stock"
-                      min="0"
-                      className="input-field w-32"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSizes = formData.availableSizes.filter((_, i) => i !== index);
-                        setFormData({ ...formData, availableSizes: newSizes });
-                      }}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData({
-                      ...formData,
-                      availableSizes: [...formData.availableSizes, { size: "", stock: 0 }],
-                    });
-                  }}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add Size
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Size Chart (Optional) */}

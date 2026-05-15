@@ -23,6 +23,7 @@ import {
   RefreshCcw,
   Search,
   Settings,
+  Share2,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -144,6 +145,7 @@ const managementSections = [
     items: [
       { label: "Insights", to: "/admin/insights", icon: BarChart3 },
       { label: "Delivery", to: "/admin/delivery-settings", icon: Settings },
+      { label: "Social Links", to: "/admin/social-settings", icon: Share2 },
     ],
   },
 ];

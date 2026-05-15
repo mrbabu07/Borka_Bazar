@@ -35,6 +35,10 @@ export const getOutOfStockProducts = () =>
 export const updateStockBulk = (updates) =>
   api.patch("/products/bulk-stock-update", { updates });
 
+// Store settings
+export const getSocialSettings = () => api.get("/social-settings");
+export const updateSocialSettings = (data) => api.put("/social-settings", data);
+
 // Categories
 export const getCategories = () => api.get("/categories");
 export const createCategory = (data) => api.post("/categories", data);

@@ -27,6 +27,7 @@ const StockAlert = require("./models/StockAlert");
 const Recommendation = require("./models/Recommendation");
 const Loyalty = require("./models/Loyalty");
 const AppNotification = require("./models/AppNotification");
+const SocialSettings = require("./models/SocialSettings");
 
 // Import routes
 const productRoutes = require("./routes/productRoutes");
@@ -49,6 +50,7 @@ const loyaltyRoutes = require("./routes/loyaltyRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const deliverySettingsRoutes = require("./routes/deliverySettingsRoutes");
+const socialSettingsRoutes = require("./routes/socialSettingsRoutes");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -167,6 +169,7 @@ async function run() {
       Recommendation: new Recommendation(db),
       Loyalty: new Loyalty(db),
       AppNotification: new AppNotification(db),
+      SocialSettings: new SocialSettings(db),
     };
 
     await Promise.all(
@@ -258,6 +261,9 @@ async function run() {
 
     app.use("/api/delivery-settings", deliverySettingsRoutes);
     console.log("✅ Delivery Settings routes registered");
+
+    app.use("/api/social-settings", socialSettingsRoutes);
+    console.log("✅ Social Settings routes registered");
 
     app.use((req, res) => {
       res.status(404).json({

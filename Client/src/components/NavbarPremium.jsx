@@ -8,7 +8,7 @@ import { getCategories } from "../services/api";
 import SearchBar from "./SearchBar";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
-import { socialLinks } from "../config/socialLinks";
+import useSocialLinks from "../hooks/useSocialLinks";
 import { getArrayData } from "../utils/apiConfig";
 
 export default function NavbarPremium() {
@@ -23,6 +23,7 @@ export default function NavbarPremium() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [scrolled, setScrolled] = useState(false);
+  const socialLinks = useSocialLinks();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -77,24 +78,41 @@ export default function NavbarPremium() {
                 01878305319
               </a>
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => window.open(socialLinks.facebook.url, "_blank", "noopener,noreferrer")}
-                  className="hover:text-gold-500 transition-colors" 
-                  title="Facebook"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => window.open(socialLinks.tiktok.url, "_blank", "noopener,noreferrer")}
-                  className="hover:text-gold-500 transition-colors" 
-                  title="TikTok"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.1 1.82 2.89 2.89 0 0 1 5.1-1.82V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.96-.1z"/>
-                  </svg>
-                </button>
+                {socialLinks.facebook.enabled && (
+                  <button 
+                    onClick={() => window.open(socialLinks.facebook.url, "_blank", "noopener,noreferrer")}
+                    className="hover:text-gold-500 transition-colors" 
+                    title="Facebook"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </button>
+                )}
+                {socialLinks.tiktok.enabled && (
+                  <button 
+                    onClick={() => window.open(socialLinks.tiktok.url, "_blank", "noopener,noreferrer")}
+                    className="hover:text-gold-500 transition-colors" 
+                    title="TikTok"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.1 1.82 2.89 2.89 0 0 1 5.1-1.82V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.96-.1z"/>
+                    </svg>
+                  </button>
+                )}
+                {socialLinks.instagram.enabled && (
+                  <button
+                    onClick={() => window.open(socialLinks.instagram.url, "_blank", "noopener,noreferrer")}
+                    className="hover:text-gold-500 transition-colors"
+                    title="Instagram"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect width="18" height="18" x="3" y="3" rx="5" ry="5" strokeWidth="2" />
+                      <circle cx="12" cy="12" r="4" strokeWidth="2" />
+                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </div>

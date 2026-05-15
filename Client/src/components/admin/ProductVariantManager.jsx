@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function ProductVariantManager({ variants = [], onChange }) {
+export default function ProductVariantManager({
+  variants = [],
+  onChange,
+  sizeOptions = [],
+  colorOptions = [],
+  basePrice = "",
+  productSku = "",
+}) {
   const [variantList, setVariantList] = useState(variants);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [bulkSizes, setBulkSizes] = useState([]);
+  const [bulkStock, setBulkStock] = useState("1");
   const [formData, setFormData] = useState({
     size: "",
     color: "",
@@ -13,6 +22,65 @@ export default function ProductVariantManager({ variants = [], onChange }) {
     sku: "",
     image: "",
   });
+
+  useEffect(() => {
+    setVariantList(variants);
+  }, [variants]);
+
+  const sizes = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...sizeOptions,
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL",
+          "XXXL",
+        ]),
+      ),
+    [sizeOptions],
+  );
+  const colors = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...colorOptions.map((color) =>
+            typeof color === "string" ? color : color.name,
+          ),
+          "Black",
+          "White",
+          "Red",
+          "Blue",
+          "Green",
+          "Yellow",
+          "Purple",
+          "Pink",
+          "Orange",
+          "Gray",
+          "Brown",
+          "Navy",
+          "Beige",
+          "Maroon",
+        ].filter(Boolean)),
+      ),
+    [colorOptions],
+  );
+
+  const normalizeSkuPart = (value) =>
+    String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+  const buildVariantSku = (size, color = "") => {
+    const prefix = normalizeSkuPart(productSku) || "AUTO";
+    const parts = [prefix, normalizeSkuPart(size), normalizeSkuPart(color)].filter(Boolean);
+    return parts.join("-");
+  };
 
   const handleAddVariant = () => {
     if (!formData.size && !formData.color) {
@@ -24,6 +92,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
       ...formData,
       price: parseFloat(formData.price) || 0,
       stock: parseInt(formData.stock) || 0,
+      sku: formData.sku || buildVariantSku(formData.size, formData.color),
     };
 
     const updated = [...variantList, newVariant];
@@ -38,6 +107,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
       ...formData,
       price: parseFloat(formData.price) || 0,
       stock: parseInt(formData.stock) || 0,
+      sku: formData.sku || buildVariantSku(formData.size, formData.color),
     };
     setVariantList(updated);
     onChange(updated);
@@ -58,6 +128,41 @@ export default function ProductVariantManager({ variants = [], onChange }) {
     setShowAddForm(true);
   };
 
+  const toggleBulkSize = (size) => {
+    setBulkSizes((current) =>
+      current.includes(size)
+        ? current.filter((item) => item !== size)
+        : [...current, size],
+    );
+  };
+
+  const handleCreateSizeVariants = () => {
+    if (bulkSizes.length === 0) {
+      alert("Select at least one size");
+      return;
+    }
+
+    const price = parseFloat(basePrice) || 0;
+    const stock = parseInt(bulkStock) || 0;
+    const existingBySize = new Map(variantList.map((variant) => [variant.size, variant]));
+    const nextVariants = [
+      ...variantList.filter((variant) => !bulkSizes.includes(variant.size)),
+      ...bulkSizes.map((size) => ({
+        ...existingBySize.get(size),
+        size,
+        color: existingBySize.get(size)?.color || "",
+        price: existingBySize.get(size)?.price || price,
+        stock: existingBySize.get(size)?.stock ?? stock,
+        sku: existingBySize.get(size)?.sku || buildVariantSku(size),
+        image: existingBySize.get(size)?.image || "",
+      })),
+    ];
+
+    setVariantList(nextVariants);
+    onChange(nextVariants);
+    setBulkSizes([]);
+  };
+
   const resetForm = () => {
     setFormData({
       size: "",
@@ -71,24 +176,6 @@ export default function ProductVariantManager({ variants = [], onChange }) {
     setEditingIndex(null);
   };
 
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-  const colors = [
-    "Black",
-    "White",
-    "Red",
-    "Blue",
-    "Green",
-    "Yellow",
-    "Purple",
-    "Pink",
-    "Orange",
-    "Gray",
-    "Brown",
-    "Navy",
-    "Beige",
-    "Maroon",
-  ];
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -96,11 +183,60 @@ export default function ProductVariantManager({ variants = [], onChange }) {
           Product Variants
         </h3>
         <button
+          type="button"
           onClick={() => setShowAddForm(!showAddForm)}
           className="btn-primary text-sm"
         >
           {showAddForm ? "Cancel" : "+ Add Variant"}
         </button>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/70">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-900 dark:text-white">
+              Quick Size Variants
+            </h4>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Select sizes once, set stock, and generate professional variant SKUs.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {sizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleBulkSize(size)}
+                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                    bulkSizes.includes(size)
+                      ? "border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-950/30 dark:text-primary-300"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-primary-300 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Stock each
+              <input
+                type="number"
+                min="0"
+                value={bulkStock}
+                onChange={(event) => setBulkStock(event.target.value)}
+                className="input-field mt-1 w-32"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleCreateSizeVariants}
+              className="btn-primary whitespace-nowrap"
+            >
+              Generate Sizes
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -227,6 +363,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
 
             <div className="flex gap-2 mt-4">
               <button
+                type="button"
                 onClick={
                   editingIndex !== null ? handleUpdateVariant : handleAddVariant
                 }
@@ -234,7 +371,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
               >
                 {editingIndex !== null ? "Update Variant" : "Add Variant"}
               </button>
-              <button onClick={resetForm} className="btn-secondary">
+              <button type="button" onClick={resetForm} className="btn-secondary">
                 Cancel
               </button>
             </div>
@@ -289,7 +426,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-gray-900 dark:text-white font-semibold">
-                      ৳{variant.price.toFixed(2)}
+                      ৳{Number(variant.price || 0).toFixed(2)}
                     </span>
                     <span
                       className={`${
@@ -309,6 +446,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => handleEditVariant(index)}
                   className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                   title="Edit"
@@ -328,6 +466,7 @@ export default function ProductVariantManager({ variants = [], onChange }) {
                   </svg>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDeleteVariant(index)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title="Delete"

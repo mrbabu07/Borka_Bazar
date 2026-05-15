@@ -17,6 +17,12 @@ export const socialLinks = {
     name: "WhatsApp",
     icon: "whatsapp",
     color: "#25D366"
+  },
+  instagram: {
+    url: "",
+    name: "Instagram",
+    icon: "instagram",
+    color: "#E4405F"
   }
 };
 

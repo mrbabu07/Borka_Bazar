@@ -138,6 +138,33 @@ describe("order creation black-box behavior", () => {
     expect(res.body.data.payment.remaining.amount).toBe(2000);
   });
 
+  test("creates a COD order without storing null transaction ids", async () => {
+    const req = createMockRequest({
+      body: {
+        ...validBody,
+        paymentMethod: "COD",
+        transactionId: "",
+        senderNumber: "",
+        receiverNumber: "",
+      },
+      deliverySettings: {
+        paymentOption: "cod",
+      },
+    });
+    const res = createMockResponse();
+
+    await createOrder(req, res);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data.paymentOption).toBe("cod");
+    expect(res.body.data.paymentInfo.method).toBe("COD");
+    expect(res.body.data.paymentInfo).not.toHaveProperty("transactionId");
+    expect(res.body.data.advancePayment).not.toHaveProperty("transactionId");
+    expect(res.body.data.payment.advance).not.toHaveProperty("transactionId");
+    expect(res.body.data).not.toHaveProperty("transactionId");
+    expect(res.body.data.dueAmount).toBe(2100);
+  });
+
   test("uses enabled area delivery charge", async () => {
     const req = createMockRequest({
       body: {

@@ -3,6 +3,17 @@ const { ObjectId } = require("mongodb");
 class Category {
   constructor(db) {
     this.collection = db.collection("categories");
+    this.createIndexes();
+  }
+
+  async createIndexes() {
+    try {
+      await this.collection.createIndex({ slug: 1 }, { unique: true });
+      await this.collection.createIndex({ name: 1 });
+      await this.collection.createIndex({ aliases: 1 });
+    } catch (error) {
+      console.error("Error creating Category indexes:", error);
+    }
   }
 
   async findAll() {
@@ -30,10 +41,38 @@ class Category {
       ...categoryData,
       slug,
       customFields: categoryData.customFields || [],
+      isActive: categoryData.isActive !== false,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     return result.insertedId;
+  }
+
+  async upsertBySlug(categoryData) {
+    const slug =
+      categoryData.slug ||
+      categoryData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+    const now = new Date();
+
+    return await this.collection.updateOne(
+      { slug },
+      {
+        $set: {
+          ...categoryData,
+          slug,
+          customFields: categoryData.customFields || [],
+          isActive: categoryData.isActive !== false,
+          updatedAt: now,
+        },
+        $setOnInsert: {
+          createdAt: now,
+        },
+      },
+      { upsert: true },
+    );
   }
 
   async update(id, categoryData) {

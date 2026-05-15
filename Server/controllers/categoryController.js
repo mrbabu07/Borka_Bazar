@@ -28,7 +28,7 @@ const getCategoryById = async (req, res) => {
 const createCategory = async (req, res) => {
   try {
     const Category = req.app.locals.models.Category;
-    const { name, slug, customFields } = req.body;
+    const { name, slug, description, image, isActive, customFields, aliases } = req.body;
 
     if (!name) {
       return res
@@ -39,6 +39,10 @@ const createCategory = async (req, res) => {
     const categoryId = await Category.create({
       name,
       slug,
+      description: description || "",
+      image: image || "",
+      isActive: isActive !== false,
+      aliases: Array.isArray(aliases) ? aliases : [],
       customFields: customFields || [],
     });
 

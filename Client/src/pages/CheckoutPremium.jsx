@@ -47,7 +47,6 @@ export default function CheckoutPremium() {
     upazila: "",
     union: "",
     area: "",
-    postalCode: "",
     notes: "",
   });
 
@@ -134,7 +133,9 @@ export default function CheckoutPremium() {
   // Use delivery settings or BDT defaults
   const {
     deliveryCharge,
-    requiresDeliveryFeePayment: calculatedRequiresDeliveryFeePayment,
+    paymentOption,
+    requiresOnlinePayment: calculatedRequiresOnlinePayment,
+    advancePaymentAmount,
     finalTotal,
     dueAmount,
   } = calculateCheckoutPricing({
@@ -143,20 +144,32 @@ export default function CheckoutPremium() {
     deliverySettings,
   });
   const deliverySettingsReady = Boolean(deliverySettings);
-  const requiresDeliveryFeePayment =
-    !deliverySettingsReady || calculatedRequiresDeliveryFeePayment;
+  const requiresOnlinePayment =
+    !deliverySettingsReady || calculatedRequiresOnlinePayment;
+  const paymentModeTitle =
+    paymentOption === "full_payment"
+      ? "Full Payment"
+      : paymentOption === "cod"
+        ? "Cash On Delivery"
+        : "Delivery Fee Payment";
+  const paymentInstruction =
+    paymentOption === "full_payment"
+      ? "Send the full order amount before placing the order."
+      : paymentOption === "cod"
+        ? "No advance payment is required. Pay the full amount on delivery."
+        : "Send only the delivery fee before placing the order. Product amount stays cash on delivery.";
   const selectedPaymentAccount =
     PAYMENT_ACCOUNTS[paymentInfo.method] || PAYMENT_ACCOUNTS.bKash;
 
   useEffect(() => {
     setPaymentInfo((current) => {
-      if (requiresDeliveryFeePayment && !PAYMENT_ACCOUNTS[current.method]) {
+      if (requiresOnlinePayment && !PAYMENT_ACCOUNTS[current.method]) {
         return { method: "bKash", transactionId: "", senderNumber: "" };
       }
 
       return current;
     });
-  }, [requiresDeliveryFeePayment]);
+  }, [requiresOnlinePayment]);
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -184,7 +197,6 @@ export default function CheckoutPremium() {
       upazila: normalized.upazila,
       union: normalized.union,
       area: normalized.area,
-      postalCode: normalized.zipCode,
     }));
     setAddressLoaded(true);
     setShowSavedAddresses(false);
@@ -268,18 +280,18 @@ export default function CheckoutPremium() {
       return;
     }
 
-    if (requiresDeliveryFeePayment && !paymentInfo.transactionId.trim()) {
+    if (requiresOnlinePayment && !paymentInfo.transactionId.trim()) {
       toast.error(`Please enter your ${selectedPaymentAccount.label} transaction ID`);
       return;
     }
 
-    if (requiresDeliveryFeePayment && !paymentInfo.senderNumber.trim()) {
+    if (requiresOnlinePayment && !paymentInfo.senderNumber.trim()) {
       toast.error(`Please enter the ${selectedPaymentAccount.label} sender number`);
       return;
     }
 
     if (
-      requiresDeliveryFeePayment &&
+      requiresOnlinePayment &&
       !/^(\+?88)?01[3-9]\d{8}$/.test(paymentInfo.senderNumber.trim())
     ) {
       toast.error("Please enter a valid Bangladeshi sender number");
@@ -300,7 +312,7 @@ export default function CheckoutPremium() {
             upazila: formData.upazila,
             union: formData.union,
             area: formData.area,
-            zipCode: formData.postalCode,
+            zipCode: "",
           }),
           isDefault: true,
         }).catch((error) => {
@@ -329,7 +341,7 @@ export default function CheckoutPremium() {
         upazila: formData.upazila,
         union: formData.union,
         area: formData.area,
-        zipCode: formData.postalCode || "",
+        zipCode: "",
       };
 
       const orderData = {
@@ -345,14 +357,14 @@ export default function CheckoutPremium() {
         customerPhone: shippingInfo.phone,
         customerEmail: shippingInfo.email,
         customerAddress: shippingInfo.address,
-        paymentMethod: paymentInfo.method,
-        transactionId: requiresDeliveryFeePayment
+        paymentMethod: requiresOnlinePayment ? paymentInfo.method : "COD",
+        transactionId: requiresOnlinePayment
           ? paymentInfo.transactionId.trim()
           : "",
-        senderNumber: requiresDeliveryFeePayment
+        senderNumber: requiresOnlinePayment
           ? paymentInfo.senderNumber.trim()
           : "",
-        receiverNumber: requiresDeliveryFeePayment
+        receiverNumber: requiresOnlinePayment
           ? selectedPaymentAccount.number
           : "",
         specialInstructions: formData.notes || "",
@@ -411,8 +423,15 @@ export default function CheckoutPremium() {
               deliveryFee: confirmationDeliveryCharge,
               subtotal: confirmationSubtotal,
               remainingAmount: dueAmount,
+              advancePaymentAmount,
+              paymentOption,
             },
-            paymentMethod: `Hybrid ${paymentInfo.method} + COD`,
+            paymentMethod:
+              paymentOption === "full_payment"
+                ? paymentInfo.method
+                : paymentOption === "cod"
+                  ? "COD"
+                  : `Hybrid ${paymentInfo.method} + COD`,
           },
         });
       }
@@ -444,23 +463,36 @@ export default function CheckoutPremium() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <div className="min-h-screen bg-gray-50 pb-28 text-gray-900 dark:bg-gray-950 dark:text-gray-100 lg:pb-0">
       {/* Page Header */}
-      <div className="bg-gray-50 border-b border-gray-100 py-12 dark:border-gray-800 dark:bg-gray-900">
+      <div className="border-b border-gray-100 bg-white py-10 dark:border-gray-800 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="font-display text-3xl md:text-4xl text-black text-center dark:text-white">
-            Checkout
-          </h1>
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="font-display text-3xl md:text-4xl text-black dark:text-white">
+              Checkout
+            </h1>
+            <div className="mt-6 grid grid-cols-3 gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {["Address", "Payment", "Review"].map((step, index) => (
+                <div
+                  key={step}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950"
+                >
+                  <span className="mr-1 text-black dark:text-white">{index + 1}.</span>
+                  {step}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="lg:grid lg:grid-cols-3 lg:gap-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8 xl:gap-10">
           {/* Checkout Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-8">
+          <div>
+            <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
               {/* Contact Information */}
-              <div>
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                 <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
                   Contact Information
                 </h2>
@@ -512,7 +544,7 @@ export default function CheckoutPremium() {
               </div>
 
               {/* Shipping Address */}
-              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                 <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-sm font-medium text-black uppercase tracking-wide dark:text-white">
                     Shipping Address
@@ -639,35 +671,19 @@ export default function CheckoutPremium() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                        Area Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="area"
-                        value={formData.area}
-                        onChange={handleChange}
-                        required
-                        className={fieldClass}
-                        placeholder="Village/area name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                        Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        name="postalCode"
-                        value={formData.postalCode}
-                        onChange={handleChange}
-                        className={fieldClass}
-                        placeholder="1200"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
+                      Area Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="area"
+                      value={formData.area}
+                      onChange={handleChange}
+                      required
+                      className={fieldClass}
+                      placeholder="Village/area name"
+                    />
                   </div>
 
                   <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
@@ -683,7 +699,7 @@ export default function CheckoutPremium() {
               </div>
 
               {/* Order Notes */}
-              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                 <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
                   Order Notes (Optional)
                 </h2>
@@ -697,10 +713,10 @@ export default function CheckoutPremium() {
                 />
               </div>
 
-              {/* Delivery Fee Payment */}
-              <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+              {requiresOnlinePayment ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
                 <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
-                  Delivery Fee Payment
+                  {paymentModeTitle}
                 </h2>
                 <div className="mb-5 grid grid-cols-2 gap-3">
                   {Object.entries(PAYMENT_ACCOUNTS).map(([method, account]) => (
@@ -747,12 +763,11 @@ export default function CheckoutPremium() {
                         </button>
                       </div>
                       <p className="text-xs text-pink-700 mt-1">
-                        Send only the delivery fee before placing the order.
-                        Product amount stays cash on delivery.
+                        {paymentInstruction}
                       </p>
                     </div>
                     <p className="text-2xl font-bold text-pink-700">
-                      ৳{deliveryCharge.toLocaleString()}
+                      ৳{advancePaymentAmount.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -760,14 +775,14 @@ export default function CheckoutPremium() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                      {selectedPaymentAccount.label} Transaction ID {requiresDeliveryFeePayment && <span className="text-red-500">*</span>}
+                      {selectedPaymentAccount.label} Transaction ID <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="transactionId"
                       value={paymentInfo.transactionId}
                       onChange={handlePaymentChange}
-                      required={requiresDeliveryFeePayment}
+                      required={requiresOnlinePayment}
                       className={fieldClass}
                       placeholder={`${selectedPaymentAccount.label} transaction ID`}
                     />
@@ -775,42 +790,48 @@ export default function CheckoutPremium() {
 
                   <div>
                     <label className="block text-sm font-medium text-black mb-2 uppercase tracking-wide dark:text-gray-100">
-                      Your {selectedPaymentAccount.label} Sender Number {requiresDeliveryFeePayment && <span className="text-red-500">*</span>}
+                      Your {selectedPaymentAccount.label} Sender Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       name="senderNumber"
                       value={paymentInfo.senderNumber}
                       onChange={handlePaymentChange}
-                      required={requiresDeliveryFeePayment}
+                      required={requiresOnlinePayment}
                       className={fieldClass}
                       placeholder="01XXXXXXXXX"
                     />
                   </div>
                 </div>
               </div>
+              ) : (
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+                  <h2 className="text-sm font-medium text-black mb-6 uppercase tracking-wide dark:text-white">
+                    Cash On Delivery
+                  </h2>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                      No online payment needed before order.
+                    </p>
+                    <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-200">
+                      Pay ৳{finalTotal.toLocaleString()} when your parcel is delivered.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {/* Submit Button - Mobile */}
-              <div className="lg:hidden">
-                <button
-                  type="submit"
-                  disabled={loading || !deliverySettingsReady}
-                  className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {loading
-                    ? "Processing..."
-                    : deliverySettingsReady
-                      ? "Place Order"
-                      : "Loading Delivery..."}
-                </button>
-              </div>
             </form>
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1 mt-12 lg:mt-0">
-            <div className="bg-gray-50 p-8 sticky top-24 dark:bg-gray-900">
-              <h2 className="font-display text-xl text-black mb-6 dark:text-white">Order Summary</h2>
+          <div className="mt-8 lg:mt-0">
+            <div className="sticky top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <h2 className="font-display text-xl text-black dark:text-white">Order Summary</h2>
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  {cart.length} item{cart.length === 1 ? "" : "s"}
+                </span>
+              </div>
 
               {/* Cart Items */}
               <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
@@ -923,17 +944,19 @@ export default function CheckoutPremium() {
                     {deliveryCharge === 0 ? 'Free' : `৳${deliveryCharge.toLocaleString()}`}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm rounded-lg bg-pink-50 border border-pink-200 px-3 py-2">
-                  <span className="font-semibold text-pink-800">
-                    Pay Before Order
+                <div className="flex justify-between text-sm rounded-lg bg-pink-50 border border-pink-200 px-3 py-2 dark:border-pink-900/60 dark:bg-pink-950/30">
+                  <span className="font-semibold text-pink-800 dark:text-pink-200">
+                    {paymentOption === "cod" ? "Pay Before Order" : paymentModeTitle}
                   </span>
-                  <span className="font-bold text-pink-700">৳{deliveryCharge.toLocaleString()}</span>
+                  <span className="font-bold text-pink-700 dark:text-pink-200">
+                    ৳{advancePaymentAmount.toLocaleString()}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm rounded-lg bg-orange-50 border border-orange-200 px-3 py-2">
-                  <span className="font-semibold text-orange-800">
-                    Product COD
+                <div className="flex justify-between text-sm rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 dark:border-orange-900/60 dark:bg-orange-950/30">
+                  <span className="font-semibold text-orange-800 dark:text-orange-200">
+                    {paymentOption === "cod" ? "Cash On Delivery" : "Due On Delivery"}
                   </span>
-                  <span className="font-bold text-orange-700">৳{dueAmount.toLocaleString()}</span>
+                  <span className="font-bold text-orange-700 dark:text-orange-200">৳{dueAmount.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -950,7 +973,7 @@ export default function CheckoutPremium() {
                   type="submit"
                   onClick={handleSubmit}
                   disabled={loading || !deliverySettingsReady}
-                  className="w-full py-4 bg-black text-white text-sm tracking-widest uppercase font-medium hover:bg-gold-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg bg-black py-4 text-sm font-semibold uppercase tracking-widest text-white transition-colors hover:bg-gold-500 disabled:cursor-not-allowed disabled:bg-gray-400 dark:bg-white dark:text-black dark:hover:bg-gold-400"
                 >
                   {loading
                     ? "Processing..."
@@ -971,6 +994,31 @@ export default function CheckoutPremium() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden dark:border-gray-800 dark:bg-gray-950/95">
+        <div className="mx-auto flex max-w-6xl items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Total
+            </p>
+            <p className="font-display text-xl font-semibold text-black dark:text-white">
+              ৳{finalTotal.toLocaleString()}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading || !deliverySettingsReady}
+            className="min-w-[160px] rounded-lg bg-black px-5 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-gold-500 disabled:cursor-not-allowed disabled:bg-gray-400 dark:bg-white dark:text-black dark:hover:bg-gold-400"
+          >
+            {loading
+              ? "Processing..."
+              : deliverySettingsReady
+                ? "Place Order"
+                : "Loading..."}
+          </button>
         </div>
       </div>
     </div>

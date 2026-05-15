@@ -135,6 +135,18 @@ exports.createOrder = async (req, res) => {
       finalTotal,
     } = pricing;
     const calculatedFinalDeliveryCharge = pricing.finalDeliveryCharge;
+    const paymentOption = ["delivery_fee_first", "cod", "full_payment"].includes(
+      deliverySettings.paymentOption,
+    )
+      ? deliverySettings.paymentOption
+      : "delivery_fee_first";
+    const requiredAdvancePayment =
+      paymentOption === "full_payment"
+        ? finalTotal
+        : paymentOption === "delivery_fee_first"
+          ? calculatedFinalDeliveryCharge
+          : 0;
+    const requiresOnlinePayment = requiredAdvancePayment > 0;
     
     console.log('💰 Calculated values:', {
       finalSubtotal,
@@ -172,39 +184,45 @@ exports.createOrder = async (req, res) => {
     }
 
     if (
-      calculatedFinalDeliveryCharge > 0 &&
+      requiresOnlinePayment &&
       !['bKash', 'Nagad'].includes(paymentMethod)
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Please pay the delivery fee with bKash or Nagad before placing this order',
+        message:
+          paymentOption === "full_payment"
+            ? 'Please pay the full order amount with bKash or Nagad before placing this order'
+            : 'Please pay the delivery fee with bKash or Nagad before placing this order',
         details: {
           paymentMethod,
-          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+          requiredAdvancePayment,
           chargeableSubtotal,
         },
       });
     }
 
-    if (calculatedFinalDeliveryCharge > 0 && (!transactionId?.trim() || !senderNumber?.trim())) {
+    if (requiresOnlinePayment && (!transactionId?.trim() || !senderNumber?.trim())) {
       return res.status(400).json({
         success: false,
-        message: 'Transaction ID and sender number are required for delivery fee payment',
+        message:
+          paymentOption === "full_payment"
+            ? 'Transaction ID and sender number are required for full payment'
+            : 'Transaction ID and sender number are required for delivery fee payment',
         details: {
           hasTransactionId: Boolean(transactionId?.trim()),
           hasSenderNumber: Boolean(senderNumber?.trim()),
-          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+          requiredAdvancePayment,
         },
       });
     }
 
-    if (finalTotal < calculatedFinalDeliveryCharge) {
+    if (finalTotal < requiredAdvancePayment) {
       return res.status(400).json({
         success: false,
-        message: 'Total amount cannot be less than delivery fee',
+        message: 'Total amount cannot be less than required advance payment',
         details: {
           finalTotal,
-          requiredDeliveryFee: calculatedFinalDeliveryCharge,
+          requiredAdvancePayment,
         },
       });
     }
@@ -231,11 +249,21 @@ exports.createOrder = async (req, res) => {
     }
 
     const deliveryPaymentMethod =
-      calculatedFinalDeliveryCharge > 0 ? paymentMethod : 'COD';
+      requiresOnlinePayment ? paymentMethod : 'COD';
     const initialDeliveryPaymentStatus =
-      calculatedFinalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+      requiresOnlinePayment ? 'pending' : 'not_required';
     const initialOrderStatus =
-      calculatedFinalDeliveryCharge > 0 ? 'pending' : 'confirmed';
+      requiresOnlinePayment ? 'pending' : 'confirmed';
+    const cleanTransactionId = transactionId?.trim();
+    const cleanSenderNumber = senderNumber?.trim();
+    const cleanReceiverNumber = receiverNumber?.trim();
+    const transactionFields = requiresOnlinePayment
+      ? {
+          transactionId: cleanTransactionId,
+          senderNumber: cleanSenderNumber || '',
+          receiverNumber: cleanReceiverNumber || '',
+        }
+      : {};
 
     // Generate unique order code
     const orderCode = await generateOrderCode(Order);
@@ -264,22 +292,20 @@ exports.createOrder = async (req, res) => {
       shippingInfo: shipping,
       paymentInfo: {
         method: deliveryPaymentMethod,
-        transactionId: transactionId?.trim() || null,
-        status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+        status: requiresOnlinePayment ? 'Pending' : 'COD',
+        ...(requiresOnlinePayment ? { transactionId: cleanTransactionId } : {}),
       },
       advancePayment: {
         method: deliveryPaymentMethod,
-        amount: calculatedFinalDeliveryCharge,
-        transactionId: transactionId?.trim() || null,
-        status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+        amount: requiredAdvancePayment,
+        status: requiresOnlinePayment ? 'Pending' : 'Not Required',
+        ...(requiresOnlinePayment ? { transactionId: cleanTransactionId } : {}),
       },
       totalAmount: finalTotal,
       deliveryFee: calculatedFinalDeliveryCharge,
-      paidAmount: calculatedFinalDeliveryCharge,
-      dueAmount: finalTotal - calculatedFinalDeliveryCharge,
-      transactionId: transactionId?.trim() || null,
-      senderNumber: senderNumber?.trim() || '',
-      receiverNumber: receiverNumber?.trim() || '',
+      paidAmount: requiredAdvancePayment,
+      dueAmount: finalTotal - requiredAdvancePayment,
+      ...transactionFields,
       deliveryPaymentStatus: initialDeliveryPaymentStatus,
       totalPrice: finalTotal,
       subtotal: finalSubtotal,
@@ -302,20 +328,26 @@ exports.createOrder = async (req, res) => {
         discount: discountAmount,
         deliveryFee: calculatedFinalDeliveryCharge,
         total: finalTotal,
-        remainingAmount: finalTotal - calculatedFinalDeliveryCharge,
+        remainingAmount: finalTotal - requiredAdvancePayment,
+        paymentOption,
+        advancePaymentAmount: requiredAdvancePayment,
       },
       payment: {
         advance: {
-          status: calculatedFinalDeliveryCharge > 0 ? 'Pending' : 'Confirmed',
+          status: requiresOnlinePayment ? 'Pending' : 'Not Required',
           method: deliveryPaymentMethod,
-          amount: calculatedFinalDeliveryCharge,
-          transactionId: transactionId?.trim() || null,
-          senderNumber: senderNumber?.trim() || '',
-          receiverNumber: receiverNumber?.trim() || '',
+          amount: requiredAdvancePayment,
+          ...transactionFields,
         },
-        remaining: { status: 'Pending', method: 'COD', amount: finalTotal - calculatedFinalDeliveryCharge },
-        paymentStatus: 'partial',
+        remaining: { status: finalTotal - requiredAdvancePayment > 0 ? 'Pending' : 'Paid', method: 'COD', amount: finalTotal - requiredAdvancePayment },
+        paymentStatus:
+          paymentOption === "full_payment"
+            ? "pending_verification"
+            : paymentOption === "cod"
+              ? "cod"
+              : "partial",
       },
+      paymentOption,
       order: {
         status: initialOrderStatus,
       }
@@ -325,7 +357,9 @@ exports.createOrder = async (req, res) => {
 
     await notifyAdmins(req, {
       title: 'New order placed',
-      message: `Order #${getOrderIdentifier(order)} is waiting for delivery payment verification.`,
+      message: requiresOnlinePayment
+        ? `Order #${getOrderIdentifier(order)} is waiting for payment verification.`
+        : `Order #${getOrderIdentifier(order)} was placed as cash on delivery.`,
       type: 'order_created',
       link: '/admin/orders',
       metadata: { orderId: order._id, orderCode: order.orderCode },
@@ -334,8 +368,8 @@ exports.createOrder = async (req, res) => {
     await notifyOrderCustomer(req, order, {
       title: 'Order placed successfully',
       message:
-        calculatedFinalDeliveryCharge > 0
-          ? `Your order #${getOrderIdentifier(order)} was placed. Delivery payment is pending admin verification.`
+        requiresOnlinePayment
+          ? `Your order #${getOrderIdentifier(order)} was placed. Payment is pending admin verification.`
           : `Your order #${getOrderIdentifier(order)} was placed successfully.`,
       type: 'order_created',
       link: '/orders',

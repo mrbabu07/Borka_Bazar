@@ -15,6 +15,18 @@ export default function ProductCardPremium({ product }) {
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || "");
 
+  const getColorLabel = (color) => {
+    if (!color) return "";
+    if (typeof color === "string") return color;
+    return color.name || color.value || JSON.stringify(color);
+  };
+
+  const getColorKey = (color, index) =>
+    `${getColorLabel(color) || "color"}-${index}`;
+
+  const isSameColor = (left, right) =>
+    getColorLabel(left) === getColorLabel(right);
+
   // Track product view
   useProductView(product._id);
 
@@ -309,17 +321,17 @@ export default function ProductCardPremium({ product }) {
                     Select Color
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {product.colors.map((color) => (
+                    {product.colors.map((color, index) => (
                       <button
-                        key={color}
+                        key={getColorKey(color, index)}
                         onClick={() => setSelectedColor(color)}
                         className={`px-4 py-2 border text-sm transition-all ${
-                          selectedColor === color
+                          isSameColor(selectedColor, color)
                             ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-gray-950"
                             : "border-gray-300 text-gray-700 hover:border-black dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-300"
                         }`}
                       >
-                        {color}
+                        {getColorLabel(color)}
                       </button>
                     ))}
                   </div>

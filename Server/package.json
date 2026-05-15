@@ -15,6 +15,7 @@
     "test": "jest --runInBand",
     "check:env": "node scripts/validateEnv.js",
     "seed": "node scripts/seed.js",
+    "seed:categories": "node scripts/ensureCoreCategories.js",
     "seed:all": "node scripts/seedAll.js",
     "seed:flash": "node scripts/seedFlashSales.js",
     "seed:flash:now": "node scripts/seedActiveFlashSales.js",
