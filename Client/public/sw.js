@@ -274,7 +274,7 @@ async function handleNavigationRequest(request) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Offline - Borka Bazar</title>
+          <title>Offline - Dubai Borka Bazar Hnila</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
@@ -442,8 +442,8 @@ self.addEventListener("push", (event) => {
   console.log("📬 Service Worker: Push notification received");
 
   let notificationData = {
-    title: "Borka Bazar",
-    body: "You have new updates from Borka Bazar!",
+    title: "Dubai Borka Bazar Hnila",
+    body: "You have new updates from Dubai Borka Bazar Hnila!",
     icon: "/icons/icon-192x192.png",
     badge: "/icons/icon-72x72.png",
     vibrate: [100, 50, 100],

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { contactInfo } from "../config/socialLinks";
 import useSocialLinks from "../hooks/useSocialLinks";
+import { brand } from "../config/brand";
+import BrandLogo from "./BrandLogo";
 
 export default function FooterPremium() {
   const currentYear = new Date().getFullYear();
@@ -34,23 +36,16 @@ export default function FooterPremium() {
   };
 
   return (
-    <footer className="bg-black dark:bg-gray-950 text-white transition-colors duration-300">
+    <footer className="bg-gray-950 text-white transition-colors duration-300 dark:bg-black">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
           {/* Brand Section */}
           <div className="lg:col-span-2">
-            <Link to="/" className="inline-block mb-6">
-              <h2 className="font-display text-3xl font-bold tracking-tight">
-                BORKA BAZAR
-              </h2>
-              <p className="text-[10px] tracking-[0.3em] text-gray-400 uppercase">
-                Modest Fashion
-              </p>
-            </Link>
+            <BrandLogo inverted className="mb-6 inline-flex" />
             <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-sm">
-              Discover timeless elegance with our curated collection of premium modest fashion. 
-              Quality craftsmanship meets contemporary design.
+              Discover modern modest fashion with a curated collection of burkas,
+              abayas, and hijabs shaped for everyday elegance.
             </p>
             
             {/* Contact Info */}
@@ -178,7 +173,7 @@ export default function FooterPremium() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-gray-400 text-sm">
-              © {currentYear} Borka Bazar. All rights reserved.
+              © {currentYear} {brand.name}. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               {footerLinks.policy.map((link) => (

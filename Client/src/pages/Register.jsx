@@ -101,7 +101,7 @@ export default function Register() {
           <h1 className="mb-2 text-3xl font-bold text-gray-900">
             Create an account
           </h1>
-          <p className="text-gray-600">Join Borka Bazar and start shopping</p>
+          <p className="text-gray-600">Join Dubai Borka Bazar Hnila and start shopping</p>
         </div>
 
         <div className="rounded-2xl bg-white p-8 shadow-soft">

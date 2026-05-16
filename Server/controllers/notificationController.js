@@ -501,7 +501,7 @@ const sendTestNotificationPublic = async (req, res) => {
 
     const notificationData = {
       title: title || "🧪 Test Notification",
-      body: body || "This is a test notification from HnilaBazar!",
+      body: body || "This is a test notification from Dubai Borka Bazar Hnila!",
       icon: icon || "/icons/icon-192x192.png",
       badge: badge || "/icons/icon-72x72.png",
       tag: "test-notification",
@@ -558,7 +558,7 @@ const sendTestNotification = async (req, res) => {
       [userId],
       {
         title: "🧪 Test Notification",
-        body: "This is a test notification from HnilaBazar!",
+        body: "This is a test notification from Dubai Borka Bazar Hnila!",
         icon: "/icons/icon-192x192.png",
         badge: "/icons/icon-72x72.png",
         tag: "test-notification",

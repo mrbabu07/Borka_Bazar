@@ -337,8 +337,11 @@ export default function AdminDashboard() {
     const delivered = scopedOrders.filter(
       (order) => getOrderStatus(order) === "delivered",
     ).length;
+    const shipped = scopedOrders.filter(
+      (order) => getOrderStatus(order) === "shipped",
+    ).length;
     const processing = scopedOrders.filter((order) =>
-      ["confirmed", "processing", "shipped"].includes(getOrderStatus(order)),
+      ["confirmed", "processing"].includes(getOrderStatus(order)),
     ).length;
     const pending = scopedOrders.filter(
       (order) => getOrderStatus(order) === "pending",
@@ -363,6 +366,7 @@ export default function AdminDashboard() {
       revenue,
       dueCod,
       delivered,
+      shipped,
       processing,
       pending,
       cancelled,
@@ -421,6 +425,7 @@ export default function AdminDashboard() {
   const badgeCounts = {
     openTickets,
     pendingOrders: dashboardStats.pending,
+    shippedOrders: dashboardStats.shipped,
     pendingPayments: pendingPayments.length,
     pendingReturns,
     printReady: dashboardStats.printReady,
@@ -430,6 +435,7 @@ export default function AdminDashboard() {
   const pipelineItems = [
     { label: "Pending", value: dashboardStats.pending, color: "bg-amber-500" },
     { label: "In progress", value: dashboardStats.processing, color: "bg-blue-500" },
+    { label: "Shipped", value: dashboardStats.shipped, color: "bg-indigo-500" },
     { label: "Delivered", value: dashboardStats.delivered, color: "bg-emerald-500" },
     { label: "Issues", value: dashboardStats.cancelled, color: "bg-red-500" },
   ];
@@ -474,10 +480,18 @@ export default function AdminDashboard() {
     {
       title: "Orders in progress",
       value: dashboardStats.processing,
-      helper: "Confirmed, processing, and shipped orders",
+      helper: "Confirmed and processing orders",
       to: "/admin/orders",
       icon: Clock3,
       tone: "bg-blue-50 text-blue-700 border-blue-100",
+    },
+    {
+      title: "Shipped orders",
+      value: dashboardStats.shipped,
+      helper: "Dispatched parcels waiting for delivery",
+      to: "/admin/orders",
+      icon: Truck,
+      tone: "bg-indigo-50 text-indigo-700 border-indigo-100",
     },
     {
       title: "Support waiting",
@@ -564,7 +578,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <Link
             to="/admin/orders"
             className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
@@ -596,6 +610,16 @@ export default function AdminDashboard() {
             <CountBadge value={openTickets} tone="bg-cyan-700 text-white" />
           </Link>
           <Link
+            to="/admin/orders"
+            className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-indigo-900 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-100"
+          >
+            <span className="flex items-center gap-3 text-sm font-semibold">
+              <Truck className="h-4 w-4" />
+              Shipped orders
+            </span>
+            <CountBadge value={dashboardStats.shipped} tone="bg-indigo-700 text-white" />
+          </Link>
+          <Link
             to="/admin/returns"
             className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-violet-900 transition hover:border-violet-300 hover:bg-violet-100 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
           >
@@ -618,7 +642,7 @@ export default function AdminDashboard() {
           <KpiCard
             title="Orders"
             value={loading ? "..." : dashboardStats.orders.toLocaleString()}
-            helper={`${dashboardStats.delivered} delivered`}
+            helper={`${dashboardStats.shipped} shipped, ${dashboardStats.delivered} delivered`}
             icon={ClipboardList}
             tone="bg-blue-50 text-blue-700 border-blue-100"
           />
@@ -660,7 +684,7 @@ export default function AdminDashboard() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                 {priorityItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -830,7 +854,7 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                     <ShoppingBag className="h-3.5 w-3.5" />
@@ -847,6 +871,15 @@ export default function AdminDashboard() {
                   </div>
                   <p className="text-sm font-bold text-gray-950 dark:text-white">
                     {loading ? "..." : dashboardStats.printReady}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-indigo-50 p-3 dark:bg-indigo-950/40">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                    <Truck className="h-3.5 w-3.5" />
+                    Shipped
+                  </div>
+                  <p className="text-sm font-bold text-indigo-950 dark:text-indigo-100">
+                    {loading ? "..." : dashboardStats.shipped}
                   </p>
                 </div>
               </div>

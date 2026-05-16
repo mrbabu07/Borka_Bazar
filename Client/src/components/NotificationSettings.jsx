@@ -177,7 +177,7 @@ export default function NotificationSettings() {
 
   const testNotification = () => {
     pushNotificationService.showLocalNotification("Test Notification", {
-      body: "This is a test notification from Borka Bazar.",
+      body: "This is a test notification from Dubai Borka Bazar Hnila.",
       tag: "test-notification",
     });
   };

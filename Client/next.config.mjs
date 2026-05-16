@@ -11,6 +11,7 @@ const apiTarget = serverApiUrl.replace(/\/api$/, "");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ["192.168.1.103"],
   env: {
     NEXT_PUBLIC_API_URL: "/api",
     NEXT_PUBLIC_FIREBASE_API_KEY:

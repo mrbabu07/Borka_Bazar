@@ -10,6 +10,7 @@ import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
 import useSocialLinks from "../hooks/useSocialLinks";
 import { getArrayData } from "../utils/apiConfig";
+import BrandLogo from "./BrandLogo";
 
 export default function NavbarPremium() {
   const { t } = useTranslation();
@@ -61,23 +62,20 @@ export default function NavbarPremium() {
   return (
     <>
       {/* Top Bar - Minimal & Elegant */}
-      <div className="bg-black py-2 text-xs text-white transition-colors duration-300 dark:bg-gray-900">
+      <div className="bg-gray-950 py-2 text-xs text-white transition-colors duration-300 dark:bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
             <p className="hidden tracking-wide md:block">
               Fast Delivery Across Bangladesh
             </p>
-            <Link
-              to="/"
-              className="min-w-0 flex-1 truncate font-display text-sm font-bold tracking-[0.18em] text-white transition-colors hover:text-gold-400 md:hidden"
-            >
-              BORKA BAZAR
-            </Link>
+            <p className="min-w-0 flex-1 truncate font-semibold tracking-wide text-gray-200 md:hidden">
+              Fast Delivery Across Bangladesh
+            </p>
             <div className="flex shrink-0 items-center gap-3 sm:gap-6">
               <a href="tel:01878305319" className="hidden tracking-wide transition-colors hover:text-gold-500 sm:inline">
                 01878305319
               </a>
-              <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 sm:flex">
                 {socialLinks.facebook.enabled && (
                   <button 
                     onClick={() => window.open(socialLinks.facebook.url, "_blank", "noopener,noreferrer")}
@@ -121,23 +119,14 @@ export default function NavbarPremium() {
 
       {/* Main Navbar - Premium & Clean */}
       <nav
-        className={`bg-white dark:bg-gray-900 sticky top-0 z-50 transition-all duration-300 ${
-          scrolled ? "shadow-md border-b border-gray-100 dark:border-gray-800" : "border-b border-gray-100 dark:border-gray-800"
+        className={`sticky top-0 z-50 border-b bg-white/90 backdrop-blur-xl transition-all duration-300 dark:bg-gray-950/90 ${
+          scrolled ? "border-gray-200 shadow-sm dark:border-gray-800" : "border-gray-100 dark:border-gray-800"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center justify-between gap-2 py-3 sm:h-20 sm:py-0">
+          <div className="flex min-w-0 items-center justify-between gap-2 py-3 sm:min-h-20 sm:py-2">
             {/* Logo - Elegant Typography */}
-            <Link to="/" className="group flex min-w-0 shrink items-center">
-              <div className="min-w-0 text-left sm:text-center">
-                <h1 className="truncate font-display text-lg font-bold tracking-tight text-black transition-colors group-hover:text-gold-500 dark:text-white sm:text-2xl md:text-3xl">
-                  BORKA BAZAR
-                </h1>
-                <p className="truncate text-[9px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 sm:text-[10px] sm:tracking-[0.3em]">
-                  Modest Fashion
-                </p>
-              </div>
-            </Link>
+            <BrandLogo compact className="shrink-0" />
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-8">

@@ -16,6 +16,29 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const method = error.config?.method?.toUpperCase() || "GET";
+    const url = `${error.config?.baseURL || ""}${error.config?.url || ""}`;
+    const serverMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message;
+
+    error.message = `${method} ${url} failed${
+      status ? ` with status ${status}` : ""
+    }: ${serverMessage}`;
+
+    if (process.env.NODE_ENV === "development") {
+      console.error("[API]", error.message, error.response?.data || "");
+    }
+
+    return Promise.reject(error);
+  },
+);
+
 // Products
 export const getProducts = (filters = {}) => {
   return api.get("/products", { params: filters });

@@ -25,7 +25,7 @@ export default function LiveChat() {
         setMessages([
           {
             id: 1,
-            text: "Hello! Welcome to Borka Bazar. How can I help you today?",
+            text: "Hello! Welcome to Dubai Borka Bazar Hnila. How can I help you today?",
             sender: "bot",
             timestamp: new Date(),
           },
@@ -142,7 +142,7 @@ export default function LiveChat() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold">Borka Bazar Support</h3>
+                <h3 className="font-semibold">Dubai Borka Bazar Hnila Support</h3>
                 <p className="text-xs text-white/80">Online now</p>
               </div>
             </div>

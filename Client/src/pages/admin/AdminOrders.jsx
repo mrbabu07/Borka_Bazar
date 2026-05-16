@@ -51,6 +51,7 @@ const filters = [
   { value: "confirmed_payment", label: "Payment Confirmed" },
   { value: "rejected_payment", label: "Payment Rejected" },
   { value: "processing", label: "Processing" },
+  { value: "shipped", label: "Shipped" },
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
@@ -200,14 +201,17 @@ export default function AdminOrders() {
       (order) => getPaymentStatus(order) === "confirmed",
     ).length;
     const processing = orders.filter((order) =>
-      ["confirmed", "processing", "shipped"].includes(getOrderStatus(order)),
+      ["confirmed", "processing"].includes(getOrderStatus(order)),
+    ).length;
+    const shipped = orders.filter(
+      (order) => getOrderStatus(order) === "shipped",
     ).length;
     const codDue = orders.reduce(
       (sum, order) => sum + Number(getTotals(order).dueAmount || 0),
       0,
     );
 
-    return { pendingPayment, confirmedPayment, processing, codDue };
+    return { pendingPayment, confirmedPayment, processing, shipped, codDue };
   }, [orders]);
 
   const visibleOrders = useMemo(() => {
@@ -223,7 +227,8 @@ export default function AdminOrders() {
           return paymentStatus === "confirmed";
         if (activeFilter === "rejected_payment") return paymentStatus === "rejected";
         if (activeFilter === "processing")
-          return ["confirmed", "processing", "shipped"].includes(orderStatus);
+          return ["confirmed", "processing"].includes(orderStatus);
+        if (activeFilter === "shipped") return orderStatus === "shipped";
         if (activeFilter === "delivered") return orderStatus === "delivered";
         if (activeFilter === "cancelled")
           return orderStatus === "cancelled" || orderStatus === "canceled";
@@ -432,7 +437,7 @@ export default function AdminOrders() {
       </div>
 
       <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <StatCard
             title="Pending Payments"
             value={stats.pendingPayment}
@@ -450,9 +455,16 @@ export default function AdminOrders() {
           <StatCard
             title="In Progress"
             value={stats.processing}
-            helper="Confirmed, processing, shipped"
+            helper="Confirmed and processing"
             icon={Truck}
             tone="border-blue-100 bg-blue-50 text-blue-700"
+          />
+          <StatCard
+            title="Shipped"
+            value={stats.shipped}
+            helper="Dispatched parcels"
+            icon={Truck}
+            tone="border-indigo-100 bg-indigo-50 text-indigo-700"
           />
           <StatCard
             title="COD To Collect"

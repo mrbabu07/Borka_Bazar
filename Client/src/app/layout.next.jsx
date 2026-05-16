@@ -1,25 +1,25 @@
 import "../index.css";
+import { brand } from "../config/brand";
 
 export const metadata = {
-  title: "Borka Bazar - Elegant Modest Fashion",
-  description:
-    "Borka Bazar - Your trusted online shopping destination for elegant modest fashion, burkas, abayas, and hijabs.",
+  title: `${brand.name} - Modern Modest Fashion`,
+  description: brand.description,
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
-    title: "Borka Bazar - Elegant Modest Fashion Online",
+    title: `${brand.name} - Modern Modest Fashion Online`,
     description:
-      "Discover elegant burkas, abayas, and hijabs with fast delivery across Bangladesh",
+      "Discover modern burkas, abayas, and hijabs with fast delivery across Bangladesh",
     url: "https://borkabazar.com",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Borka Bazar - Elegant Modest Fashion Online",
+    title: `${brand.name} - Modern Modest Fashion Online`,
     description:
-      "Discover elegant burkas, abayas, and hijabs with fast delivery across Bangladesh",
+      "Discover modern burkas, abayas, and hijabs with fast delivery across Bangladesh",
   },
 };
 

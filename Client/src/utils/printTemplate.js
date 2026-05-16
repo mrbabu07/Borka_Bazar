@@ -462,8 +462,8 @@ export const generateProfessionalInvoice = (order) => {
   <main class="sheet">
     <header class="header">
       <div>
-        <div class="brand">Borka Bazar</div>
-        <div class="tagline">Premium Modest Fashion</div>
+        <div class="brand">Dubai Borka Bazar Hnila</div>
+        <div class="tagline">Modern Modest Fashion</div>
       </div>
       <div>
         <div class="receipt-title">Parcel Receipt</div>
@@ -573,7 +573,7 @@ export const generateProfessionalInvoice = (order) => {
 
     <footer class="footer">
       <div>
-        <strong>Thank you for shopping with Borka Bazar.</strong><br />
+        <strong>Thank you for shopping with Dubai Borka Bazar Hnila.</strong><br />
         Generated ${escapeHtml(formatDate(new Date()))}. This receipt is computer generated for parcel processing.
       </div>
       <div class="signature">Packed By</div>

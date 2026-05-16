@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import BrandLogo from "./BrandLogo";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,12 +11,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">H</span>
-              </div>
-              <span className="text-2xl font-bold text-white">Borka Bazar</span>
-            </Link>
+            <BrandLogo inverted compact className="mb-4" />
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
               Your trusted online shopping destination. Quality products, great
               prices, and exceptional service.
@@ -182,7 +178,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 gap-6">
             <p className="text-gray-400 text-sm">
-              © {currentYear} Borka Bazar. All rights reserved.
+              © {currentYear} Dubai Borka Bazar Hnila. All rights reserved.
             </p>
 
             {/* Payment Methods */}

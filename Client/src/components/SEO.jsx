@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { brand } from "../config/brand";
 
 export default function SEO({ 
   title, 
@@ -7,18 +8,18 @@ export default function SEO({
   keywords, 
   image, 
   type = "website",
-  author = "Borka Bazar"
+  author = brand.name
 }) {
   const location = useLocation();
   const siteUrl = window.location.origin;
   const currentUrl = `${siteUrl}${location.pathname}`;
 
-  const defaultTitle = "Borka Bazar - Elegant Modest Fashion";
-  const defaultDescription = "Discover elegant and modest fashion at Borka Bazar. Shop premium quality burkas, abayas, and hijabs with delivery across Bangladesh.";
+  const defaultTitle = `${brand.name} - Modern Modest Fashion`;
+  const defaultDescription = `${brand.description} Shop premium quality pieces with delivery across Bangladesh.`;
   const defaultKeywords = "burka, abaya, hijab, modest fashion, islamic clothing, bangladesh, online shopping";
   const defaultImage = `${siteUrl}/og-image.jpg`;
 
-  const metaTitle = title ? `${title} | Borka Bazar` : defaultTitle;
+  const metaTitle = title ? `${title} | ${brand.name}` : defaultTitle;
   const metaDescription = description || defaultDescription;
   const metaKeywords = keywords || defaultKeywords;
   const metaImage = image || defaultImage;
@@ -38,7 +39,7 @@ export default function SEO({
     updateMetaTag("og:image", metaImage, "property");
     updateMetaTag("og:url", currentUrl, "property");
     updateMetaTag("og:type", type, "property");
-    updateMetaTag("og:site_name", "Borka Bazar", "property");
+    updateMetaTag("og:site_name", brand.name, "property");
 
     // Twitter Card tags
     updateMetaTag("twitter:card", "summary_large_image", "name");

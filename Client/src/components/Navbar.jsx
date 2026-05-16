@@ -10,6 +10,7 @@ import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
 import TopBarLanguageSwitcher from "./SimpleLanguageSwitcher";
 import SearchBar from "./SearchBar";
+import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
   const { t } = useTranslation();
@@ -116,17 +117,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link
-              to="/"
-              className="flex items-center space-x-2 group flex-shrink-0"
-            >
-              <div className="w-10 h-10 bg-[#1e7098] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">H</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white hidden sm:block">
-                Borka Bazar
-              </span>
-            </Link>
+            <BrandLogo compact className="flex-shrink-0" />
 
             {/* Search Bar - Desktop */}
             <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
