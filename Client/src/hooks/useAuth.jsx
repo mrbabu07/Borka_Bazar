@@ -14,7 +14,6 @@ export default function useAuth() {
     isAdmin: context.isAdmin,
     register: context.createUser,
     login: context.signIn,
-    googleLogin: context.googleLogin,
     logout: context.logOut,
   };
 }

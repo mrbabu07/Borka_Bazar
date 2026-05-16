@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AlertCircle, ArrowRight, Lock, Mail } from "lucide-react";
+import toast from "react-hot-toast";
+import BrandLogo from "../components/BrandLogo";
 import useAuth from "../hooks/useAuth";
-import SocialLogin from "../components/SocialLogin";
 
 export default function Login() {
-  const { login, googleLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -13,167 +15,156 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       await login(formData.email, formData.password);
+      toast.success("Signed in successfully");
       navigate(from, { replace: true });
     } catch (error) {
-      setError(
-        error.message || "Failed to login. Please check your credentials.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError("");
-    setLoading(true);
-
-    try {
-      await googleLogin();
-      navigate(from, { replace: true });
-    } catch (error) {
-      setError(error.message || "Failed to login with Google");
+      const message =
+        error.message || "Failed to login. Please check your credentials.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-gray-50">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center space-x-2 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">H</span>
-            </div>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back
-          </h1>
-          <p className="text-gray-600">Sign in to your account to continue</p>
-        </div>
+    <div className="min-h-screen bg-stone-50 text-gray-950 dark:bg-gray-950 dark:text-gray-100">
+      <main className="mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:px-8">
+        <section className="hidden lg:block">
+          <BrandLogo />
+          <div className="mt-14 max-w-xl">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-gold-600 dark:text-gold-400">
+              Account Access
+            </p>
+            <h1 className="font-display text-5xl leading-tight text-gray-950 dark:text-white">
+              Welcome back to your shopping account.
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-7 text-gray-600 dark:text-gray-400">
+              Sign in to track orders, manage delivery addresses, and continue
+              checkout without losing your saved items.
+            </p>
+          </div>
+        </section>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-soft p-8">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
-              <svg
-                className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
+        <section className="mx-auto w-full max-w-md">
+          <div className="mb-8 flex justify-center lg:hidden">
+            <BrandLogo compact />
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
+          <div className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+            <div className="mb-8">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-gold-600 dark:text-gold-400">
+                Sign In
+              </p>
+              <h2 className="text-3xl font-semibold text-gray-950 dark:text-white">
+                Access your account
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Use the email and password connected to your profile.
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-6 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <AuthField
+                icon={Mail}
+                label="Email Address"
                 name="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
                 placeholder="you@example.com"
-                className="input-field"
+                autoComplete="email"
+                required
               />
-            </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
+              <AuthField
+                icon={Lock}
+                label="Password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                required
+              />
+
+              <div className="flex items-center justify-end">
                 <a
                   href="#"
-                  className="text-sm text-primary-500 hover:text-primary-600"
+                  className="text-sm font-semibold text-gray-600 transition hover:text-gold-600 dark:text-gray-300 dark:hover:text-gold-400"
                 >
                   Forgot password?
                 </a>
               </div>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="••••••••"
-                className="input-field"
-              />
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary py-3 flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                <span>Sign In</span>
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gold-500 disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-white dark:text-gray-950 dark:hover:bg-gold-500 dark:hover:text-white dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
+              >
+                {loading ? "Signing in..." : "Sign In"}
+                {!loading && <ArrowRight className="h-4 w-4" />}
+              </button>
+            </form>
 
-          {/* Social Login */}
-          <SocialLogin />
-
-          {/* Sign Up Link */}
-          <p className="mt-8 text-center text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="text-primary-500 hover:text-primary-600 font-semibold"
-            >
-              Sign up for free
-            </Link>
-          </p>
-        </div>
-      </div>
+            <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="font-semibold text-gray-950 underline decoration-gold-500 underline-offset-4 transition hover:text-gold-600 dark:text-white dark:hover:text-gold-400"
+              >
+                Create one
+              </Link>
+            </p>
+          </div>
+        </section>
+      </main>
     </div>
+  );
+}
+
+function AuthField({
+  icon: Icon,
+  label,
+  className = "",
+  required = false,
+  ...props
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </span>
+      <span className="relative block">
+        <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          {...props}
+          required={required}
+          className={`w-full rounded-lg border border-stone-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-gold-500 focus:ring-2 focus:ring-gold-500/15 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:placeholder:text-gray-500 ${className}`}
+        />
+      </span>
+    </label>
   );
 }

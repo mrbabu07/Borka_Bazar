@@ -204,6 +204,26 @@ async function run() {
 
     console.log("🔧 Registering routes...");
 
+    app.get("/api", (req, res) => {
+      res.json({
+        message: "Borka_Bazar API is running",
+        endpoints: {
+          products: "/api/products",
+          categories: "/api/categories",
+          orders: "/api/orders",
+          user: "/api/user",
+          wishlist: "/api/wishlist",
+          reviews: "/api/reviews",
+          coupons: "/api/coupons",
+          addresses: "/api/addresses",
+          returns: "/api/returns",
+          payments: "/api/payments",
+          support: "/api/support",
+          userManagement: "/api/admin",
+        },
+      });
+    });
+
     app.use("/api/products", productRoutes);
     console.log("✅ Products routes registered");
 
