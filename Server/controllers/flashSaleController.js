@@ -180,7 +180,7 @@ exports.createFlashSale = async (req, res) => {
           title: flashSale.title,
           discountPercentage: flashSale.discountPercentage,
           product: productDoc,
-        });
+        }, null, req.app.locals.models);
       } catch (notificationError) {
         console.error("Failed to send flash sale notification:", notificationError);
       }

@@ -131,7 +131,11 @@ export default function AdminReturns() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Toaster
-        position="top-right"
+        position="top-center"
+        containerStyle={{
+          top: "50%",
+          transform: "translateY(-50%)",
+        }}
         toastOptions={{
           duration: 3000,
           style: {

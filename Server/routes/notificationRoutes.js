@@ -12,6 +12,8 @@ const {
   streamNotifications,
   markInAppNotificationRead,
   markAllInAppNotificationsRead,
+  deleteInAppNotification,
+  deleteAllInAppNotifications,
 } = require("../controllers/notificationController");
 const { verifyToken } = require("../middleware/auth");
 
@@ -29,7 +31,9 @@ router.get("/preferences", getPreferences);
 router.post("/preferences", updatePreferences);
 router.get("/in-app", getInAppNotifications);
 router.patch("/in-app/read-all", markAllInAppNotificationsRead);
+router.delete("/in-app", deleteAllInAppNotifications);
 router.patch("/in-app/:id/read", markInAppNotificationRead);
+router.delete("/in-app/:id", deleteInAppNotification);
 router.post("/test-auth", sendTestNotification); // Authenticated test endpoint
 
 module.exports = router;

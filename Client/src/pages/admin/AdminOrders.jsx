@@ -387,7 +387,13 @@ export default function AdminOrders() {
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-center"
+        containerStyle={{
+          top: "50%",
+          transform: "translateY(-50%)",
+        }}
+      />
 
       <div className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">

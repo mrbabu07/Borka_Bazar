@@ -31,10 +31,10 @@ const Toast = ({ toast }) => {
     };
 
     const animationStyles = isLeaving
-      ? "opacity-0 translate-x-full scale-95"
+      ? "opacity-0 -translate-y-3 scale-95"
       : isVisible
-        ? "opacity-100 translate-x-0 scale-100"
-        : "opacity-0 translate-x-full scale-95";
+        ? "opacity-100 translate-y-0 scale-100"
+        : "opacity-0 -translate-y-3 scale-95";
 
     return `${baseStyles} ${typeStyles[toast.type]} ${animationStyles}`;
   };
@@ -134,7 +134,7 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-sm w-full">
+    <div className="fixed top-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 space-y-3">
       {toasts.map((toast) => (
         <Toast key={toast.id} toast={toast} />
       ))}

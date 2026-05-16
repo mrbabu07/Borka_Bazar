@@ -9,8 +9,33 @@ const getApiUrl = () => {
   return `${window.location.protocol}//${window.location.hostname}:5000/api`;
 };
 
-const API_URL = getApiUrl();
+const getRealtimeApiUrl = () => {
+  const configured = getApiUrl();
+  if (configured && !configured.startsWith("/")) return configured;
+  if (typeof window === "undefined") return configured;
+  return `${window.location.protocol}//${window.location.hostname}:5000/api`;
+};
+
+const REALTIME_API_URL = getRealtimeApiUrl();
 const NotificationContext = createContext();
+
+const readJsonResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON, received ${response.status}: ${text.slice(0, 120)}`,
+    );
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || data.message || `Request failed ${response.status}`);
+  }
+
+  return data;
+};
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
@@ -29,6 +54,24 @@ const normalizeNotification = (notification) => ({
     new Date().toISOString(),
   read: Boolean(notification.read),
 });
+
+const getDeletedNotificationIds = (userId) => {
+  if (!userId) return [];
+  try {
+    return JSON.parse(localStorage.getItem(`deleted_notifications_${userId}`) || "[]");
+  } catch {
+    localStorage.removeItem(`deleted_notifications_${userId}`);
+    return [];
+  }
+};
+
+const saveDeletedNotificationIds = (userId, ids) => {
+  if (!userId) return;
+  localStorage.setItem(
+    `deleted_notifications_${userId}`,
+    JSON.stringify([...new Set(ids)].slice(-500)),
+  );
+};
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
@@ -50,8 +93,10 @@ export const NotificationProvider = ({ children }) => {
 
   const mergeNotifications = useCallback((incoming) => {
     setNotifications((current) => {
+      const deletedIds = new Set(getDeletedNotificationIds(currentUser?.uid));
       const map = new Map();
       [...incoming.map(normalizeNotification), ...current].forEach((item) => {
+        if (deletedIds.has(item.id)) return;
         map.set(item.id, item);
       });
       const merged = Array.from(map.values())
@@ -65,16 +110,17 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!currentUser) return undefined;
 
-    let eventSource;
     let closed = false;
     let syncInterval;
+    let reconnectTimer;
+    let eventSource;
 
     async function loadRemoteNotifications(token) {
       try {
-        const response = await fetch(`${API_URL}/notifications/in-app`, {
+        const response = await fetch(`${REALTIME_API_URL}/notifications/in-app`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await response.json();
+        const data = await readJsonResponse(response);
         if (data.success && Array.isArray(data.data)) {
           mergeNotifications(data.data);
         }
@@ -103,23 +149,43 @@ export const NotificationProvider = ({ children }) => {
 
       if (closed) return;
 
-      eventSource = new EventSource(
-        `${API_URL}/notifications/stream?token=${encodeURIComponent(token)}`,
-      );
+      const connectStream = async () => {
+        if (closed) return;
 
-      eventSource.addEventListener("connected", () => setConnected(true));
-      eventSource.addEventListener("notification", (event) => {
-        const notification = normalizeNotification(JSON.parse(event.data));
-        mergeNotifications([notification]);
-        toast(notification.title, { duration: 4500 });
-      });
-      eventSource.onerror = () => setConnected(false);
+        const streamToken = await currentUser.getIdToken();
+        eventSource = new EventSource(
+          `${REALTIME_API_URL}/notifications/stream?token=${encodeURIComponent(streamToken)}`,
+        );
+
+        eventSource.addEventListener("connected", () => setConnected(true));
+        eventSource.addEventListener("notification", (event) => {
+          try {
+            const notification = normalizeNotification(JSON.parse(event.data));
+            mergeNotifications([notification]);
+            toast(notification.title, { duration: 4500 });
+          } catch (error) {
+            console.error("Failed to parse realtime notification:", error);
+          }
+        });
+        eventSource.onerror = async () => {
+          setConnected(false);
+          eventSource?.close();
+          const freshToken = await currentUser.getIdToken().catch(() => null);
+          if (freshToken) await loadRemoteNotifications(freshToken);
+          if (!closed) {
+            reconnectTimer = window.setTimeout(connectStream, 3000);
+          }
+        };
+      };
+
+      connectStream();
     }
 
     connect();
 
     return () => {
       closed = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
       if (syncInterval) window.clearInterval(syncInterval);
       if (eventSource) eventSource.close();
       setConnected(false);
@@ -147,7 +213,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       const token = await currentUser?.getIdToken();
       if (token) {
-        await fetch(`${API_URL}/notifications/in-app/${id}/read`, {
+        await fetch(`${REALTIME_API_URL}/notifications/in-app/${id}/read`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -167,7 +233,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       const token = await currentUser?.getIdToken();
       if (token) {
-        await fetch(`${API_URL}/notifications/in-app/read-all`, {
+        await fetch(`${REALTIME_API_URL}/notifications/in-app/read-all`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -178,18 +244,49 @@ export const NotificationProvider = ({ children }) => {
   };
 
   const clearNotification = (id) => {
+    const deletedIds = getDeletedNotificationIds(currentUser?.uid);
+    saveDeletedNotificationIds(currentUser?.uid, [...deletedIds, id]);
+
     setNotifications((current) => {
       const updated = current.filter((item) => item.id !== id);
       saveLocal(currentUser?.uid, updated);
       return updated;
     });
+
+    currentUser
+      ?.getIdToken()
+      .then((token) =>
+        fetch(`${REALTIME_API_URL}/notifications/in-app/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      )
+      .catch((error) => {
+        console.error("Failed to delete notification:", error);
+      });
   };
 
   const clearAllNotifications = () => {
+    const ids = notifications.map((item) => item.id);
+    const deletedIds = getDeletedNotificationIds(currentUser?.uid);
+    saveDeletedNotificationIds(currentUser?.uid, [...deletedIds, ...ids]);
+
     setNotifications([]);
     if (currentUser?.uid) {
       localStorage.removeItem(`notifications_${currentUser.uid}`);
     }
+
+    currentUser
+      ?.getIdToken()
+      .then((token) =>
+        fetch(`${REALTIME_API_URL}/notifications/in-app`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      )
+      .catch((error) => {
+        console.error("Failed to delete all notifications:", error);
+      });
   };
 
   return (

@@ -32,6 +32,7 @@ const getAccessFilter = ({ userId, email, isAdmin }) => {
   if (userId) filters.push({ recipientUserId: userId });
   if (email) filters.push({ recipientEmail: email });
   if (isAdmin) filters.push({ audience: "admin" });
+  filters.push({ audience: "all" });
   return filters.length ? { $or: filters } : { recipientUserId: "__none__" };
 };
 
@@ -43,6 +44,7 @@ const broadcastNotification = (notification) => {
     const isRecipient =
       notification.recipientUserId === client.userId ||
       notification.recipientEmail === client.email ||
+      notification.audience === "all" ||
       (notification.audience === "admin" && client.isAdmin);
 
     if (isRecipient) {
@@ -56,6 +58,52 @@ const createRealtimeNotification = async (models, data) => {
   const notification = await models.AppNotification.create(data);
   broadcastNotification(notification);
   return notification;
+};
+
+const toInAppNotificationData = (
+  notificationType,
+  notificationData,
+  overrides = {},
+) => ({
+  title: notificationData.title || "Notification",
+  message: notificationData.message || notificationData.body || "",
+  type:
+    notificationType ||
+    notificationData.type ||
+    notificationData.data?.type ||
+    "system",
+  link:
+    notificationData.link ||
+    notificationData.url ||
+    notificationData.data?.url ||
+    null,
+  metadata: {
+    ...(notificationData.data || {}),
+    ...(notificationData.metadata || {}),
+  },
+  ...overrides,
+});
+
+const createRealtimeNotificationsForUsers = async (
+  models,
+  notificationType,
+  notificationData,
+  userIds,
+) => {
+  if (!models?.AppNotification) return;
+
+  const uniqueUserIds = [...new Set((userIds || []).filter(Boolean))];
+  await Promise.all(
+    uniqueUserIds.map((userId) =>
+      createRealtimeNotification(
+        models,
+        toInAppNotificationData(notificationType, notificationData, {
+          audience: "user",
+          recipientUserId: userId,
+        }),
+      ),
+    ),
+  );
 };
 
 // Configure web-push with VAPID keys from environment variables
@@ -326,6 +374,48 @@ const markAllInAppNotificationsRead = async (req, res) => {
   }
 };
 
+const deleteInAppNotification = async (req, res) => {
+  try {
+    const context = await getUserContext(req);
+    const result = await req.app.locals.models.AppNotification.deleteOneForUser(
+      req.params.id,
+      getAccessFilter(context),
+    );
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount || 0,
+    });
+  } catch (error) {
+    console.error("Failed to delete notification:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete notification",
+    });
+  }
+};
+
+const deleteAllInAppNotifications = async (req, res) => {
+  try {
+    const context = await getUserContext(req);
+    const result =
+      await req.app.locals.models.AppNotification.deleteManyForUser(
+        getAccessFilter(context),
+      );
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount || 0,
+    });
+  } catch (error) {
+    console.error("Failed to delete all notifications:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete notifications",
+    });
+  }
+};
+
 // Send notification to specific users
 const sendNotification = async (userIds, notificationData, models = null) => {
   try {
@@ -339,6 +429,13 @@ const sendNotification = async (userIds, notificationData, models = null) => {
       await NotificationSubscription.findActiveSubscriptions(userIds);
 
     if (subscriptions.length === 0) {
+      await createRealtimeNotificationsForUsers(
+        models,
+        notificationData.type || notificationData.data?.type,
+        notificationData,
+        userIds,
+      );
+
       console.log("📭 No active subscriptions found for users:", userIds);
       return { success: true, sent: 0 };
     }
@@ -385,6 +482,13 @@ const sendNotification = async (userIds, notificationData, models = null) => {
 
     await Promise.all(promises);
 
+    await createRealtimeNotificationsForUsers(
+      models,
+      notificationData.type || notificationData.data?.type,
+      notificationData,
+      userIds,
+    );
+
     console.log(
       `📊 Notification sending complete: ${successCount} sent, ${failureCount} failed`,
     );
@@ -420,6 +524,15 @@ const sendNotificationByType = async (
     );
 
     if (subscriptions.length === 0) {
+      if (!userIds && models?.AppNotification) {
+        await createRealtimeNotification(
+          models,
+          toInAppNotificationData(notificationType, notificationData, {
+            audience: "all",
+          }),
+        );
+      }
+
       console.log(
         `📭 No subscriptions found for notification type: ${notificationType}`,
       );
@@ -434,8 +547,11 @@ const sendNotificationByType = async (
     const promises = [];
     let successCount = 0;
     let failureCount = 0;
+    const realtimeUserIds = new Set();
 
     for (const sub of subscriptions) {
+      if (sub.userId) realtimeUserIds.add(sub.userId);
+
       const promise = webpush
         .sendNotification(sub.subscription, payload)
         .then(() => {
@@ -461,6 +577,22 @@ const sendNotificationByType = async (
     }
 
     await Promise.all(promises);
+
+    if (userIds) {
+      await createRealtimeNotificationsForUsers(
+        models,
+        notificationType,
+        notificationData,
+        Array.from(realtimeUserIds),
+      );
+    } else if (models?.AppNotification) {
+      await createRealtimeNotification(
+        models,
+        toInAppNotificationData(notificationType, notificationData, {
+          audience: "all",
+        }),
+      );
+    }
 
     console.log(
       `📊 ${notificationType} notifications complete: ${successCount} sent, ${failureCount} failed`,
@@ -614,5 +746,7 @@ module.exports = {
   streamNotifications,
   markInAppNotificationRead,
   markAllInAppNotificationsRead,
+  deleteInAppNotification,
+  deleteAllInAppNotifications,
   createRealtimeNotification,
 };

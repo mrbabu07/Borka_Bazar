@@ -5,7 +5,7 @@ const {
 
 class NotificationService {
   // Send order status update notification
-  static async sendOrderStatusNotification(userId, orderData) {
+  static async sendOrderStatusNotification(userId, orderData, models = null) {
     try {
       const statusMessages = {
         pending: "Your order has been received and is being processed",
@@ -34,7 +34,7 @@ class NotificationService {
 
       return await sendNotificationByType("order_status", notification, [
         userId,
-      ]);
+      ], models);
     } catch (error) {
       console.error("Failed to send order status notification:", error);
       throw error;
@@ -42,7 +42,7 @@ class NotificationService {
   }
 
   // Send flash sale alert
-  static async sendFlashSaleAlert(flashSaleData, userIds = null) {
+  static async sendFlashSaleAlert(flashSaleData, userIds = null, models = null) {
     try {
       const notification = {
         title: "⚡ Flash Sale Alert!",
@@ -60,7 +60,12 @@ class NotificationService {
         },
       };
 
-      return await sendNotificationByType("flash_sale", notification, userIds);
+      return await sendNotificationByType(
+        "flash_sale",
+        notification,
+        userIds,
+        models,
+      );
     } catch (error) {
       console.error("Failed to send flash sale notification:", error);
       throw error;
@@ -68,7 +73,7 @@ class NotificationService {
   }
 
   // Send back in stock notification
-  static async sendBackInStockNotification(productData, userIds) {
+  static async sendBackInStockNotification(productData, userIds, models = null) {
     try {
       const notification = {
         title: "📦 Back in Stock!",
@@ -89,6 +94,7 @@ class NotificationService {
         "back_in_stock",
         notification,
         userIds,
+        models,
       );
     } catch (error) {
       console.error("Failed to send back in stock notification:", error);
@@ -97,7 +103,7 @@ class NotificationService {
   }
 
   // Send abandoned cart reminder
-  static async sendAbandonedCartReminder(userId, cartData) {
+  static async sendAbandonedCartReminder(userId, cartData, models = null) {
     try {
       const itemCount = cartData.items?.length || 0;
       const notification = {
@@ -117,7 +123,7 @@ class NotificationService {
 
       return await sendNotificationByType("abandoned_cart", notification, [
         userId,
-      ]);
+      ], models);
     } catch (error) {
       console.error("Failed to send abandoned cart notification:", error);
       throw error;
@@ -125,7 +131,12 @@ class NotificationService {
   }
 
   // Send wishlist item on sale notification
-  static async sendWishlistSaleNotification(userId, productData, saleData) {
+  static async sendWishlistSaleNotification(
+    userId,
+    productData,
+    saleData,
+    models = null,
+  ) {
     try {
       const notification = {
         title: "💝 Wishlist Item on Sale!",
@@ -145,7 +156,7 @@ class NotificationService {
 
       return await sendNotificationByType("wishlist_sale", notification, [
         userId,
-      ]);
+      ], models);
     } catch (error) {
       console.error("Failed to send wishlist sale notification:", error);
       throw error;
@@ -153,7 +164,11 @@ class NotificationService {
   }
 
   // Send new product notification
-  static async sendNewProductNotification(productData, categoryUserIds = null) {
+  static async sendNewProductNotification(
+    productData,
+    categoryUserIds = null,
+    models = null,
+  ) {
     try {
       const notification = {
         title: "🆕 New Product Available!",
@@ -175,6 +190,7 @@ class NotificationService {
         "new_product",
         notification,
         categoryUserIds,
+        models,
       );
     } catch (error) {
       console.error("Failed to send new product notification:", error);
@@ -183,7 +199,7 @@ class NotificationService {
   }
 
   // Send review reminder notification
-  static async sendReviewReminder(userId, orderData) {
+  static async sendReviewReminder(userId, orderData, models = null) {
     try {
       const productCount =
         orderData.products?.length || orderData.items?.length || 0;
@@ -204,7 +220,7 @@ class NotificationService {
 
       return await sendNotificationByType("review_reminder", notification, [
         userId,
-      ]);
+      ], models);
     } catch (error) {
       console.error("Failed to send review reminder notification:", error);
       throw error;

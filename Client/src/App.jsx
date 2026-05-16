@@ -2,7 +2,7 @@
 
 import { StrictMode, useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import AuthProvider from "./context/AuthContext";
 import CartProvider from "./context/CartContext";
 import WishlistProvider from "./context/WishlistContext";
@@ -29,6 +29,20 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    const originalAlert = window.alert;
+
+    window.alert = (message) => {
+      toast(String(message), {
+        icon: "!",
+      });
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
   return (
     <StrictMode>
       <ErrorBoundary>
@@ -46,7 +60,11 @@ function App() {
                         <ToastContainer />
                         <GlobalLoading />
                         <Toaster
-                          position="top-right"
+                          position="top-center"
+                          containerStyle={{
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                          }}
                           toastOptions={{
                             duration: 4000,
                             style: {

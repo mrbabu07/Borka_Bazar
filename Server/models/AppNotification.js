@@ -35,6 +35,7 @@ class AppNotification {
     if (userId) filters.push({ recipientUserId: userId });
     if (email) filters.push({ recipientEmail: email });
     if (isAdmin) filters.push({ audience: "admin" });
+    filters.push({ audience: "all" });
 
     if (filters.length === 0) return [];
 
@@ -62,6 +63,18 @@ class AppNotification {
     return this.collection.updateMany(filter, {
       $set: { read: true, updatedAt: new Date() },
     });
+  }
+
+  async deleteOneForUser(id, filter) {
+    const { ObjectId } = require("mongodb");
+    const _id = ObjectId.isValid(id) ? new ObjectId(id) : null;
+    if (!_id) return { deletedCount: 0 };
+
+    return this.collection.deleteOne({ _id, ...filter });
+  }
+
+  async deleteManyForUser(filter) {
+    return this.collection.deleteMany(filter);
   }
 }
 
